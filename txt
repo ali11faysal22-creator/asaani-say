@@ -1,0 +1,12 @@
+
+
+
+
+  const handleAuthSubmit: React.SubmitEventHandler<HTMLFormElement>=(e)=>{
+    e.preventDefault()
+    if (isRegister) {
+      alert(`Vendor Registration submitted for ${name}!`)
+    } else {
+      alert(`Vendor Logged in with ${emailOrPhone}!`)
+    }
+  }
