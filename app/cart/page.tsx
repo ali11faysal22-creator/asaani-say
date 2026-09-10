@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { fetchAddresses, getCurrentUser, placeBooking, serviceFromCart } from '@/app/lib/booking-api'
 import { 
   Camera, 
   LayoutGrid, 
@@ -31,6 +32,7 @@ interface CartItem {
   numericPrice: number
   quantity: number
   image?: string
+  category?: string
 }
 
 interface VendorProfile {
@@ -49,13 +51,8 @@ interface BookingNotification {
   createdAt: string
   isRead: boolean
 }
-
-// ---------------------------------------------------------------------------
-// TIME SLOT CONFIG — 8:00 AM to 5:00 PM, 30 min gap (last slot starts 4:30 PM
-// so the visit finishes by 5:00 PM)
-// ---------------------------------------------------------------------------
-const SLOT_START_HOUR = 8   // 8 AM
-const SLOT_END_HOUR = 17    // 5 PM (exclusive as a start time)
+const SLOT_START_HOUR = 8   
+const SLOT_END_HOUR = 17    
 const SLOT_STEP_MIN = 30
 
 function generateTimeSlots(): string[] {
@@ -327,39 +324,47 @@ function toDateKey(year: number, month: number, day: number): string {
   return `${year}-${mm}-${dd}`
 }
 
-// Filter vendors by service type and location
+// ---------------------------------------------------------------------------
+// LEGACY FALLBACK ONLY — used when a cart item has no `category` field
+// (i.e. it was added to the cart before this update, or the services page
+// hasn't been updated yet to pass a category). Once every "Add to Cart"
+// call sets `category`, this fallback stops being used entirely.
+// ---------------------------------------------------------------------------
+function guessCategoryFromTitle(title: string): string {
+  const t = title.toLowerCase()
+  if (t.includes('ac') || t.includes('cooling')) return 'AC Services'
+  if (t.includes('plumb')) return 'Plumbing'
+  if (t.includes('electric')) return 'Electrician'
+  if (t.includes('paint')) return 'Painter'
+  if (t.includes('carpenter') || t.includes('wood')) return 'Carpenter'
+  if (t.includes('pest') || t.includes('termite') || t.includes('ant') || t.includes('cockroach') || t.includes('rodent') || t.includes('mosquito')) return 'Pest Control'
+  if (t.includes('handyman')) return 'Handyman'
+  if (t.includes('inspect')) return 'Home Inspection'
+  if (t.includes('geyser')) return 'Geyser'
+  return title
+}
+
+// Filter vendors by MAIN SERVICE CATEGORY only (not by sub-service title).
+// A cart item's `category` (e.g. "Pest Control") is what gets matched
+// against a vendor's `specialty` list — the specific sub-service name
+// (e.g. "Ant Control", "Termite Treatment") never matters for matching.
 function filterVendorsByServiceAndLocation(
   vendors: VendorProfile[],
   cartItems: CartItem[]
 ): VendorProfile[] {
-  // Map cart items to services
-  const requestedServices = cartItems.map(item => {
-    const title = item.title.toLowerCase()
-    if (title.includes('ac') || title.includes('cooling')) return 'AC Services'
-    if (title.includes('plumb')) return 'Plumbing'
-    if (title.includes('electric')) return 'Electrician'
-    if (title.includes('paint')) return 'Painter'
-    if (title.includes('carpenter') || title.includes('wood')) return 'Carpenter'
-    if (title.includes('pest') || title.includes('termite')) return 'Pest Control'
-    if (title.includes('handyman')) return 'Handyman'
-    if (title.includes('inspect') || title.includes('inspection')) return 'Home Inspection'
-    if (title.includes('geyser')) return 'Geyser'
-    return item.title
-  })
-
-  // Filter vendors that have matching specialties
-  const filtered = vendors.filter(vendor => {
-    const hasMatchingService = vendor.specialty.some(spec => 
-      requestedServices.some(service => 
-        spec.toLowerCase().includes(service.toLowerCase()) ||
-        service.toLowerCase().includes(spec.toLowerCase())
-      )
+  // Prefer the explicit category set at add-to-cart time; only fall back
+  // to guessing from the title for old cart items that predate `category`.
+  const requestedCategories = [
+    ...new Set(
+      cartItems.map(item => (item.category && item.category.trim()) || guessCategoryFromTitle(item.title))
     )
-    
-    // Simple location filter: for now, include all vendors (in real scenario, use 5km radius)
-    // In production, you'd calculate actual distance using lat/lon
-    return hasMatchingService
-  })
+  ]
+
+  const filtered = vendors.filter(vendor =>
+    vendor.specialty.some(spec =>
+      requestedCategories.some(cat => cat.toLowerCase() === spec.toLowerCase())
+    )
+  )
 
   // Sort by rating (highest first)
   return filtered.sort((a, b) => b.rating - a.rating)
@@ -376,46 +381,72 @@ function generateOrderId(): string {
   return 'AS-2026-' + Math.floor(1000 + Math.random() * 9000)
 }
 
+function slotToApiTime(slot: string): string {
+  const match = slot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+  if (!match) return slot
+  let hour = Number(match[1])
+  const minute = match[2]
+  const period = match[3].toUpperCase()
+  if (period === 'PM' && hour !== 12) hour += 12
+  if (period === 'AM' && hour === 12) hour = 0
+  return `${String(hour).padStart(2, '0')}:${minute}`
+}
+
+function addThirtyMinutes(time: string): string {
+  const [hourText, minuteText] = time.split(':')
+  const totalMinutes = Number(hourText) * 60 + Number(minuteText) + 30
+  return `${String(Math.floor(totalMinutes / 60) % 24).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`
+}
+
 export default function CartAndCheckoutPage() {
   const router = useRouter()
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [viewYear, setViewYear] = useState<number>(() => new Date().getFullYear())
+  const [viewMonth, setViewMonth] = useState<number>(() => new Date().getMonth())
+  const [selectedDate, setSelectedDate] = useState<string>('')
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('')
+  const [selectedVendor, setSelectedVendor] = useState<VendorProfile | null>(null)
+  const [savedAddresses, setSavedAddresses] = useState<string[]>(DEFAULT_USER_ADDRESSES)
+  const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(0)
+  const [billingDetails, setBillingDetails] = useState({ fullName: '', phone: '', email: '', address: '' })
 
-  // State Management
-  const [cartItems, setCartItems] = useState<CartItem[]>(getInitialCartItems)
-  const [viewYear, setViewYear] = useState<number>(getInitialViewYear)
-  const [viewMonth, setViewMonth] = useState<number>(getInitialViewMonth)
-  const [selectedDate, setSelectedDate] = useState<string>(getInitialSelectedDate)
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>(getInitialSelectedTimeSlot)
-  const [selectedVendor, setSelectedVendor] = useState<VendorProfile | null>(getInitialSelectedVendor)
-  const [savedAddresses, setSavedAddresses] = useState<string[]>(getInitialSavedAddresses)
-  const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(getInitialSelectedAddressIndex)
-  const [billingDetails, setBillingDetails] = useState(getInitialBillingDetails)
+  const [isHydrated, setIsHydrated] = useState(false)
 
-  // Popup / Modal State
+
   const [showModal, setShowModal] = useState(false)
   const [confirmedOrderInfo, setConfirmedOrderInfo] = useState<{
     orderId: string
     serviceName: string
   } | null>(null)
-  
-  // Vendor Selection Modal State
   const [showVendorModal, setShowVendorModal] = useState(false)
   const [filteredVendors, setFilteredVendors] = useState<VendorProfile[]>([])
 
   const today = useMemo(() => new Date(), [])
 
-  // Initialize localStorage defaults on mount (no setState)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return
+
+    queueMicrotask(() => {
       if (!localStorage.getItem('asaani_vendors')) {
         setStoredJson('asaani_vendors', DEFAULT_VENDOR_PROFILES)
       }
       if (!localStorage.getItem('asaani_user_addresses')) {
         setStoredJson('asaani_user_addresses', DEFAULT_USER_ADDRESSES)
       }
-    }
+
+      setCartItems(getInitialCartItems())
+      setViewYear(getInitialViewYear())
+      setViewMonth(getInitialViewMonth())
+      setSelectedDate(getInitialSelectedDate())
+      setSelectedTimeSlot(getInitialSelectedTimeSlot())
+      setSelectedVendor(getInitialSelectedVendor())
+      setSavedAddresses(getInitialSavedAddresses())
+      setSelectedAddressIndex(getInitialSelectedAddressIndex())
+      setBillingDetails(getInitialBillingDetails())
+      setIsHydrated(true)
+    })
   }, [])
 
-  // Helper to sync cart with LocalStorage
   const updateLocalStorageCart = (items: CartItem[]) => {
     setCartItems(items)
     localStorage.setItem('asaani_cart', JSON.stringify(items))
@@ -564,8 +595,6 @@ export default function CartAndCheckoutPage() {
     if (!dateKey) return false
     return !isPastDate(new Date(dateKey).getFullYear(), new Date(dateKey).getMonth(), new Date(dateKey).getDate()) && !isDateFullyBooked(dateKey)
   }
-
-  // Unavailable slots for whichever date is currently selected
   const unavailableSlots = useMemo(
     () => getUnavailableSlotsForDate(selectedDate),
     [selectedDate]
@@ -660,8 +689,7 @@ export default function CartAndCheckoutPage() {
     }, 5000)
   }
 
-  // Place Order Handler - Show Vendor Selection Modal
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (cartItems.length === 0) {
       alert('Your cart is empty! Please add some services to your cart first..')
       return
@@ -677,23 +705,62 @@ export default function CartAndCheckoutPage() {
       return
     }
 
-    // Filter and show available vendors
-    const availableVendors = filterVendorsByServiceAndLocation(
-      resolveVendorProfiles(),
-      cartItems
-    )
+    try {
+      const auth = await getCurrentUser()
+      if (auth.role !== 'customer' || !auth.profile_id) {
+        alert('Please sign in as a customer before placing an order.')
+        return
+      }
 
-    if (availableVendors.length === 0) {
-      alert('No vendors available for your selected services in your area. Please try another date or time.')
-      return
+      const addresses = await fetchAddresses(auth.profile_id)
+      const selectedAddress = addresses.find((address) => address.line === billingDetails.address)
+      if (!selectedAddress) {
+        alert('Please select a saved address before placing an order.')
+        return
+      }
+
+      const requestedService = serviceFromCart(cartItems)
+      const slotStart = slotToApiTime(selectedTimeSlot)
+      const booking = await placeBooking({
+        customer_id: auth.profile_id,
+        ...(requestedService.serviceId ? { service_id: requestedService.serviceId } : {}),
+        ...(requestedService.service ? { service: requestedService.service } : {}),
+        address_id: selectedAddress.id,
+        date: selectedDate,
+        slot_start: slotStart,
+        slot_end: addThirtyMinutes(slotStart)
+      })
+
+      const serviceNameText = cartItems.length === 1
+        ? cartItems[0].title
+        : `${cartItems[0].title} (+${cartItems.length - 1} more)`
+      localStorage.setItem('asaani_latest_order', JSON.stringify({
+        orderId: booking.id,
+        items: cartItems,
+        bookingDetails: billingDetails,
+        selectedDate,
+        selectedTimeSlot,
+        assignedVendor: booking.vendor ? {
+          id: booking.vendor.id,
+          name: booking.vendor.business_name,
+          rating: booking.vendor.average_rating
+        } : undefined,
+        subtotal,
+        visitingCharges,
+        totalAmount,
+        status: booking.status,
+        createdAt: new Date().toISOString()
+      }))
+      localStorage.removeItem('asaani_cart')
+      setCartItems([])
+      setConfirmedOrderInfo({ orderId: booking.id, serviceName: serviceNameText })
+      setShowModal(true)
+      window.setTimeout(() => router.push('/order-confirmation'), 800)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Unable to place booking')
     }
-
-    setFilteredVendors(availableVendors)
-    setShowVendorModal(true)
-    return
   }
 
-  // Legacy: Place Order with auto-assigned vendor (kept for compatibility)
   const handlePlaceOrderLegacy = () => {
     if (cartItems.length === 0) {
       alert('Your cart is empty! Please add some services to your cart first..')
@@ -715,14 +782,11 @@ export default function CartAndCheckoutPage() {
       alert('No vendor is available for this slot. Please choose another time slot or date.')
       return
     }
-
-    // This is handled by handleVendorRequest now
   }
 
   return (
     <div className="w-full bg-[#F8FAFC] font-sans text-slate-800 relative min-h-screen">
       
-      {/* VENDOR SELECTION MODAL */}
       {showVendorModal && (
         <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl border border-slate-100 relative">
@@ -744,7 +808,6 @@ export default function CartAndCheckoutPage() {
               <p className="text-xs text-slate-600 font-medium">Choose from our verified, highly recommended specialists nearby</p>
             </div>
 
-            {/* Vendors List */}
             <div className="space-y-3">
               {filteredVendors.map((vendor) => {
                 // availableSlot for future use: vendor.queue.length > 0 ? vendor.queue[0] : '09:00 AM'
@@ -759,7 +822,7 @@ export default function CartAndCheckoutPage() {
                     {/* Vendor Info Row */}
                     <div className="flex items-start gap-4">
                       {/* Avatar */}
-                      <div className="w-14 h-14 bg-gradient-to-br from-slate-200 to-slate-300 rounded-full flex items-center justify-center flex-shrink-0">
+                      <div className="w-14 h-14 bg-linear-to-br from-slate-200 to-slate-300 rounded-full flex items-center justify-center shrink-0">
                         <span className="text-sm font-bold text-slate-700">{vendor.name.charAt(0)}</span>
                       </div>
 
@@ -784,8 +847,6 @@ export default function CartAndCheckoutPage() {
                           </div>
                         </div>
                       </div>
-
-                      {/* Rating & Request Button */}
                       <div className="flex flex-col items-end gap-2">
                         <div className="flex items-center gap-1">
                           <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
@@ -809,7 +870,7 @@ export default function CartAndCheckoutPage() {
             <div className="mt-5 pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500 font-medium">
               <div className="flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>If the Vendor is available he can accept requests within <span className="font-bold">5 minutes</span></span>
+                <span>If the Vendor is available he can accept requests within <span className="font-bold">3 minutes</span></span>
               </div>
               <button
                 onClick={() => setShowVendorModal(false)}
@@ -821,8 +882,7 @@ export default function CartAndCheckoutPage() {
           </div>
         </div>
       )}
-      
-      {/* ANIMATED 5-SECOND SUCCESS POPUP */}
+
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center space-y-5 shadow-2xl border border-slate-100 relative overflow-hidden transition-all transform scale-100 animate-in fade-in zoom-in duration-300">
@@ -943,7 +1003,7 @@ export default function CartAndCheckoutPage() {
                     <Wrench className="w-6 h-6" />
                   </div>
                   <p className="text-xs text-slate-500 font-medium">
-                    Aapka Cart filhal khali hai. Sub-services add karne ke liye Services page par jayein.
+                   Your cart is empty. Explore our Services to get started.
                   </p>
                   <Link href="/services">
                     <button className="mt-2 bg-[#EE6C52] hover:bg-orange-600 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition cursor-pointer">
@@ -1072,7 +1132,7 @@ export default function CartAndCheckoutPage() {
                     <input 
                       type="text" 
                       name="address"
-                      placeholder="Flat 4B, Sector Y Block, DHA Phase 3, Lahore, Pakistan"
+                      placeholder="Flat 44B, Sector Y Block, DHA Phase 3, Lahore, Pakistan"
                       value={billingDetails.address}
                       onChange={handleInputChange}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium"
@@ -1226,7 +1286,6 @@ export default function CartAndCheckoutPage() {
               </div>
             </div>
 
-            {/* Order Summary Box */}
             <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200/80 space-y-5">
               <h2 className="text-base font-extrabold text-slate-900 border-b border-slate-100 pb-3">
                 Order Summary

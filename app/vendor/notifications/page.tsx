@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   Wrench,
   ShieldCheck,
@@ -22,6 +23,7 @@ import {
   ArrowLeft,
   Info
 } from 'lucide-react'
+import { decideVendorBooking, fetchVendorNotifications } from '@/app/lib/booking-api'
 
 export interface NotificationItem {
   id: string
@@ -40,124 +42,153 @@ export interface NotificationItem {
   time?: string
   amount?: string
   bookingStatus?: 'pending' | 'accepted' | 'declined'
+  bookingId?: string
 }
 
-const getInitialNotifications = (): NotificationItem[] => {
-  const now = Date.now()
-  return [
-    {
-      id: 'notif-101',
-      type: 'booking_request',
-      title: 'New Service Booking Request',
-      message: 'A customer requested urgent service for Electrician - DB Panel Repairing.',
-      timestamp: '2 mins ago',
-      createdAt: new Date(now - 2 * 60 * 1000).toISOString(),
-      isRead: false,
-      customerName: 'Muhammad Ahmed',
-      customerPhone: '+92 300 1234567',
-      location: 'Gulberg III, Lahore',
-      service: 'Electrician',
-      subService: 'DB Panel Repair',
-      date: '2026-08-20',
-      time: '02:30 PM',
-      amount: 'Rs. 2,500',
-      bookingStatus: 'pending'
-    },
-    {
-      id: 'notif-102',
-      type: 'booking_request',
-      title: 'New Service Booking Request',
-      message: 'New request for AC Gas Refilling & Servicing.',
-      timestamp: '8 mins ago',
-      createdAt: new Date(now - 8 * 60 * 1000).toISOString(),
-      isRead: false,
-      customerName: 'Hamza Malik',
-      customerPhone: '+92 312 4455667',
-      location: 'Johar Town, Lahore',
-      service: 'AC Repairing',
-      subService: 'Gas Refilling',
-      date: '2026-08-20',
-      time: '04:00 PM',
-      amount: 'Rs. 3,500',
-      bookingStatus: 'pending'
-    },
-    {
-      id: 'notif-103',
-      type: 'booking_confirmed',
-      title: 'Booking Confirmed',
-      message: 'Fatima Sheikh confirmed your quote for AC Service.',
-      timestamp: '25 mins ago',
-      createdAt: new Date(now - 25 * 60 * 1000).toISOString(),
-      isRead: false,
-      customerName: 'Fatima Sheikh',
-      customerPhone: '+92 321 9876543',
-      location: 'DHA Phase 5, Lahore',
-      service: 'AC Services',
-      date: '2026-08-21',
-      time: '11:00 AM',
-      amount: 'Rs. 3,500'
-    },
-    {
-      id: 'notif-104',
-      type: 'payment',
-      title: 'Payment Credited',
-      message: 'Payment for Plumbing Pipe Leakage transferred to your wallet.',
-      timestamp: '1 hour ago',
-      createdAt: new Date(now - 60 * 60 * 1000).toISOString(),
-      isRead: true,
-      customerName: 'Usman Ali',
-      service: 'Plumbing',
-      amount: 'Rs. 2,800'
-    },
-    {
-      id: 'notif-105',
-      type: 'booking_cancelled',
-      title: 'Booking Cancelled',
-      message: 'Customer cancelled the Water Heater Repair service.',
-      timestamp: '2 hours ago',
-      createdAt: new Date(now - 120 * 60 * 1000).toISOString(),
-      isRead: true,
-      customerName: 'Zainab Bibi',
-      service: 'Plumbing'
-    }
-  ]
-}
+const getInitialNotifications = (): NotificationItem[] => [
+  {
+    id: 'notif-101',
+    type: 'booking_request',
+    title: 'New Service Booking Request',
+    message: 'A customer requested urgent service for Electrician - DB Panel Repairing.',
+    timestamp: '2 mins ago',
+    createdAt: '2026-08-20T00:02:00.000Z',
+    isRead: false,
+    customerName: 'Muhammad Ahmed',
+    customerPhone: '+92 300 1234567',
+    location: 'Gulberg III, Lahore',
+    service: 'Electrician',
+    subService: 'DB Panel Repair',
+    date: '2026-08-20',
+    time: '02:30 PM',
+    amount: 'Rs. 2,500',
+    bookingStatus: 'pending'
+  },
+  {
+    id: 'notif-102',
+    type: 'booking_request',
+    title: 'New Service Booking Request',
+    message: 'New request for AC Gas Refilling & Servicing.',
+    timestamp: '8 mins ago',
+    createdAt: '2026-08-20T00:08:00.000Z',
+    isRead: false,
+    customerName: 'Hamza Malik',
+    customerPhone: '+92 312 4455667',
+    location: 'Johar Town, Lahore',
+    service: 'AC Repairing',
+    subService: 'Gas Refilling',
+    date: '2026-08-20',
+    time: '04:00 PM',
+    amount: 'Rs. 3,500',
+    bookingStatus: 'pending'
+  },
+  {
+    id: 'notif-103',
+    type: 'booking_confirmed',
+    title: 'Booking Confirmed',
+    message: 'Fatima Sheikh confirmed your quote for AC Service.',
+    timestamp: '25 mins ago',
+    createdAt: '2026-08-20T00:25:00.000Z',
+    isRead: false,
+    customerName: 'Fatima Sheikh',
+    customerPhone: '+92 321 9876543',
+    location: 'DHA Phase 5, Lahore',
+    service: 'AC Services',
+    date: '2026-08-21',
+    time: '11:00 AM',
+    amount: 'Rs. 3,500'
+  },
+  {
+    id: 'notif-104',
+    type: 'payment',
+    title: 'Payment Credited',
+    message: 'Payment for Plumbing Pipe Leakage transferred to your wallet.',
+    timestamp: '1 hour ago',
+    createdAt: '2026-08-20T01:00:00.000Z',
+    isRead: true,
+    customerName: 'Usman Ali',
+    service: 'Plumbing',
+    amount: 'Rs. 2,800'
+  },
+  {
+    id: 'notif-105',
+    type: 'booking_cancelled',
+    title: 'Booking Cancelled',
+    message: 'Customer cancelled the Water Heater Repair service.',
+    timestamp: '2 hours ago',
+    createdAt: '2026-08-20T02:00:00.000Z',
+    isRead: true,
+    customerName: 'Zainab Bibi',
+    service: 'Plumbing'
+  }
+]
 
 export default function NotificationsPage() {
-  const getStoredNotifications = (): NotificationItem[] => {
-    if (typeof window === 'undefined') return getInitialNotifications()
-
-    const stored = localStorage.getItem('vendor_notifications_v3')
-    if (!stored) {
-      const init = getInitialNotifications()
-      localStorage.setItem('vendor_notifications_v3', JSON.stringify(init))
-      return init
-    }
-
-    try {
-      const parsed = JSON.parse(stored)
-      const next = Array.isArray(parsed) && parsed.length > 0 ? parsed : getInitialNotifications()
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        localStorage.setItem('vendor_notifications_v3', JSON.stringify(next))
-      }
-      return next
-    } catch {
-      const init = getInitialNotifications()
-      localStorage.setItem('vendor_notifications_v3', JSON.stringify(init))
-      return init
-    }
-  }
-
-  const [notifications, setNotifications] = useState<NotificationItem[]>(getStoredNotifications)
+  const router = useRouter()
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [selectedNotif, setSelectedNotif] = useState<NotificationItem | null>(null)
   const [filterTab, setFilterTab] = useState<'All' | 'Unread'>('All')
 
+  useEffect(() => {
+    let active = true
+    const loadVendorNotifications = async () => {
+      try {
+        if (typeof window === 'undefined') return
+        const auth = JSON.parse(localStorage.getItem('asaani_auth') || 'null')
+        if (!auth || auth.role !== 'vendor') {
+          setNotifications([])
+          setSelectedNotif(null)
+          return
+        }
+
+        const vendorId = auth.profile_id || auth.user_id
+        const rows = await fetchVendorNotifications(vendorId)
+        const mapped = rows.map((row) => {
+          const bookingMatch = (row.body || '').match(/Booking ID:\s*([a-zA-Z0-9-]+)/i)
+          const bookingId = bookingMatch?.[1]
+          const requestMatch = (row.body || '').match(
+            /^(.+?) requested (.+?) on (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})-(\d{2}:\d{2})\./i
+          )
+          const service = requestMatch?.[2] || undefined
+          return {
+            id: row.id,
+            type: row.type === 'booking' ? 'booking_request' : 'booking_confirmed',
+            title: row.title,
+            message: row.body,
+            timestamp: 'Just now',
+            createdAt: new Date().toISOString(),
+            isRead: row.is_read,
+            customerName: requestMatch?.[1]?.trim(),
+            service,
+            date: requestMatch?.[3],
+            time: requestMatch ? `${requestMatch[4]} - ${requestMatch[5]}` : undefined,
+            bookingStatus: 'pending',
+            bookingId,
+          } as NotificationItem
+        })
+
+        if (!active) return
+        setNotifications(mapped)
+        if (mapped.length > 0 && !selectedNotif) {
+          setSelectedNotif(mapped[0])
+        }
+      } catch (error) {
+        console.error('Failed to load vendor notifications', error)
+        setNotifications([])
+        setSelectedNotif(null)
+      }
+    }
+
+    loadVendorNotifications()
+    const refreshTimer = window.setInterval(loadVendorNotifications, 5000)
+    return () => {
+      active = false
+      window.clearInterval(refreshTimer)
+    }
+  }, [router, selectedNotif])
+
   const updateStorage = (updated: NotificationItem[]) => {
     setNotifications(updated)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('vendor_notifications_v3', JSON.stringify(updated))
-      window.dispatchEvent(new Event('storage'))
-    }
   }
 
   const isRequestTimedOut = (item: NotificationItem): boolean => {
@@ -194,17 +225,30 @@ export default function NotificationsPage() {
     updateStorage(updated)
   }
 
-  const handleBookingAction = (id: string, status: 'accepted' | 'declined') => {
-    const updated = notifications.map(n => {
-      if (n.id === id) {
-        return { ...n, isRead: true, bookingStatus: status }
+  const handleBookingAction = async (id: string, status: 'accepted' | 'declined') => {
+    try {
+      const auth = JSON.parse(localStorage.getItem('asaani_auth') || 'null')
+      const action = status === 'accepted' ? 'accept' : 'reject'
+      const bookingId = selectedNotif?.bookingId || id
+      if (!bookingId) {
+        alert('This notification does not include a booking reference.')
+        return
       }
-      return n
-    })
-    if (selectedNotif && selectedNotif.id === id) {
-      setSelectedNotif({ ...selectedNotif, isRead: true, bookingStatus: status })
+      await decideVendorBooking(auth.profile_id || auth.user_id, bookingId, action)
+      const updated = notifications.map(n => {
+        if (n.id === id) {
+          return { ...n, isRead: true, bookingStatus: status === 'accepted' ? 'accepted' : 'declined' as 'accepted' | 'declined' }
+        }
+        return n
+      })
+      if (selectedNotif && selectedNotif.id === id) {
+        setSelectedNotif({ ...selectedNotif, isRead: true, bookingStatus: status === 'accepted' ? 'accepted' : 'declined' as 'accepted' | 'declined' })
+      }
+      updateStorage(updated)
+    } catch (error) {
+      console.error('Vendor booking decision failed', error)
+      alert(error instanceof Error ? error.message : 'Unable to decide booking request')
     }
-    updateStorage(updated)
   }
 
   const filteredNotifications = notifications.filter(n => {

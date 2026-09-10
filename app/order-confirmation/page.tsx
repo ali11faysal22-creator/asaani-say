@@ -2,14 +2,17 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { fetchCustomerBookings, getCurrentUser } from '../lib/booking-api'
 import { 
   Camera, 
   LayoutGrid, 
   Hand, 
   Sparkles, 
   CheckCircle2, 
-  ShieldCheck 
+  ShieldCheck,
+  Timer,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 
 interface CartItem {
@@ -54,8 +57,94 @@ function getInitialOrder(): OrderData | null {
 }
 
 export default function OrderConfirmationPage() {
-  const router = useRouter()
-  const [order] = useState<OrderData | null>(getInitialOrder)
+  const [order, setOrder] = useState<OrderData | null>(null)
+  const [bookingStatus, setBookingStatus] = useState('pending')
+  const [orderLoaded, setOrderLoaded] = useState(false)
+  const [secondsRemaining, setSecondsRemaining] = useState(180)
+  const [isRequestToastMinimized, setIsRequestToastMinimized] = useState(false)
+  const [requestToastPosition, setRequestToastPosition] = useState<{ x: number; y: number } | null>(null)
+  const [isDraggingRequestToast, setIsDraggingRequestToast] = useState(false)
+  const [requestToastDragOffset, setRequestToastDragOffset] = useState({ x: 0, y: 0 })
+  const [showVendorRequestToast, setShowVendorRequestToast] = useState(true)
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      setOrder(getInitialOrder())
+      const initialOrder = getInitialOrder()
+      if (initialOrder?.status) setBookingStatus(initialOrder.status.toLowerCase())
+      setOrderLoaded(true)
+    })
+  }, [])
+
+  const handleRequestToastPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setIsDraggingRequestToast(true)
+    setRequestToastDragOffset({ x: event.clientX - rect.left, y: event.clientY - rect.top })
+    setRequestToastPosition({ x: rect.left, y: rect.top })
+  }
+
+  const handleRequestToastPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRequestToast) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const offsetX = requestToastDragOffset.x
+    const offsetY = requestToastDragOffset.y
+    const x = Math.min(Math.max(8, event.clientX - offsetX), window.innerWidth - rect.width - 8)
+    const y = Math.min(Math.max(8, event.clientY - offsetY), window.innerHeight - rect.height - 8)
+    setRequestToastPosition({ x, y })
+  }
+
+  const handleRequestToastPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    setIsDraggingRequestToast(false)
+  }
+
+  useEffect(() => {
+    if (!order) return
+    const updateCountdown = () => {
+      const elapsed = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 1000)
+      const remaining = Math.max(0, 180 - elapsed)
+      setSecondsRemaining(remaining)
+      if (remaining === 0) setShowVendorRequestToast(false)
+    }
+    updateCountdown()
+    const timer = window.setInterval(updateCountdown, 1000)
+    return () => window.clearInterval(timer)
+  }, [order])
+
+  useEffect(() => {
+    if (!order) return
+    let active = true
+    const checkBookingStatus = async () => {
+      try {
+        const auth = await getCurrentUser()
+        if (auth.role !== 'customer' || !auth.profile_id) return
+        const bookings = await fetchCustomerBookings(auth.profile_id)
+        const current = bookings.find((booking) => booking.id === order.orderId)
+        if (active && current && current.status.toLowerCase() !== bookingStatus) {
+          setBookingStatus(current.status.toLowerCase())
+          setOrder((previous) => previous ? { ...previous, status: current.status } : previous)
+          localStorage.setItem('asaani_latest_order', JSON.stringify({
+            ...order,
+            status: current.status
+          }))
+          if (current.status === 'accepted' || current.status === 'rejected') {
+            setShowVendorRequestToast(false)
+          }
+        }
+      } catch { /* The next polling cycle retries the status check. */ }
+    }
+    checkBookingStatus()
+    const statusTimer = window.setInterval(checkBookingStatus, 10000)
+    return () => { active = false; window.clearInterval(statusTimer) }
+  }, [order, bookingStatus])
+
+  const minutes = Math.floor(secondsRemaining / 60).toString().padStart(2, '0')
+  const seconds = (secondsRemaining % 60).toString().padStart(2, '0')
+
+  if (!orderLoaded) {
+    return <div className="min-h-screen bg-[#F8FAFC]" />
+  }
 
   if (!order) {
     return (
@@ -72,6 +161,26 @@ export default function OrderConfirmationPage() {
 
   return (
     <div className="w-full bg-[#F8FAFC] font-sans text-slate-800 min-h-screen">
+      {showVendorRequestToast && <div
+        onPointerDown={handleRequestToastPointerDown}
+        onPointerMove={handleRequestToastPointerMove}
+        onPointerUp={handleRequestToastPointerUp}
+        style={requestToastPosition ? { left: requestToastPosition.x, top: requestToastPosition.y } : undefined}
+        className={`fixed z-50 touch-none overflow-hidden rounded-2xl border border-white/70 bg-white/75 shadow-xl shadow-slate-900/10 backdrop-blur-xl ${requestToastPosition ? '' : 'right-4 top-4'} ${isDraggingRequestToast ? 'cursor-grabbing' : 'cursor-grab'} ${isRequestToastMinimized ? 'w-auto' : 'w-[min(360px,calc(100vw-2rem))]'}`}>
+        <div className="flex items-center gap-2.5 px-3.5 py-3">
+          <div className="rounded-xl bg-orange-500/10 p-2 text-orange-600">
+            <Timer className="h-4 w-4" />
+          </div>
+          {!isRequestToastMinimized && <div className="min-w-0 flex-1">
+            <p className="text-xs font-extrabold text-slate-900">Vendor request is active</p>
+            <p className="mt-1 text-[10px] leading-relaxed text-slate-500">Waiting for vendor acceptance. Another vendor will be assigned after 3 minutes.</p>
+          </div>}
+          <span className="rounded-lg bg-orange-500/10 px-2 py-1 text-sm font-black tabular-nums text-orange-600">{minutes}:{seconds}</span>
+          <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => setIsRequestToastMinimized((value) => !value)} aria-label={isRequestToastMinimized ? 'Expand vendor request' : 'Minimize vendor request'} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-white hover:text-slate-700">
+            {isRequestToastMinimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>}
       
       {/* Top Bar */}
       <div className="bg-[#EEF2FB] text-xs text-slate-600 py-2.5 px-4 md:px-12 flex justify-between items-center border-b border-slate-200/60">
@@ -120,7 +229,11 @@ export default function OrderConfirmationPage() {
             Booking Confirmed!
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-2xl mx-auto leading-relaxed">
-            Your home service request has been processed successfully. Our certified professional is on the way to restore your comfort.
+            {bookingStatus === 'accepted'
+              ? 'Your vendor has accepted the service request.'
+              : bookingStatus === 'rejected'
+                ? 'Your vendor declined the request. Please choose another slot or vendor.'
+                : 'Your service request has been registered. We are waiting for vendor acceptance.'}
           </p>
         </div>
       </section>
@@ -135,7 +248,7 @@ export default function OrderConfirmationPage() {
           </div>
           <h2 className="text-xl font-extrabold text-slate-900">Order Placed Successfully!</h2>
           <p className="text-xs text-slate-500 font-medium">
-            Thank you for choosing Asaani Say. Your service booking has been confirmed and registered.
+            Thank you for choosing Asaani Say. Your service request has been confirmed and sent to a related vendor.
           </p>
         </div>
 
@@ -166,7 +279,9 @@ export default function OrderConfirmationPage() {
                 </div>
                 <div className="flex justify-between items-center text-slate-600">
                   <span>Assigned Vendor</span>
-                  <span className="font-bold text-slate-900">{order.assignedVendor ? `${order.assignedVendor.name} (${order.assignedVendor.rating.toFixed(1)}★)` : 'Pending assignment'}</span>
+                  <span className={`font-bold ${bookingStatus === 'accepted' ? 'text-emerald-600' : bookingStatus === 'rejected' ? 'text-red-600' : 'text-orange-600'}`}>
+                    {bookingStatus === 'accepted' ? 'Vendor accepted' : bookingStatus === 'rejected' ? 'Vendor declined' : 'Pending acceptance'}
+                  </span>
                 </div>
 
                 <div className="border-t border-slate-100 pt-3 space-y-2">
@@ -274,7 +389,7 @@ export default function OrderConfirmationPage() {
 
             {/* Action Buttons */}
             <div className="space-y-3">
-              <Link href="/services" className="block w-full">
+              <Link href="/customer/orders" className="block w-full">
                 <button className="w-full bg-[#EE6C52] hover:bg-orange-600 text-white font-extrabold text-xs py-3.5 rounded-xl transition shadow-xs cursor-pointer">
                   View My Bookings
                 </button>

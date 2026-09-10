@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { loginUser, registerVendor } from '@/app/lib/booking-api'
 import {
   Eye,
   EyeOff,
@@ -10,8 +11,6 @@ import {
   ArrowLeft,
   ChevronDown,
   Check,
-  Loader2,
-  Clock,
   CalendarDays
 } from 'lucide-react'
 
@@ -168,7 +167,6 @@ export default function VendorLoginPage() {
   const [isRegister, setIsRegister] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [regStep, setRegStep] = useState(1)
-  const [isProcessing, setIsProcessing] = useState(false)
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -205,149 +203,16 @@ export default function VendorLoginPage() {
   const [selectedSubServices, setSelectedSubServices] = useState<string[]>([])
   const [showOtherInput, setShowOtherInput] = useState(false)
 
-  // ------------------------------------------------------------
-  // Local Storage Persistence
-  // ------------------------------------------------------------
-  // These values are saved immediately whenever the vendor changes
-  // services, sub-services, or weekly availability. This means the
-  // vendor does not have to submit the form before the data is saved.
+  // Local Storage persistence has been removed from the vendor
+  // onboarding flow so the authoritative data source is the
+  // database-backed registration API payload rather than browser keys.
   const saveVendorSelections = (
     categories: string[],
     subServices: string[],
     weeklyAvailability: Record<string, DayAvailability>
   ) => {
-    if (typeof window === 'undefined') return
-
-    localStorage.setItem(
-      'vendor_selected_categories',
-      JSON.stringify(categories)
-    )
-
-    localStorage.setItem(
-      'vendor_selected_sub_services',
-      JSON.stringify(subServices)
-    )
-
-    localStorage.setItem(
-      'vendor_availability',
-      JSON.stringify(weeklyAvailability)
-    )
-
-    // One combined object makes it easier to use all vendor setup data
-    // later from the dashboard, booking system, API, or database.
-    localStorage.setItem(
-      'vendor_service_setup',
-      JSON.stringify({
-        categories,
-        subServices,
-        availability: weeklyAvailability,
-        updatedAt: new Date().toISOString()
-      })
-    )
+    return
   }
-
-  // Restore previously saved selections when the vendor comes back.
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    try {
-      const savedCategories = localStorage.getItem(
-        'vendor_selected_categories'
-      )
-      const savedSubServices = localStorage.getItem(
-        'vendor_selected_sub_services'
-      )
-      const savedAvailability = localStorage.getItem(
-        'vendor_availability'
-      )
-
-      if (savedCategories) {
-        const parsed = JSON.parse(savedCategories)
-        if (Array.isArray(parsed)) {
-          setSelectedCategories(parsed)
-          if (parsed.length > 0) {
-            setActiveCategory(parsed[0])
-          }
-        }
-      }
-
-      if (savedSubServices) {
-        const parsed = JSON.parse(savedSubServices)
-        if (Array.isArray(parsed)) {
-          setSelectedSubServices(parsed)
-        }
-      }
-
-      if (savedAvailability) {
-        const parsed = JSON.parse(savedAvailability)
-        if (parsed && typeof parsed === 'object') {
-          setAvailability((current) => ({
-            ...current,
-            ...parsed
-          }))
-        }
-      }
-
-      const savedCustomService = localStorage.getItem(
-        'vendor_custom_service'
-      )
-
-      if (savedCustomService) {
-        setShowOtherInput(true)
-        setVendorDetails((prev) => ({
-          ...prev,
-          customService: savedCustomService
-        }))
-      }
-    } catch (error) {
-      console.error('Failed to restore vendor data from localStorage:', error)
-    }
-  }, [])
-
-  // Save services whenever they change.
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    localStorage.setItem(
-      'vendor_selected_categories',
-      JSON.stringify(selectedCategories)
-    )
-
-    localStorage.setItem(
-      'vendor_selected_sub_services',
-      JSON.stringify(selectedSubServices)
-    )
-
-    localStorage.setItem(
-      'vendor_service_setup',
-      JSON.stringify({
-        categories: selectedCategories,
-        subServices: selectedSubServices,
-        availability,
-        updatedAt: new Date().toISOString()
-      })
-    )
-  }, [selectedCategories, selectedSubServices])
-
-  // Save weekly availability whenever a day/slot changes.
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    localStorage.setItem(
-      'vendor_availability',
-      JSON.stringify(availability)
-    )
-
-    localStorage.setItem(
-      'vendor_service_setup',
-      JSON.stringify({
-        categories: selectedCategories,
-        subServices: selectedSubServices,
-        availability,
-        updatedAt: new Date().toISOString()
-      })
-    )
-  }, [availability, selectedCategories, selectedSubServices])
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -536,7 +401,7 @@ export default function VendorLoginPage() {
     setRegStep(2)
   }
 
-  const handleFinalSubmit = (e: React.FormEvent) => {
+  const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
@@ -557,54 +422,39 @@ export default function VendorLoginPage() {
       return
     }
 
-    if (typeof window !== 'undefined') {
-      // Final save before redirecting to the dashboard.
-      saveVendorSelections(
-        selectedCategories,
-        selectedSubServices,
-        availability
-      )
-
-      if (showOtherInput && vendorDetails.customService.trim()) {
-        localStorage.setItem(
-          'vendor_custom_service',
-          vendorDetails.customService.trim()
-        )
-      } else {
-        localStorage.removeItem('vendor_custom_service')
+    try {
+      const payload = {
+        email,
+        password,
+        first_name: vendorDetails.firstName,
+        last_name: vendorDetails.lastName,
+        contact_number: vendorDetails.contactNumber,
+        business_name: vendorDetails.businessName,
+        business_email: vendorDetails.businessEmail,
+        business_phone: vendorDetails.businessPhone,
+        house_address: vendorDetails.houseAddress,
+        categories: selectedCategories,
+        services: selectedSubServices,
+        custom_service: showOtherInput && vendorDetails.customService.trim()
+          ? vendorDetails.customService.trim()
+          : '',
+        availability,
       }
 
-      // Optional complete vendor onboarding snapshot.
-      localStorage.setItem(
-        'vendor_onboarding_data',
-        JSON.stringify({
-          account: {
-            name,
-            email,
-          },
-          vendorDetails,
-          services: {
-            categories: selectedCategories,
-            subServices: selectedSubServices,
-            customService:
-              showOtherInput && vendorDetails.customService.trim()
-                ? vendorDetails.customService.trim()
-                : ''
-          },
-          availability,
-          submittedAt: new Date().toISOString()
-        })
-      )
+      const auth = await registerVendor(payload)
+      if (auth?.role === 'vendor') {
+        localStorage.setItem('asaani_vendor_auth', JSON.stringify(auth))
+        localStorage.setItem('asaani_auth', JSON.stringify(auth))
+        router.push('/vendor/dashboard')
+      } else {
+        alert('Vendor registration did not return a valid vendor session.')
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Vendor registration failed')
     }
-
-    setIsProcessing(true)
-
-    setTimeout(() => {
-      router.push('/vendor/dashboard')
-    }, 5500)
   }
 
-  const handleSignInSubmit = (e: React.FormEvent) => {
+  const handleSignInSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
@@ -613,53 +463,21 @@ export default function VendorLoginPage() {
       return
     }
 
-    router.push('/vendor/dashboard')
+    try {
+      const auth = await loginUser({ identifier: emailOrPhone, password, role: 'vendor' })
+      if (auth?.role === 'vendor') {
+        localStorage.setItem('asaani_vendor_auth', JSON.stringify(auth))
+        localStorage.setItem('asaani_auth', JSON.stringify(auth))
+        router.push('/vendor/dashboard')
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Vendor login failed')
+    }
   }
 
   const handleTabSwitch = (registerMode: boolean) => {
     setIsRegister(registerMode)
     setRegStep(1)
-  }
-
-  if (isProcessing) {
-    return (
-      <div className="min-h-screen w-full bg-[#3B3E56] flex items-center justify-center p-4 font-sans">
-        <div className="bg-white rounded-3xl p-8 md:p-12 max-w-lg w-full text-center shadow-2xl space-y-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-linear-to-r from-orange-400 to-orange-600" />
-
-          <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full bg-orange-100 animate-ping opacity-25" />
-            <div className="w-20 h-20 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center relative">
-              <Clock className="w-9 h-9 text-orange-500 animate-pulse" />
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <span className="inline-block px-3 py-1 bg-orange-50 text-orange-600 font-semibold text-[11px] rounded-full uppercase tracking-wider border border-orange-200/60">
-              Application Submitted
-            </span>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-[#2C2F45] tracking-tight">
-              Congratulations!
-            </h2>
-            <p className="text-xs md:text-sm text-slate-600 leading-relaxed font-medium">
-              Thank you for signing up as a vendor on{' '}
-              <span className="text-orange-500 font-bold">Asaani Say</span>.
-            </p>
-          </div>
-
-          <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-left space-y-1">
-            <p className="text-xs text-slate-500 font-medium text-center">
-              Please wait a moment while your application is under process...
-            </p>
-          </div>
-
-          <div className="flex items-center justify-center gap-2 pt-2 text-xs font-semibold text-slate-400">
-            <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
-            <span>Redirecting to your dashboard...</span>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (

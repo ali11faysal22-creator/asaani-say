@@ -1,8 +1,9 @@
 'use client'
 import React, {useEffect,useRef,useState } from 'react'
-import {Camera,LayoutGrid,Hand,Sparkles,ChevronDown,User,Star,Quote,Wrench,Drill,Sun,Truck,Bug,Clock,MousePointerClick,Users,Award,RefreshCw,ArrowRight,ArrowUpRight,AlertCircle,ExternalLink as ExternalLinkIcon} from 'lucide-react'
+import {Camera,LayoutGrid,Sparkles,ChevronDown,User,Star,Quote,Wrench,Drill,Sun,Truck,Bug,Clock,MousePointerClick,Users,Award,RefreshCw,ArrowRight,ArrowUpRight,AlertCircle,ExternalLink as ExternalLinkIcon} from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import CustomerNavbar from './components/customer-navbar'
 interface ExpertItem {
   number: string
   name: string
@@ -98,7 +99,6 @@ function renderStars(rating: number): React.ReactNode {
 export default function HeroSection() {
   const statsRef = useRef<HTMLDivElement>(null)
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0)
-
   const toggleFAQ = (index: number) => {
     setOpenFaqIndex((current) => (current === index ? null : index))
   }
@@ -258,33 +258,7 @@ export default function HeroSection() {
           </a>
         </div>
       </div>
-      {/* navbar */}
-      <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Hand size={28} strokeWidth={2} className="text-black"/>
-            <Sparkles size={14} strokeWidth={2} className="text-[#EF6A42] absolute -top-1 -right-1"/>
-          </div>
-          <div className="flex flex-col leading-tight">
-            <span className="font-extrabold text-xl tracking-tight text-orange-500">Asaani</span>
-            <span className="font-bold text-lg tracking-tight -mt-1.5 text-orange-500">Say</span>
-          </div>
-        </div>
-
-  {/* nav links */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-          <a href="#" className="text-slate-900 font-semibold hover:text-orange-500">Home</a>
-          <a href="about-us" className="hover:text-orange-500 transition">About Us</a>
-          <a href="services" className="hover:text-orange-500 transition">Services</a>
-          <a href="contact-us" className="hover:text-orange-500 transition">Contact Us</a>
-          <a href="blog" className="hover:text-orange-500 transition">Blog</a>
-        </nav>
-       <Link href="/login">
-  <button className="hidden md:inline-flex items-center gap-2 bg-[#3A3E59] hover:bg-[#2C2F45] text-white px-5 py-2.5 rounded-lg text-sm font-medium transition shadow-sm cursor-pointer">
-    <span>Get Started</span>
-  </button>
-</Link>
-      </header>
+      <CustomerNavbar active="home" />
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
 {/* review card */}
@@ -681,7 +655,7 @@ export default function HeroSection() {
                 </div>
 
                    <button className="bg-[#3D425A] hover:bg-[#2C2F45] text-white text-xs sm:text-sm font-semibold px-8 py-3.5 rounded-lg transition-all duration-300 shadow-md">
-                    Contact Us
+                    Contact-Us
                 </button>
             </div>
         </div>
@@ -957,7 +931,7 @@ export default function HeroSection() {
                 </li>
                         
                      <li>
-                  <a href="contact us" className="hover:text-orange-500 tansition">Contact Us</a>
+                  <a href="contact-us" className="hover:text-orange-500 tansition">Contact Us</a>
                 </li>
 
                   </ul>
@@ -1012,6 +986,3 @@ export default function HeroSection() {
   
   )
 }
-
-
-// a into link

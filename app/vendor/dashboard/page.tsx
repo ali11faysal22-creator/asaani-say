@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { fetchVendorNotifications, fetchVendorProfile } from '@/app/lib/booking-api'
 import {
   Wrench,
   ShieldCheck,
@@ -112,6 +113,46 @@ interface MainServiceGroup {
   subServices: SubServiceItem[]
 }
 
+interface AvailabilityRow {
+  day: string
+  isSelected: boolean
+  slots: string[]
+}
+
+function parseVendorAvailability(raw: unknown): AvailabilityRow[] {
+  if (!raw) return []
+  const value = typeof raw === 'string' ? (() => {
+    try { return JSON.parse(raw) } catch { return null }
+  })() : raw
+
+  if (!value || typeof value !== 'object') return []
+  if (Array.isArray(value)) {
+    return value.map((item) => {
+      const record = item && typeof item === 'object' ? item as Record<string, unknown> : {}
+      const dayValue = record.day ?? record.day_of_week ?? record.dayName ?? ''
+      const day = typeof dayValue === 'number'
+        ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][dayValue] || String(dayValue)
+        : String(dayValue)
+      const fullDay = Boolean(record.is_full_day)
+      const start = record.start_time ? String(record.start_time) : ''
+      const end = record.end_time ? String(record.end_time) : ''
+      return { day, isSelected: Boolean(record.is_enabled ?? true), slots: fullDay ? ['Full day'] : start && end ? [`${start} - ${end}`] : [] }
+    }).filter((row) => row.day && (row.isSelected || row.slots.length > 0))
+  }
+  return Object.entries(value as Record<string, unknown>).map(([day, details]) => {
+    if (Array.isArray(details)) {
+      return { day, isSelected: details.length > 0, slots: details.map(String) }
+    }
+    const record = details && typeof details === 'object' ? details as Record<string, unknown> : {}
+    const slots = record.slots ?? record.times ?? record.timeSlots ?? []
+    return {
+      day,
+      isSelected: Boolean(record.isSelected ?? record.active ?? true),
+      slots: Array.isArray(slots) ? slots.map(String) : slots ? [String(slots)] : []
+    }
+  }).filter((row) => row.isSelected || row.slots.length > 0)
+}
+
 // ================= NOTIFICATION TYPES =================
 type NotificationCategory = 'USER REQUESTS' | 'ORDER COMPLETED' | 'ORDER PENDING'
 type NotificationVisual =
@@ -134,68 +175,101 @@ const CATEGORY_ORDER: NotificationCategory[] = [
   'ORDER PENDING'
 ]
 
+const CATEGORY_ALIAS_LOOKUP: Record<string, string> = {
+  'plumber': 'Plumber',
+  'plumbing': 'Plumber',
+  'plumbing services': 'Plumber',
+  'electrician': 'Electrician',
+  'electrical services': 'Electrician',
+  'painter': 'Painter',
+  'painting services': 'Painter',
+  'carpenter': 'Carpenter',
+  'carpenter services': 'Carpenter',
+  'handyman': 'Handyman',
+  'handyman services': 'Handyman',
+  'pest control': 'Pest Control',
+  'pest control services': 'Pest Control',
+  'geyser': 'Geyser Services',
+  'ac service': 'AC Services',
+  'ac services': 'AC Services',
+  'geyser service': 'Geyser Services',
+  'geyser services': 'Geyser Services',
+  'home inspection': 'Home Inspection',
+  'home inspections': 'Home Inspection',
+  'service house inspection': 'Home Inspection',
+}
+
+function normalizeComparableName(value: string): string {
+  return (value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function normalizeCategoryName(rawCategory: string): string {
+  const lookupKey = normalizeComparableName(rawCategory)
+  if (CATEGORY_ALIAS_LOOKUP[lookupKey]) {
+    return CATEGORY_ALIAS_LOOKUP[lookupKey]
+  }
+
+  const canonicalCategory = Object.keys(GLOBAL_SERVICES_CATALOG).find((cat) =>
+    normalizeComparableName(cat) === lookupKey
+  )
+
+  return canonicalCategory || rawCategory
+}
+
+function normalizeServiceNameForCategory(category: string, rawService: string): string | null {
+  const catalogServices = GLOBAL_SERVICES_CATALOG[category] || []
+  const canonicalMatch = catalogServices.find((serviceName) =>
+    normalizeComparableName(serviceName) === normalizeComparableName(rawService)
+  )
+
+  if (canonicalMatch) {
+    return canonicalMatch
+  }
+
+  const looseFind = catalogServices.find((serviceName) =>
+    normalizeComparableName(serviceName).includes(normalizeComparableName(rawService)) ||
+    normalizeComparableName(rawService).includes(normalizeComparableName(serviceName))
+  )
+
+  return looseFind || null
+}
+
 // ================= NOTIFICATION POPOVER COMPONENT =================
 function NotificationPopover() {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: 'req-1',
-      category: 'USER REQUESTS',
-      title: 'New order request from Ali.',
-      time: '2 min ago',
-      unread: true,
-      visual: { kind: 'avatar', src: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRDxy7sTh3Ud9mGs-ucLzRc_Ip39YnVTkwYM7nPSnJw0019AnvO5orSShg&s=10' }
-    },
-    {
-      id: 'req-2',
-      category: 'USER REQUESTS',
-      title: 'Custom quote requested by Junaid.',
-      time: '1 hr ago',
-      unread: true,
-      visual: { kind: 'avatar', src: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS0WePR1Zmwb3EWIIDuKpjhx0ON2CInrrax7rTFx4YDWC02k7M-zgU1MFs&s=10' }
-    },
-    {
-      id: 'req-3',
-      category: 'USER REQUESTS',
-      title: 'Return request from Mohsin khan.',
-      time: '3 hr ago',
-      unread: false,
-      visual: { kind: 'avatar', src: 'https://img.magnific.com/free-photo/portrait-smiling-caucasian-senior-businessman_1262-2142.jpg?semt=ais_hybrid&w=740&q=80' }
-    },
-    {
-      id: 'done-1',
-      category: 'ORDER COMPLETED',
-      title: 'Order #4521 AC Service Completed successfully',
-      time: '5 hr ago',
-      unread: false,
-      visual: { kind: 'check' }
-    },
-    {
-      id: 'done-2',
-      category: 'ORDER COMPLETED',
-      title: 'Order #4498 AC Repair Service Completed Successfully',
-      time: '1 day ago',
-      unread: false,
-      visual: { kind: 'check' }
-    },
-    {
-      id: 'pending-1',
-      category: 'ORDER PENDING',
-      title: 'Order #4530 awaiting confirmation',
-      time: '2 days ago',
-      unread: true,
-      visual: { kind: 'clock' }
-    },
-    {
-      id: 'pending-2',
-      category: 'ORDER PENDING',
-      title: 'Order #4527 payment processing',
-      time: '3 days ago',
-      unread: false,
-      visual: { kind: 'clock' }
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+
+  useEffect(() => {
+    let active = true
+    const loadNotifications = async () => {
+      try {
+        const auth = JSON.parse(localStorage.getItem('asaani_auth') || 'null')
+        if (!auth || auth.role !== 'vendor') return
+        const rows = await fetchVendorNotifications(auth.profile_id || auth.user_id)
+        if (!active) return
+        setNotifications(rows.map((row) => ({
+          id: row.id,
+          category: row.type === 'booking' ? 'USER REQUESTS' : 'ORDER PENDING',
+          title: row.type === 'booking' ? row.body : row.title,
+          time: 'Just now',
+          unread: !row.is_read,
+          visual: { kind: 'clock' }
+        })))
+      } catch (error) {
+        console.error('Unable to load dashboard notifications', error)
+      }
     }
-  ])
+    loadNotifications()
+    const refreshTimer = window.setInterval(loadNotifications, 5000)
+    return () => {
+      active = false
+      window.clearInterval(refreshTimer)
+    }
+  }, [])
 
   const unreadCount = notifications.filter((n) => n.unread).length
 
@@ -381,6 +455,7 @@ export default function VendorDashboardPage() {
   const [selectedSubCategoryFilter, setSelectedSubCategoryFilter] = useState('All Sub-Services')
   
   const [servicesData, setServicesData] = useState<MainServiceGroup[]>([])
+  const [availabilityData, setAvailabilityData] = useState<AvailabilityRow[]>([])
 
   const [editingService, setEditingService] = useState<{
     mainCatIndex: number
@@ -395,34 +470,84 @@ export default function VendorDashboardPage() {
   }>({ show: false, message: '', type: 'success' })
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    const hydrateDashboardFromBackend = async () => {
+      try {
+        if (typeof window === 'undefined') return
 
-    const savedCategoriesStr = localStorage.getItem('vendor_selected_categories')
-    const savedSubServicesStr = localStorage.getItem('vendor_selected_sub_services')
-
-    const savedCategories: string[] = savedCategoriesStr ? JSON.parse(savedCategoriesStr) : []
-    const savedSubServices: string[] = savedSubServicesStr ? JSON.parse(savedSubServicesStr) : []
-
-    if (savedCategories.length > 0) {
-      const parsedGroups: MainServiceGroup[] = savedCategories.map((mainCat) => {
-        const catalogSubs = GLOBAL_SERVICES_CATALOG[mainCat] || []
-        const vendorSubsForCat = savedSubServices.filter((sub) => catalogSubs.includes(sub))
-
-        return {
-          mainCategory: mainCat,
-          subServices: vendorSubsForCat.map((subTitle, idx) => ({
-            id: `${mainCat.toLowerCase().replace(/\s+/g, '-')}-${idx}-${Date.now()}`,
-            title: subTitle,
-            description: `Professional ${subTitle} service provided with complete quality guarantee.`,
-            price: 'Rs. 2,000 – 4,500',
-            status: 'ACTIVE'
-          }))
+        const auth = JSON.parse(localStorage.getItem('asaani_auth') || 'null')
+        if (!auth || auth.role !== 'vendor') {
+          router.push('/vendor/login')
+          return
         }
-      })
 
-      setServicesData(parsedGroups)
+        const vendorId = auth.profile_id || auth.user_id
+        const vendor = await fetchVendorProfile(vendorId)
+        const categories = Array.isArray(vendor?.categories) ? vendor.categories : []
+        const services = Array.isArray(vendor?.services) ? vendor.services : []
+        const rawAvailability = vendor?.availability ?? vendor?.weekly_availability ?? vendor?.weeklyAvailability ?? vendor?.schedule
+        setAvailabilityData(parseVendorAvailability(rawAvailability))
+
+        if (categories.length > 0 && services.length > 0) {
+          const parsedGroups: MainServiceGroup[] = categories
+            .map((mainCat: string): MainServiceGroup => {
+              const canonicalCategory = normalizeCategoryName(mainCat)
+              const categoryCatalog = GLOBAL_SERVICES_CATALOG[canonicalCategory] || []
+              const categoryServices = services
+                .map((serviceTitle: string) => normalizeServiceNameForCategory(canonicalCategory, serviceTitle))
+                .filter((title: string | null): title is string => Boolean(title))
+                .filter((title: string) => categoryCatalog.length === 0 || categoryCatalog.includes(title))
+
+              const unmatchedServices = categoryCatalog.length === 0 ? services.map(String) : []
+
+              const uniqueCategoryServices = Array.from(new Set([...categoryServices, ...unmatchedServices])) as string[]
+
+              return {
+                mainCategory: canonicalCategory,
+                subServices: uniqueCategoryServices.map((subTitle: string, idx: number) => ({
+                  id: `${canonicalCategory.toLowerCase().replace(/\s+/g, '-')}-${idx}-${Date.now()}`,
+                  title: subTitle,
+                  description: `Professional ${subTitle} service provided with complete quality guarantee.`,
+                  price: 'Rs. 2,000 – 4,500',
+                  status: 'ACTIVE' as const
+                }))
+              }
+            })
+            .filter((group: MainServiceGroup) => group.subServices.length > 0)
+
+          setServicesData(parsedGroups)
+        } else {
+          const savedCategoriesStr = localStorage.getItem('vendor_selected_categories')
+          const savedSubServicesStr = localStorage.getItem('vendor_selected_sub_services')
+          const savedCategories: string[] = savedCategoriesStr ? JSON.parse(savedCategoriesStr) : []
+          const savedSubServices: string[] = savedSubServicesStr ? JSON.parse(savedSubServicesStr) : []
+
+          if (savedCategories.length > 0) {
+            const parsedGroups: MainServiceGroup[] = savedCategories.map((mainCat) => {
+              const catalogSubs = GLOBAL_SERVICES_CATALOG[mainCat] || []
+              const vendorSubsForCat = savedSubServices.filter((sub) => catalogSubs.includes(sub))
+
+              return {
+                mainCategory: mainCat,
+                subServices: vendorSubsForCat.map((subTitle, idx) => ({
+                  id: `${mainCat.toLowerCase().replace(/\s+/g, '-')}-${idx}-${Date.now()}`,
+                  title: subTitle,
+                  description: `Professional ${subTitle} service provided with complete quality guarantee.`,
+                  price: 'Rs. 2,000 – 4,500',
+                  status: 'ACTIVE' as const
+                }))
+              }
+            })
+
+            setServicesData(parsedGroups)
+          }
+        }
+      } catch (error) {
+        console.error('Unable to hydrate vendor dashboard from backend route.', error)
+      }
     }
-  }, [])
+
+    hydrateDashboardFromBackend()
+  }, [router])
 
   const updateServicesDataAndStorage = (newData: MainServiceGroup[]) => {
     setServicesData(newData)
@@ -603,7 +728,10 @@ export default function VendorDashboardPage() {
   <span>Notifications</span>
 </Link>
             <button
-              onClick={() => setActiveTab('Order History')}
+              onClick={() => {
+                setActiveTab('Order History')
+                router.push('/vendor/order-history')
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition cursor-pointer ${
                 activeTab === 'Order History'
                   ? 'bg-white/10 text-white'
@@ -675,6 +803,25 @@ export default function VendorDashboardPage() {
               <span>Add New Service</span>
             </button>
           </div>
+
+          {availabilityData.length > 0 && (
+            <section className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="w-4 h-4 text-[#EE6C52]" />
+                <h2 className="text-sm font-extrabold text-slate-900">Availability & Time Slots</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {availabilityData.map((row) => (
+                  <div key={row.day} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                    <p className="text-xs font-extrabold text-slate-800">{row.day}</p>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      {row.slots.length > 0 ? row.slots.join(', ') : 'Available'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* SEARCH & FILTER BAR */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
@@ -755,7 +902,7 @@ export default function VendorDashboardPage() {
                 </h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {servicesData.slice(0, 2).map((group) => (
+                {servicesData.map((group) => (
                   <SelectionSummaryCard key={group.mainCategory} group={group} />
                 ))}
               </div>
@@ -769,7 +916,7 @@ export default function VendorDashboardPage() {
                 No active services found. Select your main category from the dropdown above.
               </div>
             ) : (
-              servicesData.slice(0, 2).map((mainGroup, mainIndex) => (
+              servicesData.map((mainGroup, mainIndex) => (
                 <div
                   key={mainGroup.mainCategory}
                   className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-5 relative"

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -16,6 +16,7 @@ import {
   Clock,
   ArrowLeft
 } from 'lucide-react'
+import { fetchVendorProfile } from '@/app/lib/booking-api'
 
 interface DaySchedule {
   day: string
@@ -145,6 +146,49 @@ export default function VendorProfilePage() {
       contactPreferences: []
     }
 
+    let extractedSchedule: DaySchedule[] = []
+
+    const onboardingDataStr = localStorage.getItem('vendor_onboarding_data')
+    const onboardingData = onboardingDataStr ? JSON.parse(onboardingDataStr) : null
+    const serviceSetupDataStr = localStorage.getItem('vendor_service_setup')
+    const serviceSetupData = serviceSetupDataStr ? JSON.parse(serviceSetupDataStr) : null
+
+    if (onboardingData?.account?.name) {
+      updatedProfile.businessName = onboardingData.account.name || updatedProfile.businessName
+    }
+    if (onboardingData?.account?.email) {
+      updatedProfile.email = onboardingData.account.email || updatedProfile.email
+    }
+    if (onboardingData?.vendorDetails?.businessName) {
+      updatedProfile.businessName = onboardingData.vendorDetails.businessName
+    }
+    if (onboardingData?.vendorDetails?.businessEmail) {
+      updatedProfile.email = onboardingData.vendorDetails.businessEmail
+    }
+    if (onboardingData?.vendorDetails?.contactNumber) {
+      updatedProfile.phone = onboardingData.vendorDetails.contactNumber
+    }
+    if (onboardingData?.vendorDetails?.cnic) {
+      updatedProfile.cnic = onboardingData.vendorDetails.cnic
+    }
+    if (onboardingData?.vendorDetails?.experienceYears) {
+      updatedProfile.experienceYears = onboardingData.vendorDetails.experienceYears
+    }
+
+    if (serviceSetupData?.categories?.length) {
+      updatedProfile.mainCategory = serviceSetupData.categories.join(', ')
+    }
+    if (serviceSetupData?.subServices?.length) {
+      updatedProfile.selectedSubServices = serviceSetupData.subServices
+    }
+
+    if (onboardingData?.services?.categories?.length) {
+      updatedProfile.mainCategory = onboardingData.services.categories.join(', ')
+    }
+    if (onboardingData?.services?.subServices?.length) {
+      updatedProfile.selectedSubServices = onboardingData.services.subServices
+    }
+
     let currentVendorId = localStorage.getItem('vendor_id')
     if (!currentVendorId) {
       currentVendorId = `#AS-${Math.floor(10000 + Math.random() * 90000)}`
@@ -156,8 +200,6 @@ export default function VendorProfilePage() {
     const vendorAvailabilityStr = localStorage.getItem('vendor_availability')
     const weeklyAvailabilityStr = localStorage.getItem('weekly_availability')
     const availabilityStr = localStorage.getItem('availability')
-
-    let extractedSchedule: DaySchedule[] = []
 
     if (signupDataStr) {
       try {
@@ -242,6 +284,44 @@ export default function VendorProfilePage() {
     return updatedProfile
   }
 
+  useEffect(() => {
+    const hydrateProfileFromBackend = async () => {
+      try {
+        if (typeof window === 'undefined') return
+        const auth = JSON.parse(localStorage.getItem('asaani_auth') || 'null')
+        if (!auth || auth.role !== 'vendor') {
+          router.push('/vendor/login')
+          return
+        }
+
+        const vendorId = auth.profile_id || auth.user_id
+        const vendorDetail = await fetchVendorProfile(vendorId)
+        if (vendorDetail) {
+          setProfile((prev) => ({
+            ...prev,
+            vendorId: vendorDetail.id,
+            businessName: vendorDetail.business_name || prev.businessName,
+            email: vendorDetail.email || prev.email,
+            phone: vendorDetail.contact_number || prev.phone,
+            mainCategory: (vendorDetail.categories || []).join(', '),
+            selectedSubServices: vendorDetail.services || [],
+            selectedDays: vendorDetail.availability?.map((row: any) => row.day_of_week)
+              .filter((day: any) => day != null)
+              .map((day: number) => ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][day]),
+            dayWiseSchedule: (vendorDetail.availability || []).map((row: any) => ({
+              day: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][row.day_of_week],
+              slots: row.is_full_day ? ['Full Day'] : [row.start_time || '09:00', row.end_time || '17:00']
+            })),
+          }))
+        }
+      } catch (error) {
+        console.warn('Backend vendor profile could not be hydrated; falling back to stored profile object.', error)
+      }
+    }
+
+    hydrateProfileFromBackend()
+  }, [router])
+
   // Profile Avatar State
   const [avatar, setAvatar] = useState<string>(getInitialAvatar)
 
@@ -265,9 +345,6 @@ export default function VendorProfilePage() {
       reader.onloadend = () => {
         const base64String = reader.result as string
         setAvatar(base64String)
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('vendor_avatar', base64String)
-        }
       }
       reader.readAsDataURL(file)
     }
@@ -285,10 +362,6 @@ export default function VendorProfilePage() {
   // Save Changes
   const handleSaveChanges = () => {
     setToast({ show: true, message: 'Saving profile details...', type: 'saving' })
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('vendor_profile_data', JSON.stringify(profile))
-    }
 
     setTimeout(() => {
       setToast({ show: true, message: 'Profile saved successfully!', type: 'success' })

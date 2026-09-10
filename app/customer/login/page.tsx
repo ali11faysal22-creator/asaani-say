@@ -1,8 +1,11 @@
 'use client'
 import React,{useState} from 'react'
 import {Eye,EyeOff,} from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { loginUser, registerCustomer } from '../../lib/booking-api'
 
 export default function CustomerAuthPage(){
+  const router = useRouter()
   const[isRegister, setIsRegister]=useState(false)
   const[showPassword, setShowPassword]=useState(false)
   const[emailOrPhone, setEmailOrPhone]=useState('')
@@ -10,13 +13,29 @@ export default function CustomerAuthPage(){
   const[email,setEmail]=useState('')
   const[password,setPassword]=useState('')
   const[confirmPassword,setConfirmPassword]=useState('')
+  const[isProcessing,setIsProcessing]=useState(false)
+  const[error,setError]=useState('')
 
-const handleAuthSubmit: React.SubmitEventHandler<HTMLFormElement>=(e)=>{
+const handleAuthSubmit: React.SubmitEventHandler<HTMLFormElement>=async (e)=>{
   e.preventDefault()
-  if (isRegister) {
-    alert(`Account Created for ${name}!`)
-  } else {
-    alert(`LoggedIn with ${emailOrPhone}!`)
+  setError('')
+  if (isRegister && password !== confirmPassword) {
+    setError('Passwords do not match.')
+    return
+  }
+  setIsProcessing(true)
+  try {
+    const authResult = await (isRegister
+      ? await registerCustomer({ full_name: name, email, password })
+      : await loginUser({ identifier: emailOrPhone, password, role: 'customer' }))
+    localStorage.setItem('asaani_customer_auth', JSON.stringify(authResult))
+    localStorage.setItem('asaani_auth', JSON.stringify(authResult))
+    window.dispatchEvent(new Event('asaani-auth-changed'))
+    router.push('/')
+  } catch (requestError) {
+    setError(requestError instanceof Error ? requestError.message : 'Authentication failed.')
+  } finally {
+    setIsProcessing(false)
   }
 }
   return (
@@ -95,6 +114,7 @@ const handleAuthSubmit: React.SubmitEventHandler<HTMLFormElement>=(e)=>{
           </div>
 
           <form onSubmit={handleAuthSubmit} className="space-y-4">
+            {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{error}</p>}
             {isRegister ? (
          
               <>
@@ -151,8 +171,9 @@ const handleAuthSubmit: React.SubmitEventHandler<HTMLFormElement>=(e)=>{
 
                 <button
                   type="submit"
+                  disabled={isProcessing}
                   className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-wider transition shadow-md">
-                  SIGN UP
+                  {isProcessing ? 'SAVING...' : 'SIGN UP'}
                 </button>
 
                 <p className="text-[10px] text-slate-400 text-center">
@@ -199,8 +220,9 @@ const handleAuthSubmit: React.SubmitEventHandler<HTMLFormElement>=(e)=>{
 
                 <button
                   type="submit"
+                  disabled={isProcessing}
                   className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg text-xs transition shadow-md">
-                  Sign in
+                  {isProcessing ? 'Signing in...' : 'Sign in'}
                 </button>
 
                 <div className="text-center pt-2">

@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { 
@@ -76,7 +75,7 @@ export default function ContactPage() {
           <Link href="/" className="hover:text-orange-500 transition">Home</Link>
           <Link href="/about-us" className="hover:text-orange-500 transition">About Us</Link>
           <Link href="/services" className="hover:text-orange-500 transition">Services</Link>
-          <Link href="/contact" className="text-slate-900 font-bold hover:text-orange-500">Contact Us</Link>
+          <Link href="/contact-us" className="text-slate-900 font-bold hover:text-orange-500">Contact Us</Link>
           <Link href="/blog" className="hover:text-orange-500 transition">Blog</Link>
         </nav>
 
@@ -316,7 +315,7 @@ export default function ContactPage() {
                   <li><Link href="/" className="hover:text-orange-500 transition">Home</Link></li>
                   <li><Link href="/about-us" className="hover:text-orange-500 transition">About Us</Link></li>
                   <li><Link href="/services" className="hover:text-orange-500 transition">Services</Link></li>
-                  <li><Link href="/contact" className="hover:text-orange-500 transition">Contact Us</Link></li>
+                  <li><Link href="/contact-us" className="hover:text-orange-500 transition">Contact Us</Link></li>
                 </ul>
               </div>
 
