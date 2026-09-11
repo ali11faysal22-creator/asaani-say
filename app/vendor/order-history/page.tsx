@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { fetchVendorBookings, type BookingResult } from '@/app/lib/booking-api'
+import { fetchVendorBookings, getStoredAuth, type BookingResult } from '@/app/lib/booking-api'
 import { 
   ArrowLeft,
   Search, 
@@ -36,7 +36,7 @@ export default function OrderHistoryPage() {
     let active = true
     const loadOrders = async () => {
       try {
-        const saved = JSON.parse(localStorage.getItem('asaani_auth') || 'null')
+        const saved = getStoredAuth('vendor')
         if (!saved || saved.role !== 'vendor') {
           router.push('/vendor/login')
           return
@@ -77,10 +77,6 @@ export default function OrderHistoryPage() {
   const totalSpent = orders
     .filter(o => o.status !== 'Cancelled')
     .reduce((acc, curr) => acc + curr.totalAmount, 0)
-  const deliveredOrders = orders.filter(o => o.status === 'Delivered').length
-  const pendingOrders = orders.filter(o => o.status === 'In Transit' || o.status === 'Pending').length
-  const cancelledOrders = orders.filter(o => o.status === 'Cancelled').length
-
   return (
     <div className="min-h-screen w-full bg-white grid grid-cols-1 md:grid-cols-12 font-sans text-slate-800">
 
@@ -119,7 +115,7 @@ export default function OrderHistoryPage() {
         <section className="relative w-full bg-[#393E58] py-14 px-6 text-center text-white overflow-hidden">
           <div className="max-w-4xl mx-auto space-y-2 relative z-10">
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
-              Order History
+              My Orders
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-2xl mx-auto leading-relaxed">
               Your home service request has been processed successfully. Our certified professional is on the way to restore your comfort.
@@ -136,7 +132,7 @@ export default function OrderHistoryPage() {
             {/* Header Title + Stats Pill */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
               <div>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">Order History</h2>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">My Orders</h2>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
                   Review and manage your team&apos;s historical purchase records and active transactions.
                 </p>

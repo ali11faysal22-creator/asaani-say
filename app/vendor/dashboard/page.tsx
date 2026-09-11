@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { fetchVendorNotifications, fetchVendorProfile } from '@/app/lib/booking-api'
+import { fetchVendorNotifications, fetchVendorProfile, formatSlotLabel, getStoredAuth } from '@/app/lib/booking-api'
 import {
   Wrench,
   ShieldCheck,
@@ -136,7 +136,7 @@ function parseVendorAvailability(raw: unknown): AvailabilityRow[] {
       const fullDay = Boolean(record.is_full_day)
       const start = record.start_time ? String(record.start_time) : ''
       const end = record.end_time ? String(record.end_time) : ''
-      return { day, isSelected: Boolean(record.is_enabled ?? true), slots: fullDay ? ['Full day'] : start && end ? [`${start} - ${end}`] : [] }
+      return { day, isSelected: Boolean(record.is_enabled ?? true), slots: fullDay ? ['Full day'] : start && end ? [`${formatSlotLabel(start)} - ${formatSlotLabel(end)}`] : [] }
     }).filter((row) => row.day && (row.isSelected || row.slots.length > 0))
   }
   return Object.entries(value as Record<string, unknown>).map(([day, details]) => {
@@ -247,15 +247,16 @@ function NotificationPopover() {
     let active = true
     const loadNotifications = async () => {
       try {
-        const auth = JSON.parse(localStorage.getItem('asaani_auth') || 'null')
+        const auth = getStoredAuth('vendor')
         if (!auth || auth.role !== 'vendor') return
         const rows = await fetchVendorNotifications(auth.profile_id || auth.user_id)
         if (!active) return
-        setNotifications(rows.map((row) => ({
+        const uniqueRows = rows.filter((row, index, items) => index === items.findIndex((candidate) => candidate.title === row.title && candidate.body === row.body && candidate.type === row.type))
+        setNotifications(uniqueRows.map((row) => ({
           id: row.id,
           category: row.type === 'booking' ? 'USER REQUESTS' : 'ORDER PENDING',
           title: row.type === 'booking' ? row.body : row.title,
-          time: 'Just now',
+          time: row.created_at ? new Date(row.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', hour12: true }) : 'Just now',
           unread: !row.is_read,
           visual: { kind: 'clock' }
         })))
@@ -474,7 +475,7 @@ export default function VendorDashboardPage() {
       try {
         if (typeof window === 'undefined') return
 
-        const auth = JSON.parse(localStorage.getItem('asaani_auth') || 'null')
+        const auth = getStoredAuth('vendor')
         if (!auth || auth.role !== 'vendor') {
           router.push('/vendor/login')
           return
@@ -484,6 +485,7 @@ export default function VendorDashboardPage() {
         const vendor = await fetchVendorProfile(vendorId)
         const categories = Array.isArray(vendor?.categories) ? vendor.categories : []
         const services = Array.isArray(vendor?.services) ? vendor.services : []
+        const servicesByCategory = vendor?.services_by_category || {}
         const rawAvailability = vendor?.availability ?? vendor?.weekly_availability ?? vendor?.weeklyAvailability ?? vendor?.schedule
         setAvailabilityData(parseVendorAvailability(rawAvailability))
 
@@ -492,7 +494,7 @@ export default function VendorDashboardPage() {
             .map((mainCat: string): MainServiceGroup => {
               const canonicalCategory = normalizeCategoryName(mainCat)
               const categoryCatalog = GLOBAL_SERVICES_CATALOG[canonicalCategory] || []
-              const categoryServices = services
+              const categoryServices = (servicesByCategory[mainCat] || services)
                 .map((serviceTitle: string) => normalizeServiceNameForCategory(canonicalCategory, serviceTitle))
                 .filter((title: string | null): title is string => Boolean(title))
                 .filter((title: string) => categoryCatalog.length === 0 || categoryCatalog.includes(title))
@@ -729,17 +731,17 @@ export default function VendorDashboardPage() {
 </Link>
             <button
               onClick={() => {
-                setActiveTab('Order History')
+                setActiveTab('My Orders')
                 router.push('/vendor/order-history')
               }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition cursor-pointer ${
-                activeTab === 'Order History'
+                activeTab === 'My Orders'
                   ? 'bg-white/10 text-white'
                   : 'text-slate-300 hover:bg-white/5 hover:text-white'
               }`}
             >
               <History className="w-4 h-4 text-slate-300" />
-              <span>Order History</span>
+              <span>My Orders</span>
             </button>
           </nav>
         </div>
@@ -811,8 +813,8 @@ export default function VendorDashboardPage() {
                 <h2 className="text-sm font-extrabold text-slate-900">Availability & Time Slots</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {availabilityData.map((row) => (
-                  <div key={row.day} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                {availabilityData.map((row, index) => (
+                  <div key={`${row.day}-${row.slots.join('-')}-${index}`} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
                     <p className="text-xs font-extrabold text-slate-800">{row.day}</p>
                     <p className="mt-1 text-[11px] text-slate-500">
                       {row.slots.length > 0 ? row.slots.join(', ') : 'Available'}

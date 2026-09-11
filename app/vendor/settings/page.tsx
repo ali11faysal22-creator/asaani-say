@@ -196,35 +196,33 @@ export default function VendorSettingsPage() {
         try {
           const parsedAcc = JSON.parse(rawAccount);
           const accountData = parsedAcc.account || parsedAcc;
-          setAccountInfo(prev => ({
+          queueMicrotask(() => setAccountInfo(prev => ({
             ...prev,
             fullName: accountData.name || accountData.fullName || prev.fullName,
             email: accountData.email || prev.email,
             phone: accountData.phone || prev.phone,
             businessName: accountData.businessName || prev.businessName
-          }));
+          })));
         } catch (error) {
           console.error('LocalStorage parsing error:', error);
         }
       }
     }
 
-    setLoading(false);
+    queueMicrotask(() => setLoading(false));
   }, []);
 
   const syncToLocalStorage = (
     newMain = mainServices,
     newSub = subServices,
-    newAvail = availability,
-    newAccount = accountInfo,
-    newPayout = payoutInfo
+    newAvail = availability
   ) => {
     localStorage.setItem('vendor_selected_categories', JSON.stringify(newMain));
     localStorage.setItem('vendor_main_services', JSON.stringify(newMain));
     localStorage.setItem('vendor_selected_sub_services', JSON.stringify(newSub));
     localStorage.setItem('vendor_sub_services', JSON.stringify(newSub));
 
-    const availObject: Record<string, any> = {};
+    const availObject: Record<string, { isSelected: boolean; slots: string }> = {};
     newAvail.forEach(item => {
       availObject[item.day] = {
         isSelected: item.active,
@@ -247,14 +245,14 @@ export default function VendorSettingsPage() {
     setSubServices(filteredSubs);
     setIsMainModalOpen(false);
 
-    syncToLocalStorage(normalizedNewMain, filteredSubs, availability, accountInfo, payoutInfo);
+    syncToLocalStorage(normalizedNewMain, filteredSubs, availability);
   };
 
   const handleSaveSubServices = (updatedSubs: string[]) => {
     setSubServices(updatedSubs);
     setIsSubModalOpen(false);
 
-    syncToLocalStorage(mainServices, updatedSubs, availability, accountInfo, payoutInfo);
+    syncToLocalStorage(mainServices, updatedSubs, availability);
   };
 
   const handleAvailabilityToggle = (index: number) => {

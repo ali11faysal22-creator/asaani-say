@@ -19,11 +19,10 @@ import {
   CheckCheck,
   ChevronRight,
   Clock,
-  RotateCcw,
   ArrowLeft,
   Info
 } from 'lucide-react'
-import { decideVendorBooking, fetchVendorNotifications } from '@/app/lib/booking-api'
+import { decideVendorBooking, fetchVendorNotifications, getStoredAuth } from '@/app/lib/booking-api'
 
 export interface NotificationItem {
   id: string
@@ -45,84 +44,6 @@ export interface NotificationItem {
   bookingId?: string
 }
 
-const getInitialNotifications = (): NotificationItem[] => [
-  {
-    id: 'notif-101',
-    type: 'booking_request',
-    title: 'New Service Booking Request',
-    message: 'A customer requested urgent service for Electrician - DB Panel Repairing.',
-    timestamp: '2 mins ago',
-    createdAt: '2026-08-20T00:02:00.000Z',
-    isRead: false,
-    customerName: 'Muhammad Ahmed',
-    customerPhone: '+92 300 1234567',
-    location: 'Gulberg III, Lahore',
-    service: 'Electrician',
-    subService: 'DB Panel Repair',
-    date: '2026-08-20',
-    time: '02:30 PM',
-    amount: 'Rs. 2,500',
-    bookingStatus: 'pending'
-  },
-  {
-    id: 'notif-102',
-    type: 'booking_request',
-    title: 'New Service Booking Request',
-    message: 'New request for AC Gas Refilling & Servicing.',
-    timestamp: '8 mins ago',
-    createdAt: '2026-08-20T00:08:00.000Z',
-    isRead: false,
-    customerName: 'Hamza Malik',
-    customerPhone: '+92 312 4455667',
-    location: 'Johar Town, Lahore',
-    service: 'AC Repairing',
-    subService: 'Gas Refilling',
-    date: '2026-08-20',
-    time: '04:00 PM',
-    amount: 'Rs. 3,500',
-    bookingStatus: 'pending'
-  },
-  {
-    id: 'notif-103',
-    type: 'booking_confirmed',
-    title: 'Booking Confirmed',
-    message: 'Fatima Sheikh confirmed your quote for AC Service.',
-    timestamp: '25 mins ago',
-    createdAt: '2026-08-20T00:25:00.000Z',
-    isRead: false,
-    customerName: 'Fatima Sheikh',
-    customerPhone: '+92 321 9876543',
-    location: 'DHA Phase 5, Lahore',
-    service: 'AC Services',
-    date: '2026-08-21',
-    time: '11:00 AM',
-    amount: 'Rs. 3,500'
-  },
-  {
-    id: 'notif-104',
-    type: 'payment',
-    title: 'Payment Credited',
-    message: 'Payment for Plumbing Pipe Leakage transferred to your wallet.',
-    timestamp: '1 hour ago',
-    createdAt: '2026-08-20T01:00:00.000Z',
-    isRead: true,
-    customerName: 'Usman Ali',
-    service: 'Plumbing',
-    amount: 'Rs. 2,800'
-  },
-  {
-    id: 'notif-105',
-    type: 'booking_cancelled',
-    title: 'Booking Cancelled',
-    message: 'Customer cancelled the Water Heater Repair service.',
-    timestamp: '2 hours ago',
-    createdAt: '2026-08-20T02:00:00.000Z',
-    isRead: true,
-    customerName: 'Zainab Bibi',
-    service: 'Plumbing'
-  }
-]
-
 export default function NotificationsPage() {
   const router = useRouter()
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
@@ -134,7 +55,7 @@ export default function NotificationsPage() {
     const loadVendorNotifications = async () => {
       try {
         if (typeof window === 'undefined') return
-        const auth = JSON.parse(localStorage.getItem('asaani_auth') || 'null')
+        const auth = getStoredAuth('vendor')
         if (!auth || auth.role !== 'vendor') {
           setNotifications([])
           setSelectedNotif(null)
@@ -143,7 +64,8 @@ export default function NotificationsPage() {
 
         const vendorId = auth.profile_id || auth.user_id
         const rows = await fetchVendorNotifications(vendorId)
-        const mapped = rows.map((row) => {
+        const uniqueRows = rows.filter((row, index, items) => index === items.findIndex((candidate) => candidate.title === row.title && candidate.body === row.body && candidate.type === row.type))
+        const mapped = uniqueRows.map((row) => {
           const bookingMatch = (row.body || '').match(/Booking ID:\s*([a-zA-Z0-9-]+)/i)
           const bookingId = bookingMatch?.[1]
           const requestMatch = (row.body || '').match(
@@ -155,8 +77,8 @@ export default function NotificationsPage() {
             type: row.type === 'booking' ? 'booking_request' : 'booking_confirmed',
             title: row.title,
             message: row.body,
-            timestamp: 'Just now',
-            createdAt: new Date().toISOString(),
+            timestamp: row.created_at ? new Date(row.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', hour12: true }) : 'Just now',
+            createdAt: row.created_at || new Date().toISOString(),
             isRead: row.is_read,
             customerName: requestMatch?.[1]?.trim(),
             service,
@@ -196,7 +118,7 @@ export default function NotificationsPage() {
     const createdTime = new Date(item.createdAt).getTime()
     const currentTime = new Date().getTime()
     const diffInMinutes = (currentTime - createdTime) / (1000 * 60)
-    return diffInMinutes >= 5
+    return diffInMinutes >= 1
   }
 
   const handleSelectNotif = (item: NotificationItem) => {
@@ -212,12 +134,6 @@ export default function NotificationsPage() {
     updateStorage(updated)
   }
 
-  const handleResetNotifications = () => {
-    const init = getInitialNotifications()
-    updateStorage(init)
-    setSelectedNotif(null)
-  }
-
   const handleDelete = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
     const updated = notifications.filter(n => n.id !== id)
@@ -227,7 +143,11 @@ export default function NotificationsPage() {
 
   const handleBookingAction = async (id: string, status: 'accepted' | 'declined') => {
     try {
-      const auth = JSON.parse(localStorage.getItem('asaani_auth') || 'null')
+      const auth = getStoredAuth('vendor')
+      if (!auth) {
+        alert('Vendor session expired. Please sign in again.')
+        return
+      }
       const action = status === 'accepted' ? 'accept' : 'reject'
       const bookingId = selectedNotif?.bookingId || id
       if (!bookingId) {
@@ -301,7 +221,7 @@ export default function NotificationsPage() {
               How It Works
             </div>
             <p className="text-[11px] text-slate-300 leading-relaxed">
-              * <b>5-Minute Timeout:</b> Accept or Decline new booking requests within 5 minutes <b>Once the time runs out</b> the request will auto-expire. 
+              * <b>1-Minute Timeout:</b> Accept or Decline new booking requests within 1 minute <b>Once the time runs out</b> the request moves to the next vendor.
             </p>
           </div>
         </div>
@@ -342,14 +262,6 @@ export default function NotificationsPage() {
               </p>
             </div>
 
-            <button
-              onClick={handleResetNotifications}
-              title="Reset List Data"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition shadow-xs cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Reset List
-            </button>
           </div>
 
           {/* Filter Bar */}
@@ -533,7 +445,7 @@ export default function NotificationsPage() {
                             <Clock className="w-4 h-4" /> TIME OUT (Request Expired)
                           </p>
                           <p className="text-[11px] text-rose-500">
-                            Yeh booking request 5 minute mein accept na hone par expire ho chuki hai.
+                            This booking request was assigned to the next vendor because it was not accepted within 1 minute.
                           </p>
                         </div>
                       ) : selectedNotif.bookingStatus === 'pending' ? (

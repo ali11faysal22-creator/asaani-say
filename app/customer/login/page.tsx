@@ -29,7 +29,7 @@ const handleAuthSubmit: React.SubmitEventHandler<HTMLFormElement>=async (e)=>{
       ? await registerCustomer({ full_name: name, email, password })
       : await loginUser({ identifier: emailOrPhone, password, role: 'customer' }))
     localStorage.setItem('asaani_customer_auth', JSON.stringify(authResult))
-    localStorage.setItem('asaani_auth', JSON.stringify(authResult))
+    localStorage.removeItem('asaani_auth')
     window.dispatchEvent(new Event('asaani-auth-changed'))
     router.push('/')
   } catch (requestError) {

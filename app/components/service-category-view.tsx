@@ -17,9 +17,10 @@ import {
   Check,
   UserCheck,
   Phone,
-  Navigation
+  Navigation,
+  Loader2
 } from 'lucide-react'
-import { API_BASE, createCustomerAddress, fetchAddresses, fetchCategory, fetchDemoCustomer, getCurrentUser, getStoredAuth, type CatalogCategory, type CatalogService, type DateRow } from '../lib/booking-api'
+import { API_BASE, createCustomerAddress, fetchAddresses, fetchCategory, fetchDemoCustomer, formatSlotLabel, getCurrentUser, getStoredAuth, type CatalogCategory, type CatalogService, type DateRow } from '../lib/booking-api'
 import { categoryIcon } from '../lib/category-icons'
 import CustomerNavbar from './customer-navbar'
 
@@ -94,7 +95,11 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
     fetch(`${API_BASE}/api/availability/slots?address_id=${selectedAddress}&date=${dateStr}&service_id=${serviceId}&service=${encodeURIComponent(serviceName)}`, { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
-        setSlots(data.slots || [])
+        setSlots((data.slots || []).filter((slot: { start: string; end: string }) => {
+          const [startHour, startMinute] = slot.start.split(':').map(Number)
+          const [endHour, endMinute] = slot.end.split(':').map(Number)
+          return (endHour * 60 + endMinute) - (startHour * 60 + startMinute) === 60
+        }))
         setLoadingSlots(false)
       })
       .catch(() => {
@@ -143,6 +148,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   // 3. Fetch Available Dates when Modal opens or Address changes
   useEffect(() => {
     if (isSlotModalOpen && selectedAddress) {
+      queueMicrotask(() => setLoadingDates(true))
       const serviceId = selectedServices[0]?.id || ''
       const serviceName = selectedServices[0]?.name || ''
 
@@ -332,6 +338,9 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                 <div className="flex-1 min-w-0 space-y-1">
                   <h3 className="text-sm font-extrabold text-[#1E2342] truncate">{item.name}</h3>
                   <p className="text-[11px] text-slate-500 truncate">{item.subtitle}</p>
+                  <p className="text-sm font-black text-orange-600">
+                    {item.price != null ? `Rs. ${item.price.toLocaleString()}` : item.price_label || 'Price unavailable'}
+                  </p>
                   <div className="flex items-center justify-between pt-1">
                     <div className="flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
@@ -417,7 +426,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                     <Calendar className="w-4 h-4 text-orange-500" /> Available Dates
                   </label>
                   {loadingDates ? (
-                    <p className="text-xs text-slate-400 py-2">Checking vendors in range...</p>
+                    <div className="flex items-center gap-2 py-3 text-xs font-semibold text-slate-400"><Loader2 className="h-4 w-4 animate-spin text-orange-500" /> Checking availability...</div>
                   ) : (
                     <div className="flex gap-2 overflow-x-auto pb-3 pt-1 scrollbar-thin">
                       {availableDates.map((item) => {
@@ -428,7 +437,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                             key={item.date}
                             disabled={!item.available}
                             onClick={() => handleDateSelect(item.date)}
-                            className={`min-w-[68px] h-[68px] shrink-0 rounded-2xl flex flex-col items-center justify-center border text-xs transition cursor-pointer relative ${
+                            className={`min-w-17 h-17 shrink-0 rounded-2xl flex flex-col items-center justify-center border text-xs transition cursor-pointer relative ${
                               isSelected
                                 ? 'bg-[#3A3E59] text-white border-[#3A3E59] shadow-md scale-105'
                                 : item.available
@@ -454,7 +463,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                     <Clock className="w-4 h-4 text-orange-500" /> Time Slots
                   </label>
                   {loadingSlots ? (
-                    <p className="text-xs text-slate-400 py-2">Fetching slots for date...</p>
+                    <div className="flex items-center gap-2 py-3 text-xs font-semibold text-slate-400"><Loader2 className="h-4 w-4 animate-spin text-orange-500" /> Loading one-hour slots...</div>
                   ) : (
                     <div className="grid grid-cols-3 gap-2">
                       {slots.map((slot, idx) => {
@@ -472,7 +481,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                                 : 'bg-slate-100 border-slate-100 text-slate-300 cursor-not-allowed opacity-50'
                             }`}
                           >
-                            <span>{slot.start.slice(0, 5)} - {slot.end.slice(0, 5)}</span>
+                            <span>{formatSlotLabel(slot.start)} - {formatSlotLabel(slot.end)}</span>
                           </button>
                         )
                       })}
@@ -485,7 +494,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                   onClick={handleFindVendors}
                   className="w-full bg-[#EE6C52] hover:bg-orange-600 disabled:bg-slate-300 text-white font-extrabold text-sm py-3.5 rounded-xl transition shadow-md mt-4 cursor-pointer"
                 >
-                  {findingVendors ? 'Checking Availability...' : 'Continue'}
+                  <span className="inline-flex items-center justify-center gap-2">{findingVendors && <Loader2 className="h-4 w-4 animate-spin" />}{findingVendors ? 'Checking Availability...' : 'Proceed to checkout'}</span>
                 </button>
 
                 {vendors.length > 0 && (
@@ -493,14 +502,14 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                     {bookingError && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{bookingError}</p>}
                     <div>
                       <h4 className="text-sm font-extrabold text-slate-900">Service Request Sent</h4>
-                      <p className="text-[11px] text-slate-500 leading-relaxed">We have requested a vendor for this service and related services. If the vendor does not accept your request within 3 minutes, another vendor will be assigned automatically.</p>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">Your order is received. If the vendor does not respond within 1 minute, another available vendor will be assigned automatically.</p>
                     </div>
                     <button
                       disabled={isSubmitting}
                       onClick={handleConfirmBooking}
                       className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-extrabold text-sm py-3.5 rounded-xl transition shadow-md cursor-pointer"
                     >
-                      {isSubmitting ? 'Submitting Request...' : 'Confirm Request & Done'}
+                      <span className="inline-flex items-center justify-center gap-2">{isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}{isSubmitting ? 'Submitting Request...' : 'Confirm Request & Done'}</span>
                     </button>
                   </div>
                 )}
@@ -576,7 +585,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
         </div>
       )}
       {showAuthPrompt && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600"><UserCheck className="h-6 w-6" /></div>
             <h3 className="text-lg font-extrabold text-slate-900">Login or create an account</h3>

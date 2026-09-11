@@ -69,6 +69,7 @@ export type AssignedVendor = {
   first_name: string
   last_name: string
   contact_number: string
+  business_phone?: string | null
   email?: string
   city?: string | null
   area?: string | null
@@ -82,6 +83,10 @@ export type BookingResult = {
   status: string
   service_id?: string | null
   customer_id: string
+  customer_name: string
+  customer_phone?: string | null
+  total_amount?: number | null
+  created_at: string
   service_name: string
   date: string
   slot_start: string
@@ -106,6 +111,8 @@ export type CustomerNotification = {
   body: string
   type: string
   is_read: boolean
+  created_at?: string
+  createdAt?: string
 }
 
 export type VendorProfileResponse = {
@@ -114,11 +121,13 @@ export type VendorProfileResponse = {
   first_name: string
   last_name: string
   contact_number: string
+  profile_image_url?: string | null
   email?: string
   city?: string | null
   area?: string | null
   categories: string[]
   services: string[]
+  services_by_category?: Record<string, string[]>
   availability: Array<{
     day_of_week: number | string
     is_enabled: boolean
@@ -145,6 +154,18 @@ export function getStoredAuth(role: 'customer' | 'vendor'): AuthResponse | null 
     }
   }
   return null
+}
+
+export function clearStoredAuth(role: 'customer' | 'vendor'): void {
+  if (typeof window === 'undefined') return
+  const roleKey = role === 'customer' ? 'asaani_customer_auth' : 'asaani_vendor_auth'
+  localStorage.removeItem(roleKey)
+  try {
+    const shared = JSON.parse(localStorage.getItem('asaani_auth') || 'null') as AuthResponse | null
+    if (shared?.role === role) localStorage.removeItem('asaani_auth')
+  } catch {
+    localStorage.removeItem('asaani_auth')
+  }
 }
 
 async function readError(res: Response): Promise<string> {
@@ -262,7 +283,20 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
   return api(`/api/v1/vendors/${encodeURIComponent(vendorId)}`)
 }
 
-export async function fetchVendorNotifications(vendorId: string): Promise<Array<{ id: string; user_id: string; title: string; body: string; type: string; is_read: boolean }>> {
+export async function uploadVendorProfileImage(vendorId: string, file: File): Promise<VendorProfileResponse> {
+  const formData = new FormData()
+  formData.append('image', file)
+  const res = await fetch(`${API_BASE}/api/v1/vendors/${encodeURIComponent(vendorId)}/profile-image`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error(await readError(res))
+  return res.json()
+}
+
+export async function fetchVendorNotifications(vendorId: string): Promise<Array<{ id: string; user_id: string; title: string; body: string; type: string; is_read: boolean; created_at?: string }>> {
   return api(`/api/v1/vendor/${encodeURIComponent(vendorId)}/notifications`)
 }
 
@@ -283,6 +317,10 @@ export async function fetchCustomerNotifications(customerId: string): Promise<Cu
 
 export async function markCustomerNotificationRead(customerId: string, notificationId: string): Promise<CustomerNotification> {
   return api(`/api/v1/customer/notifications/${notificationId}/read?customer_id=${encodeURIComponent(customerId)}`, { method: 'PATCH' })
+}
+
+export async function markAllCustomerNotificationsRead(customerId: string): Promise<CustomerNotification[]> {
+  return api(`/api/v1/customer/notifications/read-all?customer_id=${encodeURIComponent(customerId)}`, { method: 'PATCH' })
 }
 
 export async function deleteCustomerNotification(customerId: string, notificationId: string): Promise<void> {
@@ -344,6 +382,7 @@ export async function placeBooking(payload: {
   date: string
   slot_start: string
   slot_end: string
+  total_amount?: number
 }): Promise<BookingResult> {
   return api('/api/bookings', {
     method: 'POST',
@@ -372,9 +411,13 @@ function looksLikeUuid(value?: string): boolean {
 }
 
 export function formatSlotLabel(hhmm: string): string {
-  const [hStr, mStr] = hhmm.split(':')
-  let h = Number(hStr)
-  const m = mStr || '00'
+  const match = hhmm.trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i)
+  if (!match) return hhmm
+  let h = Number(match[1])
+  const m = match[2]
+  const inputPeriod = match[3]?.toUpperCase()
+  if (inputPeriod === 'PM' && h < 12) h += 12
+  if (inputPeriod === 'AM' && h === 12) h = 0
   const period = h >= 12 ? 'PM' : 'AM'
   if (h === 0) h = 12
   else if (h > 12) h -= 12

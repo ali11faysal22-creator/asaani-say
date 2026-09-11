@@ -16,7 +16,7 @@ import {
   Clock,
   ArrowLeft
 } from 'lucide-react'
-import { fetchVendorProfile } from '@/app/lib/booking-api'
+import { API_BASE, fetchVendorProfile, formatSlotLabel, getStoredAuth, uploadVendorProfileImage, type VendorProfileResponse } from '@/app/lib/booking-api'
 
 interface DaySchedule {
   day: string
@@ -98,11 +98,10 @@ export default function VendorProfilePage() {
 
   const getInitialAvatar = (): string => {
     if (typeof window === 'undefined') {
-      return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250'
+      return '/Worker.png'
     }
 
-    const savedAvatar = localStorage.getItem('vendor_avatar')
-    return savedAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250'
+    return '/Worker.png'
   }
 
   const getInitialProfile = (): VendorProfileData => {
@@ -284,11 +283,14 @@ export default function VendorProfilePage() {
     return updatedProfile
   }
 
+  const [avatar, setAvatar] = useState<string>(getInitialAvatar)
+  const [profile, setProfile] = useState<VendorProfileData>(getInitialProfile)
+
   useEffect(() => {
     const hydrateProfileFromBackend = async () => {
       try {
         if (typeof window === 'undefined') return
-        const auth = JSON.parse(localStorage.getItem('asaani_auth') || 'null')
+        const auth = getStoredAuth('vendor')
         if (!auth || auth.role !== 'vendor') {
           router.push('/vendor/login')
           return
@@ -297,6 +299,8 @@ export default function VendorProfilePage() {
         const vendorId = auth.profile_id || auth.user_id
         const vendorDetail = await fetchVendorProfile(vendorId)
         if (vendorDetail) {
+          const availability = vendorDetail.availability || []
+          const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
           setProfile((prev) => ({
             ...prev,
             vendorId: vendorDetail.id,
@@ -305,14 +309,18 @@ export default function VendorProfilePage() {
             phone: vendorDetail.contact_number || prev.phone,
             mainCategory: (vendorDetail.categories || []).join(', '),
             selectedSubServices: vendorDetail.services || [],
-            selectedDays: vendorDetail.availability?.map((row: any) => row.day_of_week)
-              .filter((day: any) => day != null)
-              .map((day: number) => ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][day]),
-            dayWiseSchedule: (vendorDetail.availability || []).map((row: any) => ({
-              day: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][row.day_of_week],
-              slots: row.is_full_day ? ['Full Day'] : [row.start_time || '09:00', row.end_time || '17:00']
+            selectedDays: availability
+              .map((row: VendorProfileResponse['availability'][number]) => Number(row.day_of_week))
+              .filter((day) => Number.isInteger(day) && day >= 0 && day < dayNames.length)
+              .map((day) => dayNames[day]),
+            dayWiseSchedule: availability.map((row: VendorProfileResponse['availability'][number]) => ({
+              day: dayNames[Number(row.day_of_week)] || String(row.day_of_week),
+              slots: row.is_full_day ? ['Full Day'] : [`${formatSlotLabel(row.start_time || '09:00')} - ${formatSlotLabel(row.end_time || '17:00')}`]
             })),
           }))
+          if (vendorDetail.profile_image_url) {
+            setAvatar(vendorDetail.profile_image_url.startsWith('/') ? `${API_BASE}${vendorDetail.profile_image_url}` : vendorDetail.profile_image_url)
+          }
         }
       } catch (error) {
         console.warn('Backend vendor profile could not be hydrated; falling back to stored profile object.', error)
@@ -321,12 +329,6 @@ export default function VendorProfilePage() {
 
     hydrateProfileFromBackend()
   }, [router])
-
-  // Profile Avatar State
-  const [avatar, setAvatar] = useState<string>(getInitialAvatar)
-
-  // Initial State
-  const [profile, setProfile] = useState<VendorProfileData>(getInitialProfile)
 
   const [newAreaInput, setNewAreaInput] = useState('')
   const [showAddAreaInput, setShowAddAreaInput] = useState(false)
@@ -338,15 +340,20 @@ export default function VendorProfilePage() {
   }>({ show: false, message: '', type: 'success' })
 
   // Avatar Handler
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const base64String = reader.result as string
-        setAvatar(base64String)
-      }
-      reader.readAsDataURL(file)
+    const auth = getStoredAuth('vendor')
+    if (!file || !auth?.profile_id) return
+    try {
+      setToast({ show: true, message: 'Uploading profile picture...', type: 'saving' })
+      const updatedVendor = await uploadVendorProfileImage(auth.profile_id, file)
+      const imageUrl = updatedVendor.profile_image_url
+        ? updatedVendor.profile_image_url.startsWith('/') ? `${API_BASE}${updatedVendor.profile_image_url}` : updatedVendor.profile_image_url
+        : '/Worker.png'
+      setAvatar(imageUrl)
+      setToast({ show: true, message: 'Profile picture saved successfully!', type: 'success' })
+    } catch (error) {
+      setToast({ show: true, message: error instanceof Error ? error.message : 'Unable to upload profile picture', type: 'success' })
     }
   }
 

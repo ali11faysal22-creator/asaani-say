@@ -44,15 +44,8 @@ interface VendorProfile {
   queue: string[]
 }
 
-interface BookingNotification {
-  id: string
-  message: string
-  type: 'user' | 'vendor'
-  createdAt: string
-  isRead: boolean
-}
-const SLOT_START_HOUR = 8   
-const SLOT_END_HOUR = 17    
+const SLOT_START_HOUR = 8
+const SLOT_END_HOUR = 17
 const SLOT_STEP_MIN = 30
 
 function generateTimeSlots(): string[] {
@@ -309,9 +302,6 @@ function getUnavailableSlotsForDate(dateStr: string): Set<string> {
   return unavailable
 }
 
-// ---------------------------------------------------------------------------
-// CALENDAR HELPERS
-// ---------------------------------------------------------------------------
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
@@ -324,61 +314,11 @@ function toDateKey(year: number, month: number, day: number): string {
   return `${year}-${mm}-${dd}`
 }
 
-// ---------------------------------------------------------------------------
-// LEGACY FALLBACK ONLY — used when a cart item has no `category` field
-// (i.e. it was added to the cart before this update, or the services page
-// hasn't been updated yet to pass a category). Once every "Add to Cart"
-// call sets `category`, this fallback stops being used entirely.
-// ---------------------------------------------------------------------------
-function guessCategoryFromTitle(title: string): string {
-  const t = title.toLowerCase()
-  if (t.includes('ac') || t.includes('cooling')) return 'AC Services'
-  if (t.includes('plumb')) return 'Plumbing'
-  if (t.includes('electric')) return 'Electrician'
-  if (t.includes('paint')) return 'Painter'
-  if (t.includes('carpenter') || t.includes('wood')) return 'Carpenter'
-  if (t.includes('pest') || t.includes('termite') || t.includes('ant') || t.includes('cockroach') || t.includes('rodent') || t.includes('mosquito')) return 'Pest Control'
-  if (t.includes('handyman')) return 'Handyman'
-  if (t.includes('inspect')) return 'Home Inspection'
-  if (t.includes('geyser')) return 'Geyser'
-  return title
-}
-
-// Filter vendors by MAIN SERVICE CATEGORY only (not by sub-service title).
-// A cart item's `category` (e.g. "Pest Control") is what gets matched
-// against a vendor's `specialty` list — the specific sub-service name
-// (e.g. "Ant Control", "Termite Treatment") never matters for matching.
-function filterVendorsByServiceAndLocation(
-  vendors: VendorProfile[],
-  cartItems: CartItem[]
-): VendorProfile[] {
-  // Prefer the explicit category set at add-to-cart time; only fall back
-  // to guessing from the title for old cart items that predate `category`.
-  const requestedCategories = [
-    ...new Set(
-      cartItems.map(item => (item.category && item.category.trim()) || guessCategoryFromTitle(item.title))
-    )
-  ]
-
-  const filtered = vendors.filter(vendor =>
-    vendor.specialty.some(spec =>
-      requestedCategories.some(cat => cat.toLowerCase() === spec.toLowerCase())
-    )
-  )
-
-  // Sort by rating (highest first)
-  return filtered.sort((a, b) => b.rating - a.rating)
-}
-
 function isPastDate(year: number, month: number, day: number): boolean {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const candidate = new Date(year, month, day)
   return candidate < today
-}
-
-function generateOrderId(): string {
-  return 'AS-2026-' + Math.floor(1000 + Math.random() * 9000)
 }
 
 function slotToApiTime(slot: string): string {
@@ -410,16 +350,13 @@ export default function CartAndCheckoutPage() {
   const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(0)
   const [billingDetails, setBillingDetails] = useState({ fullName: '', phone: '', email: '', address: '' })
 
-  const [isHydrated, setIsHydrated] = useState(false)
-
-
   const [showModal, setShowModal] = useState(false)
   const [confirmedOrderInfo, setConfirmedOrderInfo] = useState<{
     orderId: string
     serviceName: string
   } | null>(null)
   const [showVendorModal, setShowVendorModal] = useState(false)
-  const [filteredVendors, setFilteredVendors] = useState<VendorProfile[]>([])
+  const [filteredVendors] = useState<VendorProfile[]>([])
 
   const today = useMemo(() => new Date(), [])
 
@@ -443,7 +380,6 @@ export default function CartAndCheckoutPage() {
       setSavedAddresses(getInitialSavedAddresses())
       setSelectedAddressIndex(getInitialSelectedAddressIndex())
       setBillingDetails(getInitialBillingDetails())
-      setIsHydrated(true)
     })
   }, [])
 
@@ -591,10 +527,6 @@ export default function CartAndCheckoutPage() {
     return cells
   }, [viewYear, viewMonth])
 
-  const isDateSelectable = (dateKey: string) => {
-    if (!dateKey) return false
-    return !isPastDate(new Date(dateKey).getFullYear(), new Date(dateKey).getMonth(), new Date(dateKey).getDate()) && !isDateFullyBooked(dateKey)
-  }
   const unavailableSlots = useMemo(
     () => getUnavailableSlotsForDate(selectedDate),
     [selectedDate]
@@ -609,6 +541,10 @@ export default function CartAndCheckoutPage() {
 
   // Handle vendor request from modal
   const handleVendorRequest = (requestedVendor: VendorProfile) => {
+    void handlePlaceOrder(requestedVendor.id)
+  }
+
+  /*
     const generatedOrderId = generateOrderId()
     const serviceNameText = cartItems.length === 1 
       ? cartItems[0].title 
@@ -671,6 +607,7 @@ export default function CartAndCheckoutPage() {
       },
       ...existingVendorportalNotifications
     ])
+    window.dispatchEvent(new Event('asaani-notification-created'))
 
     setSelectedVendor(requestedVendor)
     setConfirmedOrderInfo({
@@ -688,8 +625,9 @@ export default function CartAndCheckoutPage() {
       router.push('/order-confirmation')
     }, 5000)
   }
+  */
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = async (requestedVendorId?: string) => {
     if (cartItems.length === 0) {
       alert('Your cart is empty! Please add some services to your cart first..')
       return
@@ -725,10 +663,12 @@ export default function CartAndCheckoutPage() {
         customer_id: auth.profile_id,
         ...(requestedService.serviceId ? { service_id: requestedService.serviceId } : {}),
         ...(requestedService.service ? { service: requestedService.service } : {}),
+        ...(requestedVendorId ? { vendor_id: requestedVendorId } : {}),
         address_id: selectedAddress.id,
         date: selectedDate,
         slot_start: slotStart,
-        slot_end: addThirtyMinutes(slotStart)
+        slot_end: addThirtyMinutes(slotStart),
+        total_amount: totalAmount
       })
 
       const serviceNameText = cartItems.length === 1
@@ -758,29 +698,6 @@ export default function CartAndCheckoutPage() {
       window.setTimeout(() => router.push('/order-confirmation'), 800)
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Unable to place booking')
-    }
-  }
-
-  const handlePlaceOrderLegacy = () => {
-    if (cartItems.length === 0) {
-      alert('Your cart is empty! Please add some services to your cart first..')
-      return
-    }
-
-    if (!selectedDate || !selectedTimeSlot) {
-      alert('Please select a service date and an available time slot before proceeding..')
-      return
-    }
-
-    if (!billingDetails.fullName || !billingDetails.phone || !billingDetails.address) {
-      alert('Please complete your billing and booking details (Name, Phone Number, and Address) before proceeding..')
-      return
-    }
-
-    const assignedVendor = getBestAvailableVendor(selectedDate, selectedTimeSlot)
-    if (!assignedVendor) {
-      alert('No vendor is available for this slot. Please choose another time slot or date.')
-      return
     }
   }
 
@@ -870,7 +787,7 @@ export default function CartAndCheckoutPage() {
             <div className="mt-5 pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500 font-medium">
               <div className="flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>If the Vendor is available he can accept requests within <span className="font-bold">3 minutes</span></span>
+                <span>If the vendor does not respond within <span className="font-bold">1 minute</span>, another available vendor will be assigned.</span>
               </div>
               <button
                 onClick={() => setShowVendorModal(false)}
@@ -1316,7 +1233,7 @@ export default function CartAndCheckoutPage() {
               {/* Action Buttons */}
               <div className="space-y-2.5 pt-2">
                 <button 
-                  onClick={handlePlaceOrder}
+                  onClick={() => { void handlePlaceOrder() }}
                   className="w-full bg-[#EE6C52] hover:bg-orange-600 text-white font-extrabold text-xs py-3.5 rounded-xl transition shadow-xs cursor-pointer"
                 >
                   Continue

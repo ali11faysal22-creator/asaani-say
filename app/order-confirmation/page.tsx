@@ -60,12 +60,13 @@ export default function OrderConfirmationPage() {
   const [order, setOrder] = useState<OrderData | null>(null)
   const [bookingStatus, setBookingStatus] = useState('pending')
   const [orderLoaded, setOrderLoaded] = useState(false)
-  const [secondsRemaining, setSecondsRemaining] = useState(180)
+  const [secondsRemaining, setSecondsRemaining] = useState(60)
   const [isRequestToastMinimized, setIsRequestToastMinimized] = useState(false)
   const [requestToastPosition, setRequestToastPosition] = useState<{ x: number; y: number } | null>(null)
   const [isDraggingRequestToast, setIsDraggingRequestToast] = useState(false)
   const [requestToastDragOffset, setRequestToastDragOffset] = useState({ x: 0, y: 0 })
   const [showVendorRequestToast, setShowVendorRequestToast] = useState(true)
+  const [showAcceptedToast, setShowAcceptedToast] = useState(false)
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -103,7 +104,7 @@ export default function OrderConfirmationPage() {
     if (!order) return
     const updateCountdown = () => {
       const elapsed = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 1000)
-      const remaining = Math.max(0, 180 - elapsed)
+      const remaining = Math.max(0, 60 - elapsed)
       setSecondsRemaining(remaining)
       if (remaining === 0) setShowVendorRequestToast(false)
     }
@@ -128,7 +129,11 @@ export default function OrderConfirmationPage() {
             ...order,
             status: current.status
           }))
-          if (current.status === 'accepted' || current.status === 'rejected') {
+          if (current.status === 'accepted') {
+            setShowVendorRequestToast(false)
+            setShowAcceptedToast(true)
+            window.setTimeout(() => setShowAcceptedToast(false), 15000)
+          } else if (current.status === 'rejected') {
             setShowVendorRequestToast(false)
           }
         }
@@ -172,14 +177,18 @@ export default function OrderConfirmationPage() {
             <Timer className="h-4 w-4" />
           </div>
           {!isRequestToastMinimized && <div className="min-w-0 flex-1">
-            <p className="text-xs font-extrabold text-slate-900">Vendor request is active</p>
-            <p className="mt-1 text-[10px] leading-relaxed text-slate-500">Waiting for vendor acceptance. Another vendor will be assigned after 3 minutes.</p>
+            <p className="text-xs font-extrabold text-slate-900">Order received</p>
+            <p className="mt-1 text-[10px] leading-relaxed text-slate-500">We received your order. We are assigning the best vendor for you.</p>
           </div>}
           <span className="rounded-lg bg-orange-500/10 px-2 py-1 text-sm font-black tabular-nums text-orange-600">{minutes}:{seconds}</span>
           <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => setIsRequestToastMinimized((value) => !value)} aria-label={isRequestToastMinimized ? 'Expand vendor request' : 'Minimize vendor request'} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-white hover:text-slate-700">
             {isRequestToastMinimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
         </div>
+      </div>}
+      {showAcceptedToast && <div className="fixed right-4 top-4 z-50 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-emerald-100 bg-white p-4 shadow-xl">
+        <p className="text-xs font-extrabold text-emerald-700">Order confirmed</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-slate-600">Your vendor confirmed this order and is ready to provide the selected service.</p>
       </div>}
       
       {/* Top Bar */}

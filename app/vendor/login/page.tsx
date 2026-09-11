@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { loginUser, registerVendor } from '@/app/lib/booking-api'
 import {
@@ -201,7 +201,8 @@ export default function VendorLoginPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [selectedSubServices, setSelectedSubServices] = useState<string[]>([])
-  const [showOtherInput, setShowOtherInput] = useState(false)
+  const [showOtherInput] = useState(false)
+  const [sameWhatsappNumber, setSameWhatsappNumber] = useState(false)
 
   // Local Storage persistence has been removed from the vendor
   // onboarding flow so the authoritative data source is the
@@ -211,6 +212,9 @@ export default function VendorLoginPage() {
     subServices: string[],
     weeklyAvailability: Record<string, DayAvailability>
   ) => {
+    void categories
+    void subServices
+    void weeklyAvailability
     return
   }
 
@@ -218,7 +222,11 @@ export default function VendorLoginPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target
-    setVendorDetails((prev) => ({ ...prev, [name]: value }))
+    setVendorDetails((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'contactNumber' && sameWhatsappNumber ? { businessPhone: value } : {}),
+    }))
   }
 
   // Toggle an entire day on/off. Turning a day off clears its slots.
@@ -397,7 +405,13 @@ export default function VendorLoginPage() {
       alert('Passwords do not match!')
       return
     }
-    setVendorDetails((prev) => ({ ...prev, emailAddress: email }))
+    const nameParts = name.trim().split(/\s+/).filter(Boolean)
+    setVendorDetails((prev) => ({
+      ...prev,
+      emailAddress: email,
+      firstName: nameParts[0] || prev.firstName,
+      lastName: nameParts.slice(1).join(' ') || nameParts[0] || prev.lastName,
+    }))
     setRegStep(2)
   }
 
@@ -444,7 +458,7 @@ export default function VendorLoginPage() {
       const auth = await registerVendor(payload)
       if (auth?.role === 'vendor') {
         localStorage.setItem('asaani_vendor_auth', JSON.stringify(auth))
-        localStorage.setItem('asaani_auth', JSON.stringify(auth))
+        localStorage.removeItem('asaani_auth')
         router.push('/vendor/dashboard')
       } else {
         alert('Vendor registration did not return a valid vendor session.')
@@ -467,7 +481,7 @@ export default function VendorLoginPage() {
       const auth = await loginUser({ identifier: emailOrPhone, password, role: 'vendor' })
       if (auth?.role === 'vendor') {
         localStorage.setItem('asaani_vendor_auth', JSON.stringify(auth))
-        localStorage.setItem('asaani_auth', JSON.stringify(auth))
+        localStorage.removeItem('asaani_auth')
         router.push('/vendor/dashboard')
       }
     } catch (error) {
@@ -714,7 +728,7 @@ export default function VendorLoginPage() {
                   </div>
                 </div>
 
-                <form onSubmit={handleFinalSubmit} className="space-y-5">
+                <form onSubmit={handleFinalSubmit} className="flex flex-col space-y-5">
                   <div className="space-y-3">
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Personal Details
@@ -753,16 +767,41 @@ export default function VendorLoginPage() {
                         className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
                       />
 
-                      <input
-                        type="email"
-                        name="emailAddress"
-                        required
-                        placeholder="EMAIL ADDRESS"
-                        value={vendorDetails.emailAddress}
-                        onChange={handleInputChange}
-                        className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
-                      />
+                      <div className="space-y-2">
+                        <input
+                          type="tel"
+                          name="businessPhone"
+                          required
+                          placeholder="WHATSAPP NUMBER"
+                          value={vendorDetails.businessPhone}
+                          onChange={handleInputChange}
+                          className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
+                        />
+                        <label className="flex items-center gap-2 text-[10px] font-semibold text-slate-500">
+                          <input
+                            type="checkbox"
+                            checked={sameWhatsappNumber}
+                            onChange={(event) => {
+                              const checked = event.target.checked
+                              setSameWhatsappNumber(checked)
+                              if (checked) setVendorDetails((prev) => ({ ...prev, businessPhone: prev.contactNumber }))
+                            }}
+                            className="h-3.5 w-3.5 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
+                          />
+                          WhatsApp number is the same as contact number
+                        </label>
+                      </div>
                     </div>
+
+                    <input
+                      type="email"
+                      name="emailAddress"
+                      required
+                      placeholder="EMAIL ADDRESS"
+                      value={vendorDetails.emailAddress}
+                      onChange={handleInputChange}
+                      className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
+                    />
 
                     <input
                       type="text"
@@ -803,15 +842,6 @@ export default function VendorLoginPage() {
                         className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
                       />
 
-                      <input
-                        type="text"
-                        name="businessPhone"
-                        required
-                        placeholder="BUSINESS PHONE NUMBER"
-                        value={vendorDetails.businessPhone}
-                        onChange={handleInputChange}
-                        className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
-                      />
                     </div>
                   </div>
 
@@ -821,7 +851,7 @@ export default function VendorLoginPage() {
 
                   <hr className="border-slate-200/80 my-4" />
 
-                  <div className="space-y-4">
+                  <div className="order-2 space-y-4">
                     <div className="flex items-center gap-2 mb-1">
                       <CalendarDays className="w-5 h-5 text-orange-500" />
                       <div>
@@ -931,7 +961,7 @@ export default function VendorLoginPage() {
 
                   {/* ==================================================== */}
 
-                  <div className="space-y-4">
+                  <div className="order-1 space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider">
@@ -1068,7 +1098,7 @@ export default function VendorLoginPage() {
                     )}
                   </div>
 
-                  <div className="pt-4 flex justify-end">
+                  <div className="order-3 pt-4 flex justify-end">
                     <button
                       type="submit"
                       className="px-10 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl text-xs transition shadow-md uppercase tracking-wider cursor-pointer"
