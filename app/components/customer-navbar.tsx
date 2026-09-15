@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Bell, ChevronDown, ClipboardList, Hand, Menu, Sparkles, User, X } from 'lucide-react'
-import { clearStoredAuth, fetchCustomerNotifications, getCurrentUser, getStoredAuth, logoutUser, type CustomerNotification } from '../lib/booking-api'
+import { clearStoredAuth, fetchCustomerNotifications, getCurrentUser, getStoredAuth, logoutUser, markCustomerNotificationRead, type CustomerNotification } from '../lib/booking-api'
 
 export default function CustomerNavbar({ active = '' }: { active?: string }) {
   const [auth, setAuth] = useState<{ role?: string; email?: string } | null | undefined>(undefined)
@@ -11,10 +11,12 @@ export default function CustomerNavbar({ active = '' }: { active?: string }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [alertNotification, setAlertNotification] = useState<CustomerNotification | null>(null)
-  const [requestToast, setRequestToast] = useState<CustomerNotification | null>(null)
+  const notificationLoadInFlight = useRef(false)
 
   useEffect(() => {
     const load = () => {
+      if (notificationLoadInFlight.current) return
+      notificationLoadInFlight.current = true
       getCurrentUser()
         .then((user) => {
           if (user.role === 'customer') {
@@ -30,7 +32,7 @@ export default function CustomerNavbar({ active = '' }: { active?: string }) {
                 const unread = sortedItems.filter((item) => !item.is_read)
                 setUnreadCount(unread.length)
                 const seen = JSON.parse(localStorage.getItem('asaani_seen_notification_ids') || '[]') as string[]
-                const nextAlert = unread.find((item) => !seen.includes(item.id))
+                const nextAlert = unread.find((item) => item.title === 'Welcome to Asaani Say' && !seen.includes(item.id))
                 if (nextAlert) {
                   localStorage.setItem('asaani_seen_notification_ids', JSON.stringify([...seen, nextAlert.id].slice(-100)))
                   setAlertNotification(nextAlert)
@@ -45,40 +47,25 @@ export default function CustomerNavbar({ active = '' }: { active?: string }) {
             setAuth(getStoredAuth('customer'))
           } catch { setAuth(null) }
         })
+        .finally(() => {
+          notificationLoadInFlight.current = false
+        })
     }
     load()
     window.addEventListener('asaani-auth-changed', load)
-    const notificationTimer = window.setInterval(load, 5000)
     return () => {
       window.removeEventListener('asaani-auth-changed', load)
-      window.clearInterval(notificationTimer)
     }
   }, [])
 
-  useEffect(() => {
-    let active = true
-    const loadRequestNotification = async () => {
-      const currentUser = getStoredAuth('customer')
-      if (!currentUser?.profile_id) return
-      try {
-        const notifications = await fetchCustomerNotifications(currentUser.profile_id)
-        const latest = notifications.find((item) => {
-          const createdAt = item.created_at || item.createdAt
-          const age = createdAt ? Date.now() - new Date(createdAt).getTime() : Number.POSITIVE_INFINITY
-          return !item.is_read && ['booking', 'booking_request', 'order', 'vendor_request'].includes(item.type) && age >= 0 && age < 180000
-        })
-        if (active) setRequestToast(latest || null)
-      } catch {
-        if (active) setRequestToast(null)
-      }
+  const markNotificationRead = async (notification: CustomerNotification) => {
+    const customer = getStoredAuth('customer')
+    if (customer?.profile_id) {
+      await markCustomerNotificationRead(customer.profile_id, notification.id).catch(() => undefined)
     }
-    loadRequestNotification()
-    const requestTimer = window.setInterval(loadRequestNotification, 5000)
-    return () => {
-      active = false
-      window.clearInterval(requestTimer)
-    }
-  }, [])
+    setUnreadCount((count) => Math.max(0, count - (notification.is_read ? 0 : 1)))
+    setAlertNotification(null)
+  }
 
   const signOut = () => {
     clearStoredAuth('customer')
@@ -86,7 +73,6 @@ export default function CustomerNavbar({ active = '' }: { active?: string }) {
     setProfileOpen(false)
     window.dispatchEvent(new Event('asaani-auth-changed'))
     logoutUser().catch(() => {
-      // The local session is already cleared even if the API session is unavailable.
     }).finally(() => {
       setAuth(null)
       setProfileOpen(false)
@@ -134,8 +120,7 @@ export default function CustomerNavbar({ active = '' }: { active?: string }) {
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
-      {requestToast && <div className="fixed right-4 top-4 z-60 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-orange-100 bg-white/90 p-4 shadow-xl backdrop-blur-xl"><button type="button" title="Close notification" aria-label="Close notification" onClick={() => setRequestToast(null)} className="absolute right-2 top-2 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-4 w-4" /></button><div className="flex items-start gap-3 pr-5"><Bell className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" /><div className="min-w-0"><p className="text-xs font-extrabold text-slate-900">{requestToast.title}</p><p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-600">{requestToast.body}</p></div></div></div>}
-      {alertNotification && !requestToast && <div className="fixed right-4 top-20 z-60 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-orange-100 bg-white p-4 shadow-xl"><button type="button" title="Close notification" aria-label="Close notification" onClick={() => setAlertNotification(null)} className="absolute right-2 top-2 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-4 w-4" /></button><div className="flex items-start gap-3 pr-5"><Bell className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" /><div className="min-w-0"><p className="text-xs font-extrabold text-slate-900">{alertNotification.title}</p><p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-600">{alertNotification.body}</p><Link href="/customer/notifications" onClick={() => setAlertNotification(null)} className="mt-2 inline-block text-[10px] font-bold text-orange-600">View notification</Link></div></div></div>}
+      {alertNotification && <div className="fixed right-4 top-4 z-60 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-orange-100 bg-white p-4 shadow-xl"><button type="button" title="Close notification" aria-label="Close notification" onClick={() => void markNotificationRead(alertNotification)} className="absolute right-2 top-2 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-4 w-4" /></button><div className="flex items-start gap-3 pr-5"><Bell className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" /><div className="min-w-0"><p className="text-xs font-extrabold text-slate-900">{alertNotification.title}</p><p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-600">{alertNotification.body}</p><button type="button" onClick={() => void markNotificationRead(alertNotification)} className="mt-2 text-[10px] font-bold text-orange-600">Mark as read</button><Link href="/customer/notifications" onClick={() => void markNotificationRead(alertNotification)} className="ml-3 inline-block text-[10px] font-bold text-orange-600">View notification</Link></div></div></div>}
       {mobileOpen && <div className="absolute left-0 right-0 top-full z-40 border-b border-slate-200 bg-white p-4 shadow-lg md:hidden"><div className="flex flex-col gap-1 text-sm font-semibold text-slate-700"><Link href="/" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-3 hover:bg-orange-50">Home</Link><Link href="/services" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-3 hover:bg-orange-50">Services</Link><Link href="/about-us" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-3 hover:bg-orange-50">About Us</Link>{auth ? <><Link href="/customer/orders" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-3 text-orange-600 hover:bg-orange-50">My Orders</Link><Link href="/customer/notifications" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-3 text-orange-600 hover:bg-orange-50">Notifications</Link><button onClick={() => { signOut(); setMobileOpen(false) }} className="rounded-lg px-3 py-3 text-left text-red-500 hover:bg-red-50">Sign out</button></> : <Link href="/login" onClick={() => setMobileOpen(false)} className="rounded-lg px-3 py-3 text-orange-600 hover:bg-orange-50">Login / Signup</Link>}</div></div>}
     </header>
   )

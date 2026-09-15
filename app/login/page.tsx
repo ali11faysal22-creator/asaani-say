@@ -84,7 +84,7 @@ export default function GetStartedPage(){
         </div>
 
         <div className="flex items-center justify-center gap-3 pt-2">
-   {/* google */}
+   
           <button className="w-11 h-11 bg-white hover:bg-slate-100 rounded-xl flex items-center justify-center shadow transition">
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -102,20 +102,20 @@ export default function GetStartedPage(){
             </svg>
           </button>
 
-   {/* twitter */}
+   
           <button className="w-11 h-11 bg-[#1DA1F2] hover:bg-blue-500 rounded-xl flex items-center justify-center shadow transition text-white font-bold">
             <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
               <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z" />
             </svg>
           </button>
-{/* facebook */}
+
           <button className="w-11 h-11 bg-[#1877F2] hover:bg-blue-600 rounded-xl flex items-center justify-center shadow transition text-white font-bold">
             <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
               <path d="M9 8H6v4h3v12h5V12h3.642L18 8h-4V6.333C14 5.374 14.5 5 15.5 5H18V0h-3.808C10.592 0 9 1.592 9 4.893V8z" />
             </svg>
           </button>
 
-  {/* apple */}
+  
           <button className="w-11 h-11 bg-white hover:bg-slate-100 rounded-xl flex items-center justify-center shadow transition text-black font-bold">
             <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
               <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.87c.68-.82 1.14-1.97.99-3.12-1 .04-2.21.67-2.9 1.48-.62.72-1.16 1.89-.99 3.01 1.12.09 2.26-.55 2.9-1.37z" />

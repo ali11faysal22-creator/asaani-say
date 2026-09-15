@@ -11,6 +11,8 @@ export default function CustomerAuthPage(){
   const[emailOrPhone, setEmailOrPhone]=useState('')
   const[name,setName]=useState('')
   const[email,setEmail]=useState('')
+  const[phone,setPhone]=useState('')
+  const[address,setAddress]=useState('')
   const[password,setPassword]=useState('')
   const[confirmPassword,setConfirmPassword]=useState('')
   const[isProcessing,setIsProcessing]=useState(false)
@@ -26,7 +28,7 @@ const handleAuthSubmit: React.SubmitEventHandler<HTMLFormElement>=async (e)=>{
   setIsProcessing(true)
   try {
     const authResult = await (isRegister
-      ? await registerCustomer({ full_name: name, email, password })
+      ? await registerCustomer({ full_name: name, email, password, phone: phone || undefined, address: address || undefined })
       : await loginUser({ identifier: emailOrPhone, password, role: 'customer' }))
     localStorage.setItem('asaani_customer_auth', JSON.stringify(authResult))
     localStorage.removeItem('asaani_auth')
@@ -140,6 +142,16 @@ const handleAuthSubmit: React.SubmitEventHandler<HTMLFormElement>=async (e)=>{
                     placeholder="ex: ABC@email.com"
                     className="w-full bg-[#F8FAFC] border border-slate-400/80 rounded-lg px-3 py-2.5 text-xs text-slate-700 placeholder:text-slate-300 focus:outline-none focus:border-orange-400"
                   />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[12px] font-medium text-slate-500">Phone</label>
+                  <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="03xx-xxxxxxx" className="w-full bg-[#F8FAFC] border border-slate-400/80 rounded-lg px-3 py-2.5 text-xs text-slate-700 placeholder:text-slate-300 focus:outline-none focus:border-orange-400" />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[12px] font-medium text-slate-500">Home address</label>
+                  <textarea required value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Enter your service address" className="min-h-20 w-full resize-none bg-[#F8FAFC] border border-slate-400/80 rounded-lg px-3 py-2.5 text-xs text-slate-700 placeholder:text-slate-300 focus:outline-none focus:border-orange-400" />
                 </div>
 
                 <div className="space-y-1">

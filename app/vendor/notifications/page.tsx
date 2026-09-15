@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import {
   Wrench,
   ShieldCheck,
@@ -18,11 +17,10 @@ import {
   CreditCard,
   CheckCheck,
   ChevronRight,
-  Clock,
   ArrowLeft,
-  Info
+  X
 } from 'lucide-react'
-import { decideVendorBooking, fetchVendorNotifications, getStoredAuth } from '@/app/lib/booking-api'
+import { decideVendorBooking, deleteVendorNotification, fetchVendorBookings, fetchVendorNotifications, getStoredAuth, markVendorNotificationRead, updateVendorBookingStatus, type BookingResult } from '@/app/lib/booking-api'
 
 export interface NotificationItem {
   id: string
@@ -40,15 +38,17 @@ export interface NotificationItem {
   date?: string
   time?: string
   amount?: string
-  bookingStatus?: 'pending' | 'accepted' | 'declined'
+  bookingStatus?: 'pending' | 'accepted' | 'declined' | 'on_the_way' | 'in_progress' | 'completed'
   bookingId?: string
+  booking?: BookingResult
 }
 
 export default function NotificationsPage() {
-  const router = useRouter()
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [selectedNotif, setSelectedNotif] = useState<NotificationItem | null>(null)
   const [filterTab, setFilterTab] = useState<'All' | 'Unread'>('All')
+  const [actionInProgress, setActionInProgress] = useState(false)
+  const [assignmentConflict, setAssignmentConflict] = useState<NotificationItem | null>(null)
 
   useEffect(() => {
     let active = true
@@ -63,7 +63,11 @@ export default function NotificationsPage() {
         }
 
         const vendorId = auth.profile_id || auth.user_id
-        const rows = await fetchVendorNotifications(vendorId)
+        const [rows, bookings] = await Promise.all([
+          fetchVendorNotifications(vendorId),
+          fetchVendorBookings(vendorId),
+        ])
+        const bookingsById = new Map(bookings.map((booking) => [booking.id, booking]))
         const uniqueRows = rows.filter((row, index, items) => index === items.findIndex((candidate) => candidate.title === row.title && candidate.body === row.body && candidate.type === row.type))
         const mapped = uniqueRows.map((row) => {
           const bookingMatch = (row.body || '').match(/Booking ID:\s*([a-zA-Z0-9-]+)/i)
@@ -72,9 +76,16 @@ export default function NotificationsPage() {
             /^(.+?) requested (.+?) on (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})-(\d{2}:\d{2})\./i
           )
           const service = requestMatch?.[2] || undefined
+          const booking = bookingId ? bookingsById.get(bookingId) : undefined
+          const isDeclinedNotice = row.title.toLowerCase().includes('declined')
+          const bookingStatus = isDeclinedNotice || booking?.status === 'rejected'
+            ? 'declined'
+            : booking?.status === 'accepted' || booking?.status === 'on_the_way' || booking?.status === 'in_progress' || booking?.status === 'completed'
+              ? booking.status
+              : 'pending'
           return {
             id: row.id,
-            type: row.type === 'booking' ? 'booking_request' : 'booking_confirmed',
+            type: isDeclinedNotice ? 'booking_cancelled' : row.type === 'booking' ? 'booking_request' : 'booking_confirmed',
             title: row.title,
             message: row.body,
             timestamp: row.created_at ? new Date(row.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', hour12: true }) : 'Just now',
@@ -84,16 +95,21 @@ export default function NotificationsPage() {
             service,
             date: requestMatch?.[3],
             time: requestMatch ? `${requestMatch[4]} - ${requestMatch[5]}` : undefined,
-            bookingStatus: 'pending',
+            bookingStatus,
             bookingId,
+            booking,
+            customerPhone: booking?.customer_phone || undefined,
+            location: booking?.address?.line,
+            amount: booking?.total_amount != null ? `Rs. ${booking.total_amount.toLocaleString()}` : undefined,
           } as NotificationItem
         })
 
         if (!active) return
         setNotifications(mapped)
-        if (mapped.length > 0 && !selectedNotif) {
-          setSelectedNotif(mapped[0])
-        }
+        setSelectedNotif((previous) => {
+          if (previous && mapped.some((item) => item.id === previous.id)) return previous
+          return mapped[0] || null
+        })
       } catch (error) {
         console.error('Failed to load vendor notifications', error)
         setNotifications([])
@@ -107,41 +123,47 @@ export default function NotificationsPage() {
       active = false
       window.clearInterval(refreshTimer)
     }
-  }, [router, selectedNotif])
+  }, [])
 
   const updateStorage = (updated: NotificationItem[]) => {
     setNotifications(updated)
   }
 
-  const isRequestTimedOut = (item: NotificationItem): boolean => {
-    if (item.type !== 'booking_request' || item.bookingStatus !== 'pending') return false
-    const createdTime = new Date(item.createdAt).getTime()
-    const currentTime = new Date().getTime()
-    const diffInMinutes = (currentTime - createdTime) / (1000 * 60)
-    return diffInMinutes >= 1
-  }
-
-  const handleSelectNotif = (item: NotificationItem) => {
+  const handleSelectNotif = async (item: NotificationItem) => {
     setSelectedNotif(item)
     if (!item.isRead) {
       const updated = notifications.map(n => (n.id === item.id ? { ...n, isRead: true } : n))
       updateStorage(updated)
+      const auth = getStoredAuth('vendor')
+      if (auth?.profile_id) {
+        await markVendorNotificationRead(auth.profile_id, item.id).catch(() => undefined)
+      }
     }
   }
 
-  const handleMarkAllAsRead = () => {
+  const handleMarkAllAsRead = async () => {
     const updated = notifications.map(n => ({ ...n, isRead: true }))
     updateStorage(updated)
+    const auth = getStoredAuth('vendor')
+    if (auth?.profile_id) {
+      await Promise.all(notifications.filter((item) => !item.isRead).map((item) => markVendorNotificationRead(auth.profile_id, item.id).catch(() => undefined)))
+    }
   }
 
-  const handleDelete = (id: string, e?: React.MouseEvent) => {
+  const handleDelete = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
     const updated = notifications.filter(n => n.id !== id)
     if (selectedNotif?.id === id) setSelectedNotif(null)
     updateStorage(updated)
+    const auth = getStoredAuth('vendor')
+    if (auth?.profile_id) {
+      await deleteVendorNotification(auth.profile_id, id).catch(() => undefined)
+    }
   }
 
   const handleBookingAction = async (id: string, status: 'accepted' | 'declined') => {
+    if (actionInProgress) return
+    setActionInProgress(true)
     try {
       const auth = getStoredAuth('vendor')
       if (!auth) {
@@ -154,20 +176,56 @@ export default function NotificationsPage() {
         alert('This notification does not include a booking reference.')
         return
       }
-      await decideVendorBooking(auth.profile_id || auth.user_id, bookingId, action)
+      const updatedBooking = await decideVendorBooking(auth.profile_id || auth.user_id, bookingId, action)
       const updated = notifications.map(n => {
         if (n.id === id) {
-          return { ...n, isRead: true, bookingStatus: status === 'accepted' ? 'accepted' : 'declined' as 'accepted' | 'declined' }
+          return {
+            ...n,
+            isRead: true,
+            booking: updatedBooking,
+            customerPhone: updatedBooking.customer_phone || undefined,
+            location: updatedBooking.address.line,
+            amount: updatedBooking.total_amount != null ? `Rs. ${updatedBooking.total_amount.toLocaleString()}` : n.amount,
+            bookingStatus: updatedBooking.status as NotificationItem['bookingStatus']
+          }
         }
         return n
       })
       if (selectedNotif && selectedNotif.id === id) {
-        setSelectedNotif({ ...selectedNotif, isRead: true, bookingStatus: status === 'accepted' ? 'accepted' : 'declined' as 'accepted' | 'declined' })
+        setSelectedNotif({ ...selectedNotif, isRead: true, booking: updatedBooking, bookingId: updatedBooking.id, bookingStatus: updatedBooking.status as NotificationItem['bookingStatus'] })
       }
       updateStorage(updated)
     } catch (error) {
-      console.error('Vendor booking decision failed', error)
-      alert(error instanceof Error ? error.message : 'Unable to decide booking request')
+      if (error instanceof Error && (
+        error.message.includes('assigned to another vendor') ||
+        error.message.includes('already been decided')
+      )) {
+        const staleNotification = notifications.find((item) => item.id === id) || selectedNotif
+        setAssignmentConflict(staleNotification || null)
+        setNotifications((items) => items.filter((item) => item.id !== id))
+        setSelectedNotif((item) => item?.id === id ? null : item)
+      } else {
+        console.error('Vendor booking decision failed', error)
+        alert(error instanceof Error ? error.message : 'Unable to decide booking request')
+      }
+    } finally {
+      setActionInProgress(false)
+    }
+  }
+
+  const handleTrackingStatus = async (action: 'on_the_way' | 'in_progress' | 'completed') => {
+    const auth = getStoredAuth('vendor')
+    const bookingId = selectedNotif?.bookingId
+    if (!auth?.profile_id || !bookingId || !selectedNotif?.booking) return
+    setActionInProgress(true)
+    try {
+      const updatedBooking = await updateVendorBookingStatus(auth.profile_id, bookingId, action)
+      setSelectedNotif((item) => item ? { ...item, booking: updatedBooking } : item)
+      setNotifications((items) => items.map((item) => item.bookingId === bookingId ? { ...item, booking: updatedBooking } : item))
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Unable to update tracking status')
+    } finally {
+      setActionInProgress(false)
     }
   }
 
@@ -181,11 +239,11 @@ export default function NotificationsPage() {
   return (
     <div className="min-h-screen w-full bg-white grid grid-cols-1 md:grid-cols-12 font-sans relative overflow-x-hidden">
 
-      {/* LEFT SIDEBAR PANEL — same elegant dark panel as the Vendor Profile page */}
+      
       <div className="md:col-span-4 lg:col-span-3 bg-[#3B3E56] text-white p-6 md:p-8 flex flex-col justify-between min-h-screen">
         <div>
 
-          {/* ELEGANT BACK BUTTON */}
+          
           <Link
             href="/vendor/dashboard"
             className="group inline-flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white bg-white/10 hover:bg-white/15 border border-white/10 px-3.5 py-2 rounded-xl transition-all duration-200 mb-8 cursor-pointer backdrop-blur-sm shadow-2xs"
@@ -194,7 +252,7 @@ export default function NotificationsPage() {
             <span>Back </span>
           </Link>
 
-          {/* LOGO */}
+          
           <div className="flex items-center gap-3 mb-12">
             <div className="w-9 h-9 rounded-xl bg-[#EE6C52] flex items-center justify-center shadow-xs">
               <Wrench className="w-5 h-5 text-white" />
@@ -214,16 +272,6 @@ export default function NotificationsPage() {
             </p>
           </div>
 
-          {/* Instructions Box */}
-          <div className="mt-6 p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-            <div className="flex items-center gap-2 text-[#EE6C52] font-bold text-xs">
-              <Info className="w-4 h-4" />
-              How It Works
-            </div>
-            <p className="text-[11px] text-slate-300 leading-relaxed">
-              * <b>1-Minute Timeout:</b> Accept or Decline new booking requests within 1 minute <b>Once the time runs out</b> the request moves to the next vendor.
-            </p>
-          </div>
         </div>
 
         <div className="pt-8 border-t border-slate-600/50 flex items-center gap-2.5 text-xs text-slate-300">
@@ -232,10 +280,10 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* RIGHT MAIN CONTENT AREA */}
+      
       <div className="md:col-span-8 lg:col-span-9 bg-[#F8FAFC] min-h-screen overflow-y-auto">
 
-        {/* Header Bar */}
+        
         <header className="h-16 px-8 flex items-center justify-between border-b border-slate-200/80 bg-white/50 backdrop-blur-sm">
           <div className="text-xs font-medium text-slate-600">English</div>
 
@@ -249,9 +297,9 @@ export default function NotificationsPage() {
           </div>
         </header>
 
-        {/* Content Area */}
+        
         <div className="p-8 space-y-6">
-          {/* Section Header */}
+          
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h2 className="text-2xl font-extrabold text-[#EE6C52] tracking-tight">
@@ -264,7 +312,7 @@ export default function NotificationsPage() {
 
           </div>
 
-          {/* Filter Bar */}
+          
           <div className="flex items-center justify-between bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-xs flex-wrap gap-2">
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
               {(['All', 'Unread'] as const).map(tab => (
@@ -296,9 +344,9 @@ export default function NotificationsPage() {
             </button>
           </div>
 
-          {/* Notifications Grid */}
+          
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* List */}
+            
             <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs divide-y divide-slate-100 overflow-hidden">
               {filteredNotifications.length === 0 ? (
                 <div className="py-16 text-center space-y-2">
@@ -308,8 +356,6 @@ export default function NotificationsPage() {
               ) : (
                 filteredNotifications.map(item => {
                   const isSelected = selectedNotif?.id === item.id
-                  const timedOut = isRequestTimedOut(item)
-
                   return (
                     <div
                       key={item.id}
@@ -352,11 +398,6 @@ export default function NotificationsPage() {
                               {item.service}
                             </span>
                           )}
-                          {timedOut && (
-                            <span className="text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> Timed Out
-                            </span>
-                          )}
                         </div>
                       </div>
 
@@ -367,7 +408,7 @@ export default function NotificationsPage() {
               )}
             </div>
 
-            {/* Details View Side-Panel */}
+            
             <div className="lg:col-span-5">
               {selectedNotif ? (
                 <div className="bg-white rounded-2xl border border-slate-200/80 p-6 space-y-5 shadow-xs sticky top-4">
@@ -436,29 +477,22 @@ export default function NotificationsPage() {
                     </div>
                   )}
 
-                  {/* Actions & Timeout Logic */}
+                  
                   {selectedNotif.type === 'booking_request' && (
                     <div className="pt-2">
-                      {isRequestTimedOut(selectedNotif) ? (
-                        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-center space-y-1">
-                          <p className="text-xs font-bold text-rose-600 flex items-center justify-center gap-1">
-                            <Clock className="w-4 h-4" /> TIME OUT (Request Expired)
-                          </p>
-                          <p className="text-[11px] text-rose-500">
-                            This booking request was assigned to the next vendor because it was not accepted within 1 minute.
-                          </p>
-                        </div>
-                      ) : selectedNotif.bookingStatus === 'pending' ? (
+                      {selectedNotif.bookingStatus === 'pending' ? (
                         <div className="flex items-center gap-3">
                           <button
+                            disabled={actionInProgress}
                             onClick={() => handleBookingAction(selectedNotif.id, 'accepted')}
-                            className="flex-1 py-2.5 bg-[#EE6C52] hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer text-center"
+                            className="flex-1 py-2.5 bg-[#EE6C52] hover:bg-orange-600 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer text-center"
                           >
                             Accept Booking
                           </button>
                           <button
+                            disabled={actionInProgress}
                             onClick={() => handleBookingAction(selectedNotif.id, 'declined')}
-                            className="flex-1 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer text-center"
+                            className="flex-1 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 disabled:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer text-center"
                           >
                             Decline
                           </button>
@@ -468,6 +502,16 @@ export default function NotificationsPage() {
                           STATUS: {selectedNotif.bookingStatus?.toUpperCase()}
                         </div>
                       )}
+                    </div>
+                  )}
+                  {selectedNotif.booking && ['accepted', 'on_the_way', 'in_progress'].includes(selectedNotif.booking.status) && (
+                    <div className="mt-4 border-t border-slate-100 pt-4">
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Customer tracking</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedNotif.booking.status === 'accepted' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('on_the_way')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Mark on the way</button>}
+                        {selectedNotif.booking.status === 'on_the_way' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('in_progress')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Mark arrived</button>}
+                        {selectedNotif.booking.status === 'in_progress' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('completed')} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Complete order</button>}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -482,6 +526,64 @@ export default function NotificationsPage() {
           </div>
         </div>
       </div>
+
+      {assignmentConflict && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4" role="dialog" aria-modal="true" aria-labelledby="assignment-conflict-title">
+          <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setAssignmentConflict(null)}
+              className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Close notification"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="pr-8">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+                <XCircle className="h-6 w-6" />
+              </div>
+              <h2 id="assignment-conflict-title" className="text-lg font-extrabold text-slate-900">
+                This booking is assigned to another vendor
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                This request was reassigned because it was declined or timed out. It is no longer available for your account.
+              </p>
+            </div>
+
+            <div className="mt-5 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-slate-500">Order</span>
+                <span className="text-right font-bold text-slate-800">{assignmentConflict.service || 'Service booking'}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-slate-500">Booking ID</span>
+                <span className="text-right font-semibold text-slate-800">{assignmentConflict.bookingId || 'Unavailable'}</span>
+              </div>
+              {assignmentConflict.customerName && (
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-slate-500">Customer</span>
+                  <span className="text-right font-semibold text-slate-800">{assignmentConflict.customerName}</span>
+                </div>
+              )}
+              {assignmentConflict.date && (
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-slate-500">Date & time</span>
+                  <span className="text-right font-semibold text-slate-800">{assignmentConflict.date} @ {assignmentConflict.time}</span>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setAssignmentConflict(null)}
+              className="mt-5 w-full rounded-xl bg-[#EE6C52] py-2.5 text-sm font-bold text-white transition hover:bg-orange-600"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

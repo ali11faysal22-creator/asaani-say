@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { fetchVendorProfile, getStoredAuth, updateVendorProfile } from '@/app/lib/booking-api';
+import UnsavedChangesGuard from '../components/unsaved-changes-guard';
 import {
   Wrench,
   User,
@@ -112,7 +114,6 @@ const getStoredStringArray = (keys: string[]): string[] => {
       const parsed = JSON.parse(rawValue);
       if (Array.isArray(parsed)) return parsed.map((item) => String(item));
     } catch {
-      // ignore malformed localStorage entries and continue to next key
     }
   }
 
@@ -169,8 +170,9 @@ export default function VendorSettingsPage() {
   const [availability, setAvailability] = useState<DaySetting[]>(getStoredAvailability)
 
   const [accountInfo, setAccountInfo] = useState({
-    fullName: '', phone: '', email: '', businessName: '', cnic: '', address: ''
+    fullName: '', phone: '', email: '', businessName: '', cnic: '', postalCode: '', address: ''
   })
+  const [profileMeta, setProfileMeta] = useState({ firstName: '', lastName: '', experienceYears: '', postalCode: '', serviceAreas: [] as string[], contactPreferences: [] as string[] });
   const [payoutInfo, setPayoutInfo] = useState({
     bankName: '', accountTitle: '', accountNumber: '', paymentMethod: 'bank'
   });
@@ -180,6 +182,7 @@ export default function VendorSettingsPage() {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [savedSettings, setSavedSettings] = useState('');
 
   const [isMainModalOpen, setIsMainModalOpen] = useState(false);
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
@@ -190,6 +193,45 @@ export default function VendorSettingsPage() {
   };
 
   useEffect(() => {
+    const loadBackendProfile = async () => {
+      const auth = getStoredAuth('vendor')
+      if (!auth?.profile_id) {
+        setLoading(false)
+        return
+      }
+      try {
+        const profile = await fetchVendorProfile(auth.profile_id)
+        setAccountInfo({
+          fullName: `${profile.first_name} ${profile.last_name}`.trim(),
+          phone: profile.contact_number,
+          email: profile.email || '',
+          businessName: profile.business_name,
+          cnic: profile.cnic,
+          postalCode: profile.postal_code,
+          address: profile.addresses?.[0]?.line || '',
+        })
+        setProfileMeta({
+          firstName: profile.first_name,
+          lastName: profile.last_name,
+          experienceYears: profile.experience_years,
+          postalCode: profile.postal_code,
+          serviceAreas: profile.service_areas || [],
+          contactPreferences: profile.contact_preferences || [],
+        })
+        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        setAvailability(profile.availability.map((row) => ({
+          day: dayNames[Number(row.day_of_week)] || String(row.day_of_week),
+          active: row.is_enabled,
+          slots: row.is_full_day ? 'Full day' : `${row.start_time || '09:00'} - ${row.end_time || '17:00'}`,
+        })))
+      } catch (error) {
+        console.error('Unable to load vendor settings from backend', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    void loadBackendProfile()
+
     if (typeof window !== 'undefined') {
       const rawAccount = localStorage.getItem('vendor_onboarding_data') || localStorage.getItem('vendor_signup_data');
       if (rawAccount) {
@@ -209,8 +251,13 @@ export default function VendorSettingsPage() {
       }
     }
 
-    queueMicrotask(() => setLoading(false));
   }, []);
+
+  const settingsSnapshot = JSON.stringify({ mainServices, subServices, availability, accountInfo, profileMeta });
+
+  useEffect(() => {
+    if (!loading && !savedSettings) queueMicrotask(() => setSavedSettings(settingsSnapshot));
+  }, [loading, savedSettings, settingsSnapshot]);
 
   const syncToLocalStorage = (
     newMain = mainServices,
@@ -232,6 +279,35 @@ export default function VendorSettingsPage() {
     localStorage.setItem('vendor_availability', JSON.stringify(availObject));
 
     showToast('Settings updated successfully!');
+    setSavedSettings(JSON.stringify({ mainServices: newMain, subServices: newSub, availability: newAvail, accountInfo, profileMeta }));
+  };
+
+  const saveAccountDetails = async () => {
+    const auth = getStoredAuth('vendor');
+    if (!auth?.profile_id) return showToast('Vendor session expired. Please sign in again.');
+    const nameParts = accountInfo.fullName.trim().split(/\s+/).filter(Boolean);
+    if (nameParts.length < 2 || !accountInfo.email || !accountInfo.phone || !accountInfo.businessName || !accountInfo.cnic || !accountInfo.postalCode) {
+      showToast('Full name, email, phone, business name, CNIC, and postal code are required.');
+      return;
+    }
+    try {
+      await updateVendorProfile(auth.profile_id, {
+        first_name: nameParts[0],
+        last_name: nameParts.slice(1).join(' '),
+        business_name: accountInfo.businessName,
+        contact_number: accountInfo.phone,
+        postal_code: accountInfo.postalCode,
+        email: accountInfo.email,
+        cnic: accountInfo.cnic,
+        experience_years: profileMeta.experienceYears || 'Not specified',
+        service_areas: profileMeta.serviceAreas.length ? profileMeta.serviceAreas : ['Lahore'],
+        contact_preferences: profileMeta.contactPreferences,
+      });
+      showToast('Profile saved successfully!');
+      setSavedSettings(settingsSnapshot);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to save profile');
+    }
   };
 
   const handleSaveMainServices = (updatedMain: string[]) => {
@@ -281,6 +357,7 @@ export default function VendorSettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800 flex">
+      <UnsavedChangesGuard isDirty={Boolean(savedSettings) && settingsSnapshot !== savedSettings} onSave={async () => { await saveAccountDetails(); syncToLocalStorage(); }} />
       {toastMessage && (
         <div className="fixed bottom-5 right-5 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">
           <Check className="w-4 h-4 text-emerald-400" />
@@ -288,7 +365,7 @@ export default function VendorSettingsPage() {
         </div>
       )}
 
-      {/* LEFT SIDEBAR — full height, flat */}
+      
       <div className="w-72 shrink-0 bg-[#3B3E56] text-white flex flex-col justify-between min-h-screen sticky top-0">
         <div>
           <div className="px-6 pt-6">
@@ -331,7 +408,7 @@ export default function VendorSettingsPage() {
         </div>
       </div>
 
-      {/* RIGHT CONTENT */}
+      
       <div className="flex-1 px-8 py-8 space-y-6 max-w-3xl">
         {activeTab === 'services' && (
             <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">
@@ -342,7 +419,7 @@ export default function VendorSettingsPage() {
                 </p>
               </div>
 
-              {/* MAIN SERVICES */}
+              
               <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <h3 className="text-xs font-semibold text-gray-600">
@@ -373,7 +450,7 @@ export default function VendorSettingsPage() {
                 </div>
               </div>
 
-              {/* SUB SERVICES */}
+              
               <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <h3 className="text-xs font-semibold text-gray-600">
@@ -404,7 +481,7 @@ export default function VendorSettingsPage() {
                 </div>
               </div>
 
-              {/* WEEKLY AVAILABILITY */}
+              
               <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-orange-500" />
@@ -486,9 +563,13 @@ export default function VendorSettingsPage() {
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Email Address</label>
                   <input type="email" value={accountInfo.email} onChange={(e) => setAccountInfo({ ...accountInfo, email: e.target.value })} className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:border-orange-500" />
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Postal Code</label>
+                  <input type="text" required value={accountInfo.postalCode} onChange={(e) => setAccountInfo({ ...accountInfo, postalCode: e.target.value })} className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:border-orange-500" />
+                </div>
               </div>
               <div className="flex justify-end pt-2">
-                <button onClick={() => syncToLocalStorage()} className="bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs px-6 py-2.5 rounded-xl flex items-center gap-2">
+                <button onClick={() => void saveAccountDetails()} className="bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs px-6 py-2.5 rounded-xl flex items-center gap-2">
                   <Save className="w-4 h-4" /> Save Profile
                 </button>
               </div>

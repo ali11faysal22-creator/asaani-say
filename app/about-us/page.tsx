@@ -3,7 +3,6 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-// Agar counter.tsx `components` folder mein hai toh relative path try karein:
 import Counter from '../components/counter'; 
 import { 
   CheckCircle2, 
@@ -21,7 +20,7 @@ export default function AboutUsPage() {
   return (
     <div className="w-full bg-white font-sans text-slate-800">
       
-      {/* 1. TOP BAR */}
+      
       <div className="bg-[#EEF2FB] text-xs text-slate-600 py-2.5 px-4 md:px-12 flex justify-between items-center border-b border-slate-100">
         <div className="flex items-center gap-6">
           <span>Asaani Say@gmail.com</span>
@@ -37,7 +36,7 @@ export default function AboutUsPage() {
         </div>
       </div>
 
-      {/* 2. NAVBAR */}
+      
       <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between border-b border-slate-100">
         <Link href="/" className="flex items-center gap-2">
           <div className="relative">
@@ -50,7 +49,7 @@ export default function AboutUsPage() {
           </div>
         </Link>
 
-        {/* NAV LINKS */}
+        
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
           <Link href="/" className="text-slate-900 font-semibold hover:text-orange-500">Home</Link>
           <Link href="/about-us" className="hover:text-orange-500 transition text-orange-500 font-bold">About Us</Link>
@@ -66,10 +65,10 @@ export default function AboutUsPage() {
         </Link>
       </header>
 
-      {/* 3. MAIN CONTENT */}
+      
       <main className="space-y-20 py-12">
         
-        {/* HERO SECTION */}
+        
         <section className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
             
@@ -105,7 +104,7 @@ export default function AboutUsPage() {
           </div>
         </section>
 
-        {/* VALUES SECTION */}
+        
         <section className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end mb-10">
             <div className="md:col-span-7 space-y-2">
@@ -163,7 +162,7 @@ export default function AboutUsPage() {
           </div>
         </section>
 
-        {/* STATS BANNER */}
+        
         <section className="bg-[#2D334A] text-white py-12">
           <div className="max-w-6xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-slate-700/60">
             <div className="pt-4 md:pt-0">
@@ -193,7 +192,7 @@ export default function AboutUsPage() {
           </div>
         </section>
 
-        {/* EXPERTS SECTION */}
+        
         <section className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end mb-10">
             <div className="md:col-span-7 space-y-2">
@@ -265,7 +264,7 @@ export default function AboutUsPage() {
           </div>
         </section>
 
-        {/* CTA BANNER */}
+        
         <section className="max-w-6xl mx-auto px-6">
           <div className="bg-[#0B132B] text-white rounded-3xl p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
             <div className="space-y-2 max-w-xl">
@@ -287,7 +286,7 @@ export default function AboutUsPage() {
 
       </main>
 
-      {/* 4. FOOTER */}
+      
       <footer className="w-full bg-[#393E58] text-slate-200 pt-16 pb-8 font-sans">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-12">

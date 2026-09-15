@@ -16,7 +16,8 @@ import {
   Clock,
   ArrowLeft
 } from 'lucide-react'
-import { API_BASE, fetchVendorProfile, formatSlotLabel, getStoredAuth, uploadVendorProfileImage, type VendorProfileResponse } from '@/app/lib/booking-api'
+import { API_BASE, fetchVendorProfile, formatSlotLabel, getStoredAuth, updateVendorProfile, uploadVendorProfileImage, type VendorProfileResponse } from '@/app/lib/booking-api'
+import UnsavedChangesGuard from '../components/unsaved-changes-guard'
 
 interface DaySchedule {
   day: string
@@ -25,11 +26,14 @@ interface DaySchedule {
 
 interface VendorProfileData {
   vendorId: string
+  firstName: string
+  lastName: string
   totalCompletedJobs: number
   memberSince: string
   businessName: string
   email: string
   phone: string
+  postalCode: string
   cnic: string
   experienceYears: string
   mainCategory: string
@@ -40,56 +44,6 @@ interface VendorProfileData {
   dayWiseSchedule: DaySchedule[]
   bio: string
   contactPreferences: string[]
-}
-
-// Helper Parser: Converts any availability structure into standard DaySchedule[]
-function parseAvailabilityData(raw: unknown): DaySchedule[] {
-  if (!raw) return []
-
-  let parsed: unknown = raw
-
-  if (typeof parsed === 'string') {
-    try {
-      parsed = JSON.parse(parsed)
-    } catch {
-      return []
-    }
-  }
-
-  if (Array.isArray(parsed)) {
-    return parsed
-      .map((item: unknown) => {
-        if (typeof item === 'string') return { day: item, slots: [] }
-        if (typeof item !== 'object' || item === null) return { day: '', slots: [] }
-        const record = item as Record<string, unknown>
-        const day = String(record.day ?? record.name ?? record.dayName ?? '')
-        const slots = record.slots ?? record.times ?? record.timeSlots ?? record.selectedSlots ?? []
-        return {
-          day,
-          slots: Array.isArray(slots) ? slots.map((slot) => String(slot)) : [String(slots)]
-        }
-      })
-      .filter((item) => item.day)
-  }
-
-  if (typeof parsed === 'object' && parsed !== null) {
-    const scheduleList: DaySchedule[] = []
-    Object.entries(parsed as Record<string, unknown>).forEach(([day, value]) => {
-      let slots: string[] = []
-      if (Array.isArray(value)) {
-        slots = value.map((v) => (typeof v === 'object' && v !== null ? String((v as Record<string, unknown>).slot ?? (v as Record<string, unknown>).time ?? v) : String(v)))
-      } else if (typeof value === 'string' && value.trim()) {
-        slots = [value]
-      }
-
-      if (slots.length > 0 || typeof value === 'boolean') {
-        scheduleList.push({ day, slots })
-      }
-    })
-    return scheduleList
-  }
-
-  return []
 }
 
 export default function VendorProfilePage() {
@@ -104,35 +58,16 @@ export default function VendorProfilePage() {
     return '/Worker.png'
   }
 
-  const getInitialProfile = (): VendorProfileData => {
-    if (typeof window === 'undefined') {
-      return {
-        vendorId: '#AS-PENDING',
-        totalCompletedJobs: 0,
-        memberSince: 'New Vendor',
-        businessName: '',
-        email: '',
-        phone: '',
-        cnic: '',
-        experienceYears: '',
-        mainCategory: 'Electrician & Plumbing Services',
-        selectedSubServices: [],
-        serviceAreas: [],
-        selectedDays: [],
-        selectedTimeSlots: [],
-        dayWiseSchedule: [],
-        bio: '',
-        contactPreferences: []
-      }
-    }
-
-    let updatedProfile: VendorProfileData = {
+  const getInitialProfile = (): VendorProfileData => ({
       vendorId: '#AS-PENDING',
+      firstName: '',
+      lastName: '',
       totalCompletedJobs: 0,
       memberSince: 'New Vendor',
       businessName: '',
       email: '',
       phone: '',
+      postalCode: '',
       cnic: '',
       experienceYears: '',
       mainCategory: 'Electrician & Plumbing Services',
@@ -143,148 +78,12 @@ export default function VendorProfilePage() {
       dayWiseSchedule: [],
       bio: '',
       contactPreferences: []
-    }
-
-    let extractedSchedule: DaySchedule[] = []
-
-    const onboardingDataStr = localStorage.getItem('vendor_onboarding_data')
-    const onboardingData = onboardingDataStr ? JSON.parse(onboardingDataStr) : null
-    const serviceSetupDataStr = localStorage.getItem('vendor_service_setup')
-    const serviceSetupData = serviceSetupDataStr ? JSON.parse(serviceSetupDataStr) : null
-
-    if (onboardingData?.account?.name) {
-      updatedProfile.businessName = onboardingData.account.name || updatedProfile.businessName
-    }
-    if (onboardingData?.account?.email) {
-      updatedProfile.email = onboardingData.account.email || updatedProfile.email
-    }
-    if (onboardingData?.vendorDetails?.businessName) {
-      updatedProfile.businessName = onboardingData.vendorDetails.businessName
-    }
-    if (onboardingData?.vendorDetails?.businessEmail) {
-      updatedProfile.email = onboardingData.vendorDetails.businessEmail
-    }
-    if (onboardingData?.vendorDetails?.contactNumber) {
-      updatedProfile.phone = onboardingData.vendorDetails.contactNumber
-    }
-    if (onboardingData?.vendorDetails?.cnic) {
-      updatedProfile.cnic = onboardingData.vendorDetails.cnic
-    }
-    if (onboardingData?.vendorDetails?.experienceYears) {
-      updatedProfile.experienceYears = onboardingData.vendorDetails.experienceYears
-    }
-
-    if (serviceSetupData?.categories?.length) {
-      updatedProfile.mainCategory = serviceSetupData.categories.join(', ')
-    }
-    if (serviceSetupData?.subServices?.length) {
-      updatedProfile.selectedSubServices = serviceSetupData.subServices
-    }
-
-    if (onboardingData?.services?.categories?.length) {
-      updatedProfile.mainCategory = onboardingData.services.categories.join(', ')
-    }
-    if (onboardingData?.services?.subServices?.length) {
-      updatedProfile.selectedSubServices = onboardingData.services.subServices
-    }
-
-    let currentVendorId = localStorage.getItem('vendor_id')
-    if (!currentVendorId) {
-      currentVendorId = `#AS-${Math.floor(10000 + Math.random() * 90000)}`
-      localStorage.setItem('vendor_id', currentVendorId)
-    }
-    updatedProfile.vendorId = currentVendorId
-
-    const signupDataStr = localStorage.getItem('vendor_signup_data')
-    const vendorAvailabilityStr = localStorage.getItem('vendor_availability')
-    const weeklyAvailabilityStr = localStorage.getItem('weekly_availability')
-    const availabilityStr = localStorage.getItem('availability')
-
-    if (signupDataStr) {
-      try {
-        const parsedSignup = JSON.parse(signupDataStr)
-
-        if (parsedSignup.businessName) updatedProfile.businessName = parsedSignup.businessName
-        if (parsedSignup.email) updatedProfile.email = parsedSignup.email
-        if (parsedSignup.phone) updatedProfile.phone = parsedSignup.phone
-
-        const rawAvailability =
-          parsedSignup.availability ||
-          parsedSignup.weeklyAvailability ||
-          parsedSignup.availabilitySummary ||
-          parsedSignup.schedule ||
-          parsedSignup.selectedAvailability
-
-        extractedSchedule = parseAvailabilityData(rawAvailability)
-      } catch (error) {
-        console.error('Error reading vendor_signup_data', error)
-      }
-    }
-
-    if (extractedSchedule.length === 0 && vendorAvailabilityStr) {
-      extractedSchedule = parseAvailabilityData(vendorAvailabilityStr)
-    }
-    if (extractedSchedule.length === 0 && weeklyAvailabilityStr) {
-      extractedSchedule = parseAvailabilityData(weeklyAvailabilityStr)
-    }
-    if (extractedSchedule.length === 0 && availabilityStr) {
-      extractedSchedule = parseAvailabilityData(availabilityStr)
-    }
-
-    if (extractedSchedule.length > 0) {
-      updatedProfile.dayWiseSchedule = extractedSchedule
-      updatedProfile.selectedDays = extractedSchedule.map((s) => s.day)
-      updatedProfile.selectedTimeSlots = Array.from(
-        new Set(extractedSchedule.flatMap((s) => s.slots))
-      )
-    }
-
-    const savedCategoriesStr = localStorage.getItem('vendor_selected_categories')
-    const savedSubServicesStr = localStorage.getItem('vendor_selected_sub_services')
-
-    if (savedCategoriesStr) {
-      try {
-        const cats = JSON.parse(savedCategoriesStr)
-        if (Array.isArray(cats) && cats.length > 0) updatedProfile.mainCategory = cats.join(', ')
-      } catch (error) {
-        console.error('Error reading vendor_selected_categories', error)
-      }
-    }
-
-    if (savedSubServicesStr) {
-      try {
-        const subs = JSON.parse(savedSubServicesStr)
-        if (Array.isArray(subs) && subs.length > 0) updatedProfile.selectedSubServices = subs
-      } catch (error) {
-        console.error('Error reading vendor_selected_sub_services', error)
-      }
-    }
-
-    const savedProfileStr = localStorage.getItem('vendor_profile_data')
-    if (savedProfileStr) {
-      try {
-        const parsedSaved = JSON.parse(savedProfileStr)
-        updatedProfile = {
-          ...updatedProfile,
-          ...parsedSaved,
-          vendorId: currentVendorId,
-          mainCategory: updatedProfile.mainCategory,
-          selectedSubServices: updatedProfile.selectedSubServices,
-          dayWiseSchedule:
-            extractedSchedule.length > 0
-              ? extractedSchedule
-              : parsedSaved.dayWiseSchedule || []
-        }
-      } catch (error) {
-        console.error('Error reading vendor_profile_data', error)
-      }
-    }
-
-    return updatedProfile
-  }
+  })
 
   const [avatar, setAvatar] = useState<string>(getInitialAvatar)
   const [profile, setProfile] = useState<VendorProfileData>(getInitialProfile)
+  const [savedProfile, setSavedProfile] = useState('')
+  const [profileReady, setProfileReady] = useState(false)
 
   useEffect(() => {
     const hydrateProfileFromBackend = async () => {
@@ -301,12 +100,23 @@ export default function VendorProfilePage() {
         if (vendorDetail) {
           const availability = vendorDetail.availability || []
           const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-          setProfile((prev) => ({
+          setProfile((prev) => {
+            const next = {
             ...prev,
             vendorId: vendorDetail.id,
+            firstName: vendorDetail.first_name,
+            lastName: vendorDetail.last_name,
             businessName: vendorDetail.business_name || prev.businessName,
             email: vendorDetail.email || prev.email,
             phone: vendorDetail.contact_number || prev.phone,
+            postalCode: vendorDetail.postal_code || prev.postalCode,
+            cnic: vendorDetail.cnic || prev.cnic,
+            experienceYears: vendorDetail.experience_years || prev.experienceYears,
+            serviceAreas: vendorDetail.service_areas || [],
+            contactPreferences: vendorDetail.contact_preferences || [],
+            bio: vendorDetail.bio || '',
+            totalCompletedJobs: vendorDetail.completed_jobs,
+            memberSince: new Date(vendorDetail.member_since).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }),
             mainCategory: (vendorDetail.categories || []).join(', '),
             selectedSubServices: vendorDetail.services || [],
             selectedDays: availability
@@ -317,7 +127,11 @@ export default function VendorProfilePage() {
               day: dayNames[Number(row.day_of_week)] || String(row.day_of_week),
               slots: row.is_full_day ? ['Full Day'] : [`${formatSlotLabel(row.start_time || '09:00')} - ${formatSlotLabel(row.end_time || '17:00')}`]
             })),
-          }))
+            }
+            setSavedProfile(JSON.stringify(next))
+            return next
+          })
+          setProfileReady(true)
           if (vendorDetail.profile_image_url) {
             setAvatar(vendorDetail.profile_image_url.startsWith('/') ? `${API_BASE}${vendorDetail.profile_image_url}` : vendorDetail.profile_image_url)
           }
@@ -338,8 +152,6 @@ export default function VendorProfilePage() {
     message: string
     type: 'saving' | 'success'
   }>({ show: false, message: '', type: 'success' })
-
-  // Avatar Handler
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     const auth = getStoredAuth('vendor')
@@ -356,27 +168,42 @@ export default function VendorProfilePage() {
       setToast({ show: true, message: error instanceof Error ? error.message : 'Unable to upload profile picture', type: 'success' })
     }
   }
-
-
-  // Sign Out
   const handleSignOut = () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('vendor_logged_in')
+      sessionStorage.removeItem('asaani_vendor_auth')
     }
     router.push('/vendor/login')
   }
-
-  // Save Changes
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     setToast({ show: true, message: 'Saving profile details...', type: 'saving' })
-
-    setTimeout(() => {
+    try {
+      const auth = getStoredAuth('vendor')
+      if (!auth?.profile_id) throw new Error('Vendor session expired')
+      if (!profile.email || !profile.cnic || !profile.experienceYears || !profile.postalCode || profile.serviceAreas.length === 0) {
+        throw new Error('Contact email, CNIC, experience, postal code, and at least one service area are required')
+      }
+      const updated = await updateVendorProfile(auth.profile_id, {
+        first_name: profile.firstName,
+        last_name: profile.lastName,
+        business_name: profile.businessName,
+        contact_number: profile.phone,
+        postal_code: profile.postalCode,
+        email: profile.email,
+        cnic: profile.cnic,
+        experience_years: profile.experienceYears,
+        service_areas: profile.serviceAreas,
+        contact_preferences: profile.contactPreferences,
+        bio: profile.bio,
+      })
+      const updatedMemberSince = new Date(updated.member_since).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+      setProfile((prev) => ({ ...prev, totalCompletedJobs: updated.completed_jobs, memberSince: updatedMemberSince }))
+      setSavedProfile(JSON.stringify({ ...profile, totalCompletedJobs: updated.completed_jobs, memberSince: updatedMemberSince }))
       setToast({ show: true, message: 'Profile saved successfully!', type: 'success' })
       setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000)
-    }, 800)
+    } catch (error) {
+      setToast({ show: true, message: error instanceof Error ? error.message : 'Unable to save profile', type: 'success' })
+    }
   }
-
-  // Area Handlers
   const handleAddServiceArea = () => {
     if (!newAreaInput.trim()) return
     if (profile.serviceAreas.includes(newAreaInput.trim())) {
@@ -407,10 +234,13 @@ export default function VendorProfilePage() {
     })
   }
 
+  const profileIsDirty = profileReady && JSON.stringify(profile) !== savedProfile
+
   return (
     <div className="min-h-screen w-full bg-white grid grid-cols-1 md:grid-cols-12 font-sans relative overflow-x-hidden">
+      <UnsavedChangesGuard isDirty={profileIsDirty} onSave={handleSaveChanges} />
       
-      {/* Toast Notification */}
+      
       {toast.show && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300">
           <div className="bg-[#2C2F45] text-white text-xs font-semibold px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3">
@@ -430,11 +260,11 @@ export default function VendorProfilePage() {
         </div>
       )}
 
-      {/* LEFT SIDEBAR PANEL */}
+      
       <div className="md:col-span-4 lg:col-span-3 bg-[#3B3E56] text-white p-6 md:p-8 flex flex-col justify-between min-h-screen">
         <div>
           
-          {/* ELEGANT BACK BUTTON */}
+          
           <Link
             href="/vendor/dashboard"
             className="group inline-flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white bg-white/10 hover:bg-white/15 border border-white/10 px-3.5 py-2 rounded-xl transition-all duration-200 mb-8 cursor-pointer backdrop-blur-sm shadow-2xs"
@@ -443,7 +273,7 @@ export default function VendorProfilePage() {
             <span>Back </span>
           </Link>
 
-          {/* LOGO */}
+          
           <div className="flex items-center gap-3 mb-12">
             <div className="w-9 h-9 rounded-xl bg-[#EE6C52] flex items-center justify-center shadow-xs">
               <Wrench className="w-5 h-5 text-white" />
@@ -470,11 +300,11 @@ export default function VendorProfilePage() {
         </div>
       </div>
 
-      {/* RIGHT MAIN FORM AREA */}
+      
       <div className="md:col-span-8 lg:col-span-9 bg-[#F8FAFC] p-6 md:p-10 lg:p-12 overflow-y-auto">
         <div className="max-w-4xl mx-auto space-y-8">
 
-          {/* TOP BAR */}
+          
           <div className="flex items-center justify-between pb-4 border-b border-slate-200/60">
             <div>
               <span className="text-xs font-bold text-slate-500 tracking-wide">
@@ -499,7 +329,7 @@ export default function VendorProfilePage() {
             </div>
           </div>
 
-          {/* PROFILE AVATAR & HEADER */}
+          
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row items-center gap-6 justify-between">
             <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
               <div className="relative">
@@ -561,10 +391,10 @@ export default function VendorProfilePage() {
             </div>
           </div>
 
-          {/* FORM FIELDS */}
+          
           <div className="space-y-6">
             
-            {/* Business Name & Email */}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-1.5">
                 <label className="text-xs font-extrabold text-[#2C2F45] block">
@@ -585,6 +415,7 @@ export default function VendorProfilePage() {
                 </label>
                 <input
                   type="email"
+                  required
                   placeholder="Enter your email address..."
                   value={profile.email}
                   onChange={(e) => setProfile({ ...profile, email: e.target.value })}
@@ -593,7 +424,7 @@ export default function VendorProfilePage() {
               </div>
             </div>
 
-            {/* Phone & CNIC */}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-1.5">
                 <label className="text-xs font-extrabold text-[#2C2F45] block">
@@ -601,6 +432,7 @@ export default function VendorProfilePage() {
                 </label>
                 <input
                   type="text"
+                  required
                   placeholder="e.g. +92 300 1234567"
                   value={profile.phone}
                   onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
@@ -614,6 +446,7 @@ export default function VendorProfilePage() {
                 </label>
                 <input
                   type="text"
+                  required
                   placeholder="35201-XXXXXXX-X"
                   value={profile.cnic}
                   onChange={(e) => setProfile({ ...profile, cnic: e.target.value })}
@@ -622,7 +455,7 @@ export default function VendorProfilePage() {
               </div>
             </div>
 
-            {/* Category & Experience */}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-1.5">
                 <label className="text-xs font-extrabold text-[#2C2F45] block">
@@ -639,6 +472,7 @@ export default function VendorProfilePage() {
                 </label>
                 <input
                   type="text"
+                  required
                   placeholder="e.g. 5+ Years"
                   value={profile.experienceYears}
                   onChange={(e) => setProfile({ ...profile, experienceYears: e.target.value })}
@@ -647,7 +481,7 @@ export default function VendorProfilePage() {
               </div>
             </div>
 
-            {/* SUB SERVICES */}
+            
             <div className="space-y-2 bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
               <label className="text-xs font-extrabold text-[#2C2F45] block">
                 Selected Sub-Services
@@ -670,7 +504,7 @@ export default function VendorProfilePage() {
               </div>
             </div>
 
-            {/* DYNAMIC AVAILABILITY & TIMING SCHEDULE SUMMARY */}
+            
             <div className="space-y-4 bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-extrabold text-[#2C2F45] flex items-center gap-2">
@@ -763,13 +597,14 @@ export default function VendorProfilePage() {
               )}
             </div>
 
-            {/* SERVICE AREAS */}
+            
             <div className="space-y-2 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
               <label className="text-xs font-extrabold text-[#2C2F45] block">
                 Service Areas
               </label>
 
               <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-xs font-bold text-slate-600">Postal Code: {profile.postalCode || 'Not set'}</span>
                 {profile.serviceAreas.map((area) => (
                   <span
                     key={area}
@@ -826,7 +661,7 @@ export default function VendorProfilePage() {
               </div>
             </div>
 
-            {/* BIO */}
+            
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-extrabold text-[#2C2F45] block">
@@ -846,7 +681,7 @@ export default function VendorProfilePage() {
               />
             </div>
 
-            {/* CONTACT PREFERENCES */}
+            
             <div className="space-y-2 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
               <label className="text-xs font-extrabold text-[#2C2F45] block">
                 Contact Preferences
@@ -873,11 +708,11 @@ export default function VendorProfilePage() {
               </div>
             </div>
 
-            {/* ACTIONS */}
+            
             <div className="pt-4 flex items-center gap-4">
               <button
                 type="button"
-                onClick={handleSaveChanges}
+                  onClick={handleSaveChanges}
                 className="bg-[#EE6C52] hover:bg-orange-600 text-white text-xs font-extrabold px-8 py-3 rounded-xl transition shadow-sm cursor-pointer"
               >
                 Save Changes

@@ -135,8 +135,6 @@ const SERVICES_DATA: Record<string, string[]> = {
     'Wall Crack Repair'
   ]
 }
-
-// ---- Vendor Availability config ----
 const DAYS_OF_WEEK = [
   'Monday',
   'Tuesday',
@@ -183,11 +181,12 @@ export default function VendorLoginPage() {
     businessName: '',
     businessEmail: '',
     businessPhone: '',
-    customService: ''
+    customService: '',
+    cnic: '',
+    experienceYears: '',
+    serviceAreas: '',
+    postalCode: ''
   })
-
-  // Weekly availability state — each day tracks whether it's selected
-  // and which time slots are chosen for that specific day.
   const [availability, setAvailability] = useState<Record<string, DayAvailability>>({
     Monday: { isSelected: false, slots: [] },
     Tuesday: { isSelected: false, slots: [] },
@@ -203,10 +202,6 @@ export default function VendorLoginPage() {
   const [selectedSubServices, setSelectedSubServices] = useState<string[]>([])
   const [showOtherInput] = useState(false)
   const [sameWhatsappNumber, setSameWhatsappNumber] = useState(false)
-
-  // Local Storage persistence has been removed from the vendor
-  // onboarding flow so the authoritative data source is the
-  // database-backed registration API payload rather than browser keys.
   const saveVendorSelections = (
     categories: string[],
     subServices: string[],
@@ -228,8 +223,6 @@ export default function VendorLoginPage() {
       ...(name === 'contactNumber' && sameWhatsappNumber ? { businessPhone: value } : {}),
     }))
   }
-
-  // Toggle an entire day on/off. Turning a day off clears its slots.
   const toggleDay = (day: string) => {
     setAvailability((prev) => {
       const updatedAvailability = {
@@ -239,8 +232,6 @@ export default function VendorLoginPage() {
           slots: !prev[day].isSelected ? prev[day].slots : []
         }
       }
-
-      // Save immediately.
       saveVendorSelections(
         selectedCategories,
         selectedSubServices,
@@ -250,10 +241,6 @@ export default function VendorLoginPage() {
       return updatedAvailability
     })
   }
-
-  // Toggle a specific time slot for a specific day. Selecting "Full Day"
-  // clears any other slots for that day; selecting an individual slot
-  // automatically removes "Full Day" for that day.
   const toggleSlot = (day: string, slot: string) => {
     setAvailability((prev) => {
       const dayData = prev[day]
@@ -272,8 +259,6 @@ export default function VendorLoginPage() {
         ...prev,
         [day]: { ...dayData, slots: newSlots }
       }
-
-      // Save immediately.
       saveVendorSelections(
         selectedCategories,
         selectedSubServices,
@@ -304,8 +289,6 @@ export default function VendorLoginPage() {
     const updatedCategories = [...selectedCategories, categoryName]
     setSelectedCategories(updatedCategories)
     setActiveCategory(categoryName)
-
-    // Save immediately so the selection survives navigation/refresh.
     saveVendorSelections(
       updatedCategories,
       selectedSubServices,
@@ -325,8 +308,6 @@ export default function VendorLoginPage() {
 
     setSelectedCategories(updatedCategories)
     setSelectedSubServices(updatedSubServices)
-
-    // Save immediately.
     saveVendorSelections(
       updatedCategories,
       updatedSubServices,
@@ -345,8 +326,6 @@ export default function VendorLoginPage() {
       )
 
       setSelectedSubServices(updatedSubServices)
-
-      // Save immediately.
       saveVendorSelections(
         selectedCategories,
         updatedSubServices,
@@ -355,8 +334,6 @@ export default function VendorLoginPage() {
     } else {
         const updatedSubServices = [...selectedSubServices, subService]
       setSelectedSubServices(updatedSubServices)
-
-      // Save immediately.
       saveVendorSelections(
         selectedCategories,
         updatedSubServices,
@@ -377,8 +354,6 @@ export default function VendorLoginPage() {
       )
 
       setSelectedSubServices(updatedSubServices)
-
-      // Save immediately.
       saveVendorSelections(
         selectedCategories,
         updatedSubServices,
@@ -389,8 +364,6 @@ export default function VendorLoginPage() {
       const updatedSubServices = Array.from(combined)
 
       setSelectedSubServices(updatedSubServices)
-
-      // Save immediately.
       saveVendorSelections(
         selectedCategories,
         updatedSubServices,
@@ -437,6 +410,17 @@ export default function VendorLoginPage() {
     }
 
     try {
+      const servicesByCategory = selectedCategories.reduce<Record<string, string[]>>(
+        (groupedServices, category) => {
+          const categoryServices = SERVICES_DATA[category] || []
+          groupedServices[category] = selectedSubServices.filter((service) =>
+            categoryServices.includes(service)
+          )
+          return groupedServices
+        },
+        {}
+      )
+
       const payload = {
         email,
         password,
@@ -446,9 +430,15 @@ export default function VendorLoginPage() {
         business_name: vendorDetails.businessName,
         business_email: vendorDetails.businessEmail,
         business_phone: vendorDetails.businessPhone,
+        cnic: vendorDetails.cnic,
+        experience_years: vendorDetails.experienceYears,
+        postal_code: vendorDetails.postalCode,
+        service_areas: vendorDetails.serviceAreas.split(',').map((area) => area.trim()).filter(Boolean),
+        contact_preferences: [],
         house_address: vendorDetails.houseAddress,
         categories: selectedCategories,
         services: selectedSubServices,
+        services_by_category: servicesByCategory,
         custom_service: showOtherInput && vendorDetails.customService.trim()
           ? vendorDetails.customService.trim()
           : '',
@@ -457,7 +447,7 @@ export default function VendorLoginPage() {
 
       const auth = await registerVendor(payload)
       if (auth?.role === 'vendor') {
-        localStorage.setItem('asaani_vendor_auth', JSON.stringify(auth))
+        sessionStorage.setItem('asaani_vendor_auth', JSON.stringify(auth))
         localStorage.removeItem('asaani_auth')
         router.push('/vendor/dashboard')
       } else {
@@ -480,7 +470,7 @@ export default function VendorLoginPage() {
     try {
       const auth = await loginUser({ identifier: emailOrPhone, password, role: 'vendor' })
       if (auth?.role === 'vendor') {
-        localStorage.setItem('asaani_vendor_auth', JSON.stringify(auth))
+        sessionStorage.setItem('asaani_vendor_auth', JSON.stringify(auth))
         localStorage.removeItem('asaani_auth')
         router.push('/vendor/dashboard')
       }
@@ -497,7 +487,7 @@ export default function VendorLoginPage() {
   return (
     <div className="min-h-screen w-full bg-[#C7CBD1] font-sans overflow-hidden">
       <div className="min-h-[calc(100vh-40px)] w-full bg-white grid grid-cols-1 md:grid-cols-12 overflow-hidden">
-        {/* Left Side Panel */}
+        
         <div
           className="md:col-span-4 bg-[#3B3E56] text-white p-6 md:p-10 flex flex-col justify-between relative"
           style={{ minHeight: '35rem' }}
@@ -532,7 +522,7 @@ export default function VendorLoginPage() {
           </div>
         </div>
 
-        {/* Right Side Panel */}
+        
         <div className="md:col-span-8 bg-white p-6 md:p-12 flex flex-col justify-between min-h-screen overflow-y-auto">
           <div className="w-full max-w-xl mx-auto my-auto py-4">
             <div className="flex items-center justify-center mb-6">
@@ -563,7 +553,7 @@ export default function VendorLoginPage() {
               </div>
             </div>
 
-            {/* SIGN IN FORM */}
+            
             {!isRegister && (
               <div className="max-w-md mx-auto space-y-6">
                 <div className="text-center">
@@ -628,7 +618,7 @@ export default function VendorLoginPage() {
               </div>
             )}
 
-            {/* REGISTER STEP 1 */}
+            
             {isRegister && regStep === 1 && (
               <div className="max-w-md mx-auto space-y-6">
                 <div className="text-center">
@@ -706,7 +696,7 @@ export default function VendorLoginPage() {
               </div>
             )}
 
-            {/* REGISTER STEP 2 */}
+            
             {isRegister && regStep === 2 && (
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
@@ -812,6 +802,12 @@ export default function VendorLoginPage() {
                       onChange={handleInputChange}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
                     />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input type="text" name="cnic" required placeholder="CNIC REGISTRATION NUMBER" value={vendorDetails.cnic} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
+                      <input type="text" name="experienceYears" required placeholder="YEARS OF EXPERIENCE" value={vendorDetails.experienceYears} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
+                    </div>
+
                   </div>
 
                   <hr className="border-slate-200/80 my-4" />
@@ -845,9 +841,9 @@ export default function VendorLoginPage() {
                     </div>
                   </div>
 
-                  {/* ==================================================== */}
-                  {/* VENDOR AVAILABILITY / WEEKLY WORKING HOURS — right after Business Details */}
-                  {/* ==================================================== */}
+                  
+                  
+                  
 
                   <hr className="border-slate-200/80 my-4" />
 
@@ -915,7 +911,7 @@ export default function VendorLoginPage() {
                       })}
                     </div>
 
-                    {/* Availability Summary */}
+                    
                     <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 mt-2 shadow-inner">
                       <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
                         <Check className="w-3.5 h-3.5 text-green-500" />
@@ -955,11 +951,16 @@ export default function VendorLoginPage() {
                         )}
                       </div>
                     </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      <input type="text" name="postalCode" required placeholder="POSTAL CODE" value={vendorDetails.postalCode} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
+                      <input type="text" name="serviceAreas" required placeholder="SERVICE AREAS (COMMA SEPARATED)" value={vendorDetails.serviceAreas} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
+                    </div>
                   </div>
 
                   <hr className="border-slate-200/80 my-4" />
 
-                  {/* ==================================================== */}
+                  
 
                   <div className="order-1 space-y-4">
                     <div className="flex items-center justify-between">

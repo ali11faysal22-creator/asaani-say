@@ -70,7 +70,7 @@ export type AssignedVendor = {
   last_name: string
   contact_number: string
   business_phone?: string | null
-  email?: string
+  addresses: ApiAddress[]
   city?: string | null
   area?: string | null
   average_rating: number
@@ -87,6 +87,9 @@ export type BookingResult = {
   customer_phone?: string | null
   total_amount?: number | null
   created_at: string
+  accepted_at?: string | null
+  started_at?: string | null
+  completed_at?: string | null
   service_name: string
   date: string
   slot_start: string
@@ -121,8 +124,17 @@ export type VendorProfileResponse = {
   first_name: string
   last_name: string
   contact_number: string
+  postal_code: string
+  email?: string | null
+  cnic: string
+  experience_years: string
+  service_areas: string[]
+  contact_preferences: string[]
+  bio?: string | null
+  member_since: string
+  completed_jobs: number
   profile_image_url?: string | null
-  email?: string
+  addresses?: ApiAddress[]
   city?: string | null
   area?: string | null
   categories: string[]
@@ -145,12 +157,13 @@ export type VendorBookingAction = 'accept' | 'reject'
 export function getStoredAuth(role: 'customer' | 'vendor'): AuthResponse | null {
   if (typeof window === 'undefined') return null
   const roleKey = role === 'customer' ? 'asaani_customer_auth' : 'asaani_vendor_auth'
-  for (const key of [roleKey, 'asaani_auth']) {
+  const storage = role === 'vendor' ? window.sessionStorage : window.localStorage
+  const keys = role === 'vendor' ? [roleKey] : [roleKey, 'asaani_auth']
+  for (const key of keys) {
     try {
-      const parsed = JSON.parse(localStorage.getItem(key) || 'null') as AuthResponse | null
+      const parsed = JSON.parse(storage.getItem(key) || 'null') as AuthResponse | null
       if (parsed?.role === role && parsed.profile_id && parsed.user_id) return parsed
     } catch {
-      // Continue to the next compatible auth key.
     }
   }
   return null
@@ -159,12 +172,15 @@ export function getStoredAuth(role: 'customer' | 'vendor'): AuthResponse | null 
 export function clearStoredAuth(role: 'customer' | 'vendor'): void {
   if (typeof window === 'undefined') return
   const roleKey = role === 'customer' ? 'asaani_customer_auth' : 'asaani_vendor_auth'
-  localStorage.removeItem(roleKey)
+  const storage = role === 'vendor' ? window.sessionStorage : window.localStorage
+  storage.removeItem(roleKey)
+  if (role === 'vendor') return
+
   try {
-    const shared = JSON.parse(localStorage.getItem('asaani_auth') || 'null') as AuthResponse | null
-    if (shared?.role === role) localStorage.removeItem('asaani_auth')
+    const shared = JSON.parse(window.localStorage.getItem('asaani_auth') || 'null') as AuthResponse | null
+    if (shared?.role === role) window.localStorage.removeItem('asaani_auth')
   } catch {
-    localStorage.removeItem('asaani_auth')
+    window.localStorage.removeItem('asaani_auth')
   }
 }
 
@@ -221,6 +237,9 @@ export async function registerCustomer(payload: {
   email: string
   password: string
   phone?: string
+  address?: string
+  city?: string
+  area?: string
 }): Promise<AuthResponse> {
   return api('/api/auth/register/customer', { method: 'POST', body: JSON.stringify(payload) })
 }
@@ -237,6 +256,7 @@ export async function registerVendor(payload: {
   house_address?: string
   categories?: string[]
   services?: string[]
+  services_by_category?: Record<string, string[]>
   custom_service?: string
   availability?: Record<string, { isSelected: boolean; slots: string[] }>
 }): Promise<AuthResponse> {
@@ -283,6 +303,25 @@ export async function fetchVendorProfile(vendorId: string): Promise<VendorProfil
   return api(`/api/v1/vendors/${encodeURIComponent(vendorId)}`)
 }
 
+export async function updateVendorProfile(vendorId: string, payload: {
+  first_name: string
+  last_name: string
+  business_name: string
+  contact_number: string
+  postal_code: string
+  email: string
+  cnic: string
+  experience_years: string
+  service_areas: string[]
+  contact_preferences: string[]
+  bio?: string | null
+}): Promise<VendorProfileResponse> {
+  return api(`/api/v1/vendors/${encodeURIComponent(vendorId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
 export async function uploadVendorProfileImage(vendorId: string, file: File): Promise<VendorProfileResponse> {
   const formData = new FormData()
   formData.append('image', file)
@@ -300,8 +339,23 @@ export async function fetchVendorNotifications(vendorId: string): Promise<Array<
   return api(`/api/v1/vendor/${encodeURIComponent(vendorId)}/notifications`)
 }
 
+export async function markVendorNotificationRead(vendorId: string, notificationId: string): Promise<void> {
+  return api(`/api/v1/vendor/${encodeURIComponent(vendorId)}/notifications/${encodeURIComponent(notificationId)}/read`, { method: 'PATCH' })
+}
+
+export async function deleteVendorNotification(vendorId: string, notificationId: string): Promise<void> {
+  return api(`/api/v1/vendor/${encodeURIComponent(vendorId)}/notifications/${encodeURIComponent(notificationId)}`, { method: 'DELETE' })
+}
+
 export async function decideVendorBooking(vendorId: string, bookingId: string, action: 'accept' | 'reject'): Promise<BookingResult> {
   return api(`/api/v1/vendor/bookings/${encodeURIComponent(bookingId)}/decision?vendor_id=${encodeURIComponent(vendorId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ action }),
+  })
+}
+
+export async function updateVendorBookingStatus(vendorId: string, bookingId: string, action: 'on_the_way' | 'in_progress' | 'completed'): Promise<BookingResult> {
+  return api(`/api/v1/vendor/bookings/${encodeURIComponent(bookingId)}/status?vendor_id=${encodeURIComponent(vendorId)}`, {
     method: 'PATCH',
     body: JSON.stringify({ action }),
   })
@@ -342,6 +396,25 @@ export async function createCustomerAddress(payload: {
   is_default?: boolean
 }): Promise<ApiAddress> {
   return api('/api/v1/addresses', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export async function updateCustomerAddress(
+  addressId: string,
+  customerId: string,
+  payload: {
+    label?: string
+    line?: string
+    city?: string
+    area?: string
+    latitude?: number
+    longitude?: number
+    is_default?: boolean
+  }
+): Promise<ApiAddress> {
+  return api(`/api/v1/addresses/${encodeURIComponent(addressId)}?customer_id=${encodeURIComponent(customerId)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
 }
 
 export function bookingQuery(serviceId?: string, serviceName?: string) {
@@ -424,7 +497,7 @@ export function formatSlotLabel(hhmm: string): string {
   return `${h}:${m} ${period}`
 }
 
-/** @deprecated use serviceFromCart */
+
 export function serviceNameFromCart(items: { title: string }[]): string {
   return serviceFromCart(items).service || 'Plumbing Services'
 }

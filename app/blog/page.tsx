@@ -96,7 +96,7 @@ export default function BlogPage() {
   return (
     <div className="w-full bg-slate-50 font-sans text-slate-800">
       
-      {/* 1. TOP BAR */}
+      
       <div className="bg-[#EEF2FB] text-xs text-slate-600 py-2.5 px-4 md:px-12 flex justify-between items-center border-b border-slate-100">
         <div className="flex items-center gap-6">
           <span>AsaaniSay@gmail.com</span>
@@ -110,7 +110,7 @@ export default function BlogPage() {
         </div>
       </div>
 
-      {/* 2. NAVBAR */}
+      
       <header className="bg-white max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between border-b border-slate-100">
         <Link href="/" className="flex items-center gap-2">
           <div className="relative">
@@ -123,7 +123,7 @@ export default function BlogPage() {
           </div>
         </Link>
 
-        {/* NAV LINKS */}
+        
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
           <Link href="/" className="hover:text-orange-500 transition">Home</Link>
           <Link href="/about-us" className="hover:text-orange-500 transition">About Us</Link>
@@ -139,7 +139,7 @@ export default function BlogPage() {
         </Link>
       </header>
 
-      {/* 3. HERO SECTION */}
+      
       <section className="bg-[#3B3E5B] text-white pt-16 pb-20 px-6 text-center">
         <div className="max-w-3xl mx-auto space-y-3">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight">
@@ -151,10 +151,10 @@ export default function BlogPage() {
         </div>
       </section>
 
-      {/* 4. MAIN CONTENT CONTAINER */}
+      
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-12 space-y-16">
         
-        {/* FEATURED STORY SECTION */}
+        
         <section className="space-y-6">
           <div className="flex items-center gap-3">
             <span className="w-8 h-1 bg-[#EF6A42] rounded-full"></span>
@@ -211,7 +211,7 @@ export default function BlogPage() {
           </div>
         </section>
 
-        {/* LATEST ARTICLES SECTION */}
+        
         <section className="space-y-6">
           <div className="flex items-center gap-3">
             <span className="w-8 h-1 bg-[#EF6A42] rounded-full"></span>
@@ -220,7 +220,7 @@ export default function BlogPage() {
             </h2>
           </div>
 
-          {/* ARTICLES GRID */}
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {latestArticles.map((article) => (
               <div 
@@ -274,7 +274,7 @@ export default function BlogPage() {
 
       </main>
 
-      {/* 5. NEWSLETTER SECTION */}
+      
       <section className="bg-[#616683] text-white py-14 px-6 text-center">
         <div className="max-w-2xl mx-auto space-y-6">
           <div className="space-y-2">
@@ -302,7 +302,7 @@ export default function BlogPage() {
         </div>
       </section>
 
-      {/* 6. FOOTER */}
+      
     <footer className="w-full bg-[#393E58] text-slate-200 pt-16 pb-8 font-sans">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-12">
@@ -318,7 +318,7 @@ export default function BlogPage() {
             </div>
 
               <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-3 text-xs gap-8">
-                {/* navigation links */}
+                
                 <div className="space-y-3">
                   <h3 className="font-semibold text-white text-sm">Navigation
 
@@ -345,7 +345,7 @@ export default function BlogPage() {
 
                   </ul>
                 </div>
-         {/* quicklinks        */}
+         
          <div className="space-y-3">
           <h3 className="font-semibold text-sm text-white">Quick Links
 

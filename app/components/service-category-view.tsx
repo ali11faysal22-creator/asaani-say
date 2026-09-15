@@ -49,10 +49,14 @@ interface AssignedVendor {
 interface BookingResponse {
   id: string
   status: string
+  created_at: string
   service_name: string
   date: string
   slot_start: string
   slot_end: string
+  customer_name: string
+  customer_phone?: string | null
+  address: AddressItem
   vendor: AssignedVendor
 }
 
@@ -60,14 +64,14 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   const router = useRouter()
   const [category, setCategory] = useState<CatalogCategory | null>(null)
   const [selectedServices, setSelectedServices] = useState<CatalogService[]>([])
-  
-  // Modal & Flow States
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false)
   const [addresses, setAddresses] = useState<AddressItem[]>([])
   const [selectedAddress, setSelectedAddress] = useState<string>('')
   const [customerId, setCustomerId] = useState<string>('')
-  
-  // Booking API States
+  const [showNewAddressForm, setShowNewAddressForm] = useState(false)
+  const [newAddressLine, setNewAddressLine] = useState('')
+  const [newAddressArea, setNewAddressArea] = useState('')
+  const [savingAddress, setSavingAddress] = useState(false)
   const [availableDates, setAvailableDates] = useState<{ date: string; available: boolean; vendor_count: number }[]>([])
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [slots, setSlots] = useState<{ start: string; end: string; available: boolean; vendor_count: number }[]>([])
@@ -75,7 +79,6 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   
   const [loadingDates, setLoadingDates] = useState(false)
   const [loadingSlots, setLoadingSlots] = useState(false)
-  const [findingVendors, setFindingVendors] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [vendors, setVendors] = useState<AssignedVendor[]>([])
   const [bookingData, setBookingData] = useState<BookingResponse | null>(null)
@@ -95,24 +98,16 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
     fetch(`${API_BASE}/api/availability/slots?address_id=${selectedAddress}&date=${dateStr}&service_id=${serviceId}&service=${encodeURIComponent(serviceName)}`, { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
-        setSlots((data.slots || []).filter((slot: { start: string; end: string }) => {
-          const [startHour, startMinute] = slot.start.split(':').map(Number)
-          const [endHour, endMinute] = slot.end.split(':').map(Number)
-          return (endHour * 60 + endMinute) - (startHour * 60 + startMinute) === 60
-        }))
+        setSlots(data.slots || [])
         setLoadingSlots(false)
       })
       .catch(() => {
         setLoadingSlots(false)
       })
   }, [selectedAddress, selectedServices])
-
-  // 1. Fetch Category Data
   useEffect(() => {
     fetchCategory(slug).then(setCategory).catch(() => {})
   }, [slug])
-
-  // 2. Fetch the demo customer's real ID and addresses from the backend.
   useEffect(() => {
     const loadCustomer = async () => {
       try {
@@ -144,8 +139,6 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
     }
     loadCustomer()
   }, [])
-
-  // 3. Fetch Available Dates when Modal opens or Address changes
   useEffect(() => {
     if (isSlotModalOpen && selectedAddress) {
       queueMicrotask(() => setLoadingDates(true))
@@ -158,8 +151,6 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
           const fetchedDates = data.dates || []
           setAvailableDates(fetchedDates)
           setLoadingDates(false)
-
-          // Auto select first available date
           const validDate = fetchedDates.find((d: DateRow) => d.available) || fetchedDates[0]
           if (validDate) {
             handleDateSelect(validDate.date)
@@ -170,8 +161,6 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
         })
     }
   }, [isSlotModalOpen, selectedAddress, selectedServices, handleDateSelect])
-
-  // Toggle Selected Services
   const toggleSelectService = (service: CatalogService) => {
     if (selectedServices.some((s) => s.id === service.id)) {
       setSelectedServices(selectedServices.filter((s) => s.id !== service.id))
@@ -180,35 +169,53 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
     }
   }
 
-  // 5. Find vendors first so the customer can review the available queue.
-  const handleFindVendors = async () => {
-    if (!selectedDate || !selectedSlot || !selectedAddress || selectedServices.length === 0) return
-    setFindingVendors(true)
-    setVendors([])
+  const handleAddAddress = async () => {
+    if (!customerId || !newAddressLine.trim()) return
+    setSavingAddress(true)
 
-    const params = new URLSearchParams({
-      address_id: selectedAddress,
-      date: selectedDate,
-      service_id: selectedServices[0].id,
-      service: selectedServices[0].name,
-      slot_start: selectedSlot.start,
-      slot_end: selectedSlot.end,
-    })
+    const createAddress = (latitude: number, longitude: number) =>
+      createCustomerAddress({
+        customer_id: customerId,
+        label: newAddressArea.trim() || 'Service address',
+        line: newAddressLine.trim(),
+        city: 'Lahore',
+        area: newAddressArea.trim() || 'Lahore',
+        latitude,
+        longitude,
+        is_default: addresses.length === 0,
+      })
 
     try {
-      const res = await fetch(`${API_BASE}/api/v1/vendors/search?${params}`, { credentials: 'include' })
-      if (!res.ok) throw new Error('Unable to find vendors')
-      setVendors(await res.json())
+      const address = await new Promise<AddressItem>((resolve, reject) => {
+        if (!navigator.geolocation) {
+          createAddress(31.5204, 74.3587).then(resolve).catch(reject)
+          return
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            createAddress(position.coords.latitude, position.coords.longitude).then(resolve).catch(reject)
+          },
+          () => {
+            createAddress(31.5204, 74.3587).then(resolve).catch(reject)
+          },
+          { enableHighAccuracy: true, timeout: 8000 }
+        )
+      })
+
+      setAddresses((previous) => [...previous, address])
+      setSelectedAddress(address.id)
+      setNewAddressLine('')
+      setNewAddressArea('')
+      setShowNewAddressForm(false)
     } catch (error) {
-      console.error(error)
+      setBookingError(error instanceof Error ? error.message : 'Unable to save address')
     } finally {
-      setFindingVendors(false)
+      setSavingAddress(false)
     }
   }
-
-  // 6. Place the booking after the customer reviews available vendors.
   const handleConfirmBooking = async () => {
-    if (!customerId || !selectedDate || !selectedSlot || selectedServices.length === 0 || vendors.length === 0) return
+    if (!customerId || !selectedDate || !selectedSlot || selectedServices.length === 0) return
     try {
       const auth = getStoredAuth('customer') || await getCurrentUser().catch(() => null)
       if (auth?.role !== 'customer') {
@@ -222,19 +229,35 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
     setIsSubmitting(true)
     setBookingError('')
 
-    const payload = {
-      customer_id: customerId,
-      service_id: selectedServices[0].id,
-      vendor_id: vendors[0].id,
-      service: selectedServices[0].name,
-      address_id: selectedAddress,
-      date: selectedDate,
-      slot_start: selectedSlot.start,
-      slot_end: selectedSlot.end,
-      notes: 'Please assign highest rated vendor',
-    }
-
     try {
+      let selectedVendor = vendors[0]
+      if (!selectedVendor) {
+        const params = new URLSearchParams({
+          address_id: selectedAddress,
+          date: selectedDate,
+          service_id: selectedServices[0].id,
+          service: selectedServices[0].name,
+          slot_start: selectedSlot.start,
+          slot_end: selectedSlot.end,
+        })
+        const vendorResponse = await fetch(`${API_BASE}/api/v1/vendors/search?${params}`, { credentials: 'include' })
+        if (!vendorResponse.ok) throw new Error('No vendor is available for this time slot')
+        const matchingVendors = await vendorResponse.json() as AssignedVendor[]
+        selectedVendor = matchingVendors[0]
+        if (!selectedVendor) throw new Error('No vendor is available for this time slot')
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 5000))
+      const payload = {
+        customer_id: customerId,
+        service_id: selectedServices[0].id,
+        vendor_id: selectedVendor.id,
+        service: selectedServices[0].name,
+        address_id: selectedAddress,
+        date: selectedDate,
+        slot_start: selectedSlot.start,
+        slot_end: selectedSlot.end,
+        notes: 'Please assign highest rated vendor',
+      }
       const res = await fetch(`${API_BASE}/api/bookings`, {
         method: 'POST',
         credentials: 'include',
@@ -254,10 +277,10 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
             quantity: 1,
           })),
           bookingDetails: {
-            fullName: 'Demo Customer',
-            phone: '',
-            email: '',
-            address: address?.line || '',
+            fullName: result.customer_name,
+            phone: result.customer_phone || '',
+            email: getStoredAuth('customer')?.email || '',
+            address: result.address?.line || address?.line || '',
           },
           selectedDate,
           selectedTimeSlot: `${selectedSlot.start} - ${selectedSlot.end}`,
@@ -265,8 +288,9 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
           visitingCharges: 0,
           totalAmount: totalPrice,
           status: 'Pending vendor acceptance',
-          createdAt: new Date().toISOString(),
+          createdAt: result.created_at,
         }))
+        window.dispatchEvent(new Event('asaani-order-changed'))
         const notification = {
           id: `booking-${result.id}`,
           message: 'Your service request has been submitted. We are waiting for vendor acceptance and will update you shortly.',
@@ -283,7 +307,11 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
       }
     } catch (error) {
       console.error(error)
-      setBookingError('Unable to connect to the booking service. Please try again.')
+      setBookingError(
+        error instanceof TypeError && error.message === 'Failed to fetch'
+          ? 'Booking service is unavailable. Please make sure the backend is running at http://127.0.0.1:8000 and try again.'
+          : 'Unable to connect to the booking service. Please try again.'
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -293,7 +321,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
 
   return (
     <div className="w-full bg-white font-sans text-slate-800 relative min-h-screen pb-24">
-      {/* Top Header */}
+      
       <div className="bg-[#EEF2FB] text-xs text-slate-600 py-2.5 px-4 md:px-12 flex justify-between items-center border-b border-slate-100">
         <div className="flex items-center gap-6">
           <span>Asaani Say@gmail.com</span>
@@ -307,7 +335,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
 
       <CustomerNavbar active="services" />
 
-      {/* Catalog Services */}
+      
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-[#1E2342]">
@@ -322,8 +350,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
             return (
               <div
                 key={item.id}
-                onClick={() => toggleSelectService(item)}
-                className={`bg-[#EEF2FB] rounded-xl p-3 flex items-center gap-3.5 shadow-sm transition cursor-pointer border ${
+                className={`bg-[#EEF2FB] rounded-xl p-3 flex items-center gap-3.5 shadow-sm transition border ${
                   isSelected ? 'border-orange-500 ring-2 ring-orange-500/20 bg-orange-50/30' : 'border-slate-300/60'
                 }`}
               >
@@ -347,7 +374,9 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                       <span className="text-xs font-bold text-slate-700">{item.rating || '4.9'}</span>
                     </div>
                     <button
-                      className={`text-[11px] font-bold px-3 py-1 rounded flex items-center gap-1 transition ${
+                      type="button"
+                      onClick={() => toggleSelectService(item)}
+                      className={`text-[11px] font-bold px-3 py-1 rounded flex items-center gap-1 transition cursor-pointer ${
                         isSelected ? 'bg-emerald-600 text-white' : 'bg-[#EE6C52] text-white hover:bg-orange-600'
                       }`}
                     >
@@ -362,7 +391,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
         </div>
       </section>
 
-      {/* Floating Continue Bar */}
+      
       {selectedServices.length > 0 && (
         <div className="fixed bottom-6 right-6 z-40">
           <button
@@ -375,7 +404,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
         </div>
       )}
 
-      {/* SLOT & VENDOR ASSIGNMENT MODAL */}
+      
       {isSlotModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-6 max-h-[90vh] overflow-y-auto relative">
@@ -397,7 +426,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                   <p className="text-xs text-slate-500">Auto-assigning top rated vendor within 10 km radius</p>
                 </div>
 
-                {/* 1. ADDRESS SELECTION */}
+                
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                     <MapPin className="w-4 h-4 text-orange-500" /> Delivery Address
@@ -418,9 +447,40 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                       </div>
                     ))}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewAddressForm((value) => !value)}
+                    className="text-xs font-bold text-orange-600 hover:text-orange-700"
+                  >
+                    {showNewAddressForm ? 'Cancel new address' : '+ Add a new address'}
+                  </button>
+                  {showNewAddressForm && (
+                    <div className="space-y-2 rounded-xl border border-orange-100 bg-orange-50/40 p-3">
+                      <input
+                        value={newAddressLine}
+                        onChange={(event) => setNewAddressLine(event.target.value)}
+                        placeholder="House 22, Street 5, Gulberg, Lahore"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-500"
+                      />
+                      <input
+                        value={newAddressArea}
+                        onChange={(event) => setNewAddressArea(event.target.value)}
+                        placeholder="Area name, e.g. Gulberg"
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-500"
+                      />
+                      <button
+                        type="button"
+                        disabled={!newAddressLine.trim() || savingAddress}
+                        onClick={() => void handleAddAddress()}
+                        className="rounded-lg bg-orange-500 px-4 py-2 text-xs font-bold text-white disabled:bg-slate-300"
+                      >
+                        {savingAddress ? 'Saving address...' : 'Save & use this address'}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {/* 2. REAL BACKEND DATES */}
+                
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                     <Calendar className="w-4 h-4 text-orange-500" /> Available Dates
@@ -435,14 +495,12 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                         return (
                           <button
                             key={item.date}
-                            disabled={!item.available}
+                            disabled={false}
                             onClick={() => handleDateSelect(item.date)}
                             className={`min-w-17 h-17 shrink-0 rounded-2xl flex flex-col items-center justify-center border text-xs transition cursor-pointer relative ${
                               isSelected
                                 ? 'bg-[#3A3E59] text-white border-[#3A3E59] shadow-md scale-105'
-                                : item.available
-                                ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
-                                : 'bg-slate-100 border-slate-100 text-slate-300 opacity-50 cursor-not-allowed'
+                                : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
                             }`}
                           >
                             <span className="text-[10px] font-medium">{d.toLocaleDateString('en-US', { weekday: 'short' })}</span>
@@ -457,7 +515,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                   )}
                 </div>
 
-                {/* 3. REAL BACKEND SLOTS */}
+                
                 <div className="space-y-2 pt-1">
                   <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                     <Clock className="w-4 h-4 text-orange-500" /> Time Slots
@@ -468,15 +526,20 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                     <div className="grid grid-cols-3 gap-2">
                       {slots.map((slot, idx) => {
                         const isSelected = selectedSlot?.start === slot.start
+                        const now = new Date()
+                        const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+                        const [slotHour, slotMinute] = slot.start.split(':').map(Number)
+                        const isPastToday = selectedDate === localDate
+                          && slotHour * 60 + slotMinute <= now.getHours() * 60 + now.getMinutes()
                         return (
                           <button
                             key={idx}
-                            disabled={!slot.available}
+                            disabled={isPastToday}
                             onClick={() => setSelectedSlot(slot)}
                             className={`py-2.5 px-2 rounded-xl border text-[11px] font-bold transition flex flex-col items-center justify-center cursor-pointer ${
                               isSelected
                                 ? 'bg-[#EE6C52] text-white border-[#EE6C52] shadow-sm'
-                                : slot.available
+                                : !isPastToday
                                 ? 'bg-white border-slate-200 text-slate-700 hover:border-orange-500 hover:bg-orange-50/20'
                                 : 'bg-slate-100 border-slate-100 text-slate-300 cursor-not-allowed opacity-50'
                             }`}
@@ -490,11 +553,11 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                 </div>
 
                 <button
-                  disabled={!selectedDate || !selectedSlot || findingVendors || vendors.length > 0}
-                  onClick={handleFindVendors}
+                  disabled={!selectedDate || !selectedSlot || isSubmitting}
+                  onClick={() => void handleConfirmBooking()}
                   className="w-full bg-[#EE6C52] hover:bg-orange-600 disabled:bg-slate-300 text-white font-extrabold text-sm py-3.5 rounded-xl transition shadow-md mt-4 cursor-pointer"
                 >
-                  <span className="inline-flex items-center justify-center gap-2">{findingVendors && <Loader2 className="h-4 w-4 animate-spin" />}{findingVendors ? 'Checking Availability...' : 'Proceed to checkout'}</span>
+                  <span className="inline-flex items-center justify-center gap-2">{isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}{isSubmitting ? 'Confirming booking...' : 'Confirm booking'}</span>
                 </button>
 
                 {vendors.length > 0 && (
@@ -515,7 +578,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                 )}
               </>
             ) : (
-              /* TOP VENDOR CONFIRMATION CARD */
+              
               <div className="py-4 space-y-5">
                 <div className="text-center space-y-1">
                   <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
@@ -525,7 +588,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                   <p className="text-xs text-slate-500">Highest rated vendor automatically assigned within 10 km</p>
                 </div>
 
-                {/* VENDOR DETAILS CARD */}
+                
                 <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-bold text-lg shrink-0">

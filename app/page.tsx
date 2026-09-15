@@ -261,7 +261,7 @@ export default function HeroSection() {
       <CustomerNavbar active="home" />
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-{/* review card */}
+
           <div className="lg:col-span-7 pt-2 space-y-8">
             <div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#23263B] leading-tight tracking-tight">
@@ -282,7 +282,7 @@ export default function HeroSection() {
                 <div className="absolute -top-5 right-6 w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-md z-10">
                   <Quote className="w-6 h-6 fill-current rotate-180" />
                 </div>
-    {/* card box */}
+    
                 <div className="bg-[#EEF2FB] rounded-2xl p-6 sm:p-7 flex items-start gap-4 shadow-sm border border-slate-100">
                   <div className="w-12 h-12 bg-[#3A3E59] rounded-full flex items-center justify-center shrink-0">
                     <User className="w-6 h-6 text-white"/>
@@ -305,14 +305,14 @@ export default function HeroSection() {
               </div>
             </div>
           </div>
-{/* order service form */}
+
           <div className="lg:col-span-5">
             <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-[0_10px_40px_rgba(0,0,0,0.06)] border border-slate-100">
               <h3 className="text-lg font-bold text-[#23263B] mb-6">
                 Order Service
               </h3>
               <form className="space-y-4">
-        {/* zip & city */}
+        
                 <div className="grid grid-cols-2 gap-3">
                   <input
                     type="text"
@@ -334,7 +334,7 @@ export default function HeroSection() {
                   </div>
                 </div>
 
-     {/* select job */}
+     
                 <div>
                   <label className="block text-xs font-bold text-[#23263B] mb-1.5">
                     Select Job
@@ -381,7 +381,7 @@ export default function HeroSection() {
                     className="w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400"/>
                 </div>
 
-                {/* submit button */}
+                
                 <button
                   type="button"
                   className="w-full bg-[#3A3E59] hover:bg-[#2C2F45] text-white font-semibold text-xs py-3.5 rounded-lg mt-3 transition shadow-md">
@@ -413,7 +413,7 @@ export default function HeroSection() {
           </Link>
         </div>
 
-  {/* service cards */}
+  
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {services.map((item, index) => (
@@ -517,7 +517,7 @@ export default function HeroSection() {
             </div>
           </div>
           <div className="lg:col-span-6 space-y-10 pt-2">
-{/* stats */}
+
           <div
               ref={statsRef}
               className="grid grid-cols-3 gap-4 border-b border-slate-100 pb-8 text-center sm:text-left">
@@ -592,7 +592,7 @@ export default function HeroSection() {
       </section>
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans border-t border-slate-200">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          {/* accordion */}
+          
       <div className="lg:col-span-6 space-y-6">
         <div>
           <div className="flex items-center gap-2 mb-3">
@@ -751,7 +751,7 @@ export default function HeroSection() {
 
        </div>
 
-       {/* image */}
+       
        <div className="lg:col-span-5 flex justify-center lg:justify-end">
         <div className="relative w-full max-w-md aspect-4/3 sm:aspect-square">
          <Image
@@ -801,7 +801,7 @@ export default function HeroSection() {
             </h2>
   </div>
           </div>
-          {/* google revieew badge */}
+          
 
              <div className="bg-white rounded-xl p-4 flex items-center gap-4 border border-slate-100 shrink-0">
             <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm shrink-0">
@@ -909,7 +909,7 @@ export default function HeroSection() {
             </div>
 
               <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-3 text-xs gap-8">
-                {/* navigation links */}
+                
                 <div className="space-y-3">
                   <h3 className="font-semibold text-white text-sm">Navigation
 
@@ -936,7 +936,7 @@ export default function HeroSection() {
 
                   </ul>
                 </div>
-         {/* quicklinks        */}
+         
          <div className="space-y-3">
           <h3 className="font-semibold text-sm text-white">Quick Links
 

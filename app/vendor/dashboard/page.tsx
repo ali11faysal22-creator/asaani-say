@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { fetchVendorNotifications, fetchVendorProfile, formatSlotLabel, getStoredAuth } from '@/app/lib/booking-api'
+import { fetchServices, fetchVendorNotifications, fetchVendorProfile, formatSlotLabel, getStoredAuth, markVendorNotificationRead } from '@/app/lib/booking-api'
 import {
   Wrench,
   ShieldCheck,
@@ -12,7 +12,6 @@ import {
   Bell,
   History,
   Plus,
-  Edit2,
   Trash2,
   Check,
   X,
@@ -24,6 +23,7 @@ import {
   Sparkles,
   ClipboardCheck
 } from 'lucide-react'
+import UnsavedChangesGuard from '../components/unsaved-changes-guard'
 
 const GLOBAL_SERVICES_CATALOG: Record<string, string[]> = {
   'Home Inspection': [
@@ -50,7 +50,13 @@ const GLOBAL_SERVICES_CATALOG: Record<string, string[]> = {
     'Light Installation',
     'Fan Installation',
     'Circuit Breaker Repair',
-    'DB Panel Work'
+    'DB Panel Work',
+    'Short-Circuit Repair',
+    'Power Outlet Installation',
+    'Electrical Fault Detection',
+    'Generator Wiring',
+    'Inverter Installation',
+    'Electrical Inspection'
   ],
   'AC Services': [
     'AC Repair',
@@ -58,7 +64,12 @@ const GLOBAL_SERVICES_CATALOG: Record<string, string[]> = {
     'AC Cleaning',
     'AC Maintenance',
     'AC Gas Refilling',
-    'AC Troubleshooting'
+    'AC Troubleshooting',
+    'Split AC Service',
+    'Window AC Service',
+    'Central AC Service',
+    'AC Duct Cleaning',
+    'AC Replacement'
   ],
   Handyman: [
     'Furniture Assembly',
@@ -152,8 +163,6 @@ function parseVendorAvailability(raw: unknown): AvailabilityRow[] {
     }
   }).filter((row) => row.isSelected || row.slots.length > 0)
 }
-
-// ================= NOTIFICATION TYPES =================
 type NotificationCategory = 'USER REQUESTS' | 'ORDER COMPLETED' | 'ORDER PENDING'
 type NotificationVisual =
   | { kind: 'avatar'; src: string }
@@ -220,6 +229,9 @@ function normalizeCategoryName(rawCategory: string): string {
 }
 
 function normalizeServiceNameForCategory(category: string, rawService: string): string | null {
+  const serviceName = String(rawService || '').trim()
+  if (!serviceName) return null
+
   const catalogServices = GLOBAL_SERVICES_CATALOG[category] || []
   const canonicalMatch = catalogServices.find((serviceName) =>
     normalizeComparableName(serviceName) === normalizeComparableName(rawService)
@@ -234,10 +246,8 @@ function normalizeServiceNameForCategory(category: string, rawService: string): 
     normalizeComparableName(rawService).includes(normalizeComparableName(serviceName))
   )
 
-  return looseFind || null
+  return looseFind || serviceName
 }
-
-// ================= NOTIFICATION POPOVER COMPONENT =================
 function NotificationPopover() {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -274,12 +284,18 @@ function NotificationPopover() {
 
   const unreadCount = notifications.filter((n) => n.unread).length
 
-  const handleMarkAllAsRead = () => {
-    setNotifications([])
+  const handleMarkAllAsRead = async () => {
+    const auth = getStoredAuth('vendor')
+    if (auth?.profile_id) {
+      await Promise.all(notifications.filter((item) => item.unread).map((item) => markVendorNotificationRead(auth.profile_id, item.id).catch(() => undefined)))
+    }
+    setNotifications((items) => items.map((item) => ({ ...item, unread: false })))
   }
 
-  const handleRemoveSingle = (id: string) => {
-    setNotifications((prev) => prev.filter((item) => item.id !== id))
+  const handleMarkSingleAsRead = async (id: string) => {
+    setNotifications((prev) => prev.map((item) => item.id === id ? { ...item, unread: false } : item))
+    const auth = getStoredAuth('vendor')
+    if (auth?.profile_id) await markVendorNotificationRead(auth.profile_id, id).catch(() => undefined)
   }
 
   const groupedNotifications = CATEGORY_ORDER.map((category) => ({
@@ -343,7 +359,7 @@ function NotificationPopover() {
                       {group.items.map((item) => (
                         <div
                           key={item.id}
-                          onClick={() => handleRemoveSingle(item.id)}
+                          onClick={() => void handleMarkSingleAsRead(item.id)}
                           className="px-5 py-3.5 flex items-start gap-3.5 transition hover:bg-slate-50 cursor-pointer group"
                           title="Click to mark as read"
                         >
@@ -389,7 +405,7 @@ function NotificationPopover() {
               )}
             </div>
 
-            {/* Redirect Footer */}
+            
             <div className="p-3 bg-slate-50/80 border-t border-slate-100 text-center">
              <Link
   href="/vendor/notifications"
@@ -405,14 +421,10 @@ function NotificationPopover() {
     </div>
   )
 }
-
-// ================= SELECTION SUMMARY CARD (NEW) =================
-// Elegant read-only overview: shows the main category the vendor picked,
-// and an auto-generated checklist of every sub-service selected under it.
 function SelectionSummaryCard({ group }: { group: MainServiceGroup }) {
   return (
     <div className="bg-white rounded-2xl p-5 shadow-md relative overflow-hidden">
-  {/* curved spot */}
+  
       <div className="absolute -right-6 -top-6 w-24 h-24 bg-[#EE6C52]/10 rounded-full" />
 
       <div className="flex items-center gap-2.5 mb-4 relative">
@@ -445,8 +457,6 @@ function SelectionSummaryCard({ group }: { group: MainServiceGroup }) {
     </div>
   )
 }
-
-// ================= MAIN DASHBOARD PAGE =================
 export default function VendorDashboardPage() {
   const router = useRouter()
   const searchInputRef = useRef<HTMLSelectElement>(null)
@@ -456,13 +466,9 @@ export default function VendorDashboardPage() {
   const [selectedSubCategoryFilter, setSelectedSubCategoryFilter] = useState('All Sub-Services')
   
   const [servicesData, setServicesData] = useState<MainServiceGroup[]>([])
+  const [savedServicesData, setSavedServicesData] = useState('')
   const [availabilityData, setAvailabilityData] = useState<AvailabilityRow[]>([])
-
-  const [editingService, setEditingService] = useState<{
-    mainCatIndex: number
-    subService: SubServiceItem
-  } | null>(null)
-  const [editPrice, setEditPrice] = useState('')
+  const [marketPrices, setMarketPrices] = useState<Record<string, string>>({})
 
   const [toast, setToast] = useState<{
     show: boolean
@@ -482,22 +488,40 @@ export default function VendorDashboardPage() {
         }
 
         const vendorId = auth.profile_id || auth.user_id
-        const vendor = await fetchVendorProfile(vendorId)
+        const [vendor, catalogServices] = await Promise.all([
+          fetchVendorProfile(vendorId),
+          fetchServices(),
+        ])
+        const marketPrices = new Map(
+          catalogServices
+            .filter((service) => service.price != null)
+            .map((service) => [normalizeComparableName(service.name), `Rs. ${service.price!.toLocaleString()}`])
+        )
+          setMarketPrices(Object.fromEntries(marketPrices))
         const categories = Array.isArray(vendor?.categories) ? vendor.categories : []
         const services = Array.isArray(vendor?.services) ? vendor.services : []
         const servicesByCategory = vendor?.services_by_category || {}
         const rawAvailability = vendor?.availability ?? vendor?.weekly_availability ?? vendor?.weeklyAvailability ?? vendor?.schedule
         setAvailabilityData(parseVendorAvailability(rawAvailability))
 
-        if (categories.length > 0 && services.length > 0) {
+        if (categories.length > 0 && (services.length > 0 || Object.keys(servicesByCategory).length > 0)) {
           const parsedGroups: MainServiceGroup[] = categories
             .map((mainCat: string): MainServiceGroup => {
               const canonicalCategory = normalizeCategoryName(mainCat)
               const categoryCatalog = GLOBAL_SERVICES_CATALOG[canonicalCategory] || []
-              const categoryServices = (servicesByCategory[mainCat] || services)
+              const categoryServicesFromBackend = Object.entries(servicesByCategory).find(
+                ([categoryName]) => normalizeCategoryName(categoryName) === canonicalCategory
+              )?.[1]
+              const servicesForCategory = categoryServicesFromBackend ?? services.filter((serviceTitle) =>
+                categoryCatalog.length === 0 || categoryCatalog.some((catalogTitle) => {
+                  const catalogName = normalizeComparableName(catalogTitle)
+                  const serviceName = normalizeComparableName(serviceTitle)
+                  return catalogName === serviceName || catalogName.includes(serviceName) || serviceName.includes(catalogName)
+                })
+              )
+              const categoryServices = servicesForCategory
                 .map((serviceTitle: string) => normalizeServiceNameForCategory(canonicalCategory, serviceTitle))
                 .filter((title: string | null): title is string => Boolean(title))
-                .filter((title: string) => categoryCatalog.length === 0 || categoryCatalog.includes(title))
 
               const unmatchedServices = categoryCatalog.length === 0 ? services.map(String) : []
 
@@ -509,7 +533,7 @@ export default function VendorDashboardPage() {
                   id: `${canonicalCategory.toLowerCase().replace(/\s+/g, '-')}-${idx}-${Date.now()}`,
                   title: subTitle,
                   description: `Professional ${subTitle} service provided with complete quality guarantee.`,
-                  price: 'Rs. 2,000 – 4,500',
+                  price: marketPrices.get(normalizeComparableName(subTitle)) || 'Price unavailable',
                   status: 'ACTIVE' as const
                 }))
               }
@@ -517,6 +541,7 @@ export default function VendorDashboardPage() {
             .filter((group: MainServiceGroup) => group.subServices.length > 0)
 
           setServicesData(parsedGroups)
+          setSavedServicesData(JSON.stringify(parsedGroups))
         } else {
           const savedCategoriesStr = localStorage.getItem('vendor_selected_categories')
           const savedSubServicesStr = localStorage.getItem('vendor_selected_sub_services')
@@ -534,13 +559,14 @@ export default function VendorDashboardPage() {
                   id: `${mainCat.toLowerCase().replace(/\s+/g, '-')}-${idx}-${Date.now()}`,
                   title: subTitle,
                   description: `Professional ${subTitle} service provided with complete quality guarantee.`,
-                  price: 'Rs. 2,000 – 4,500',
+                  price: marketPrices.get(normalizeComparableName(subTitle)) || 'Price unavailable',
                   status: 'ACTIVE' as const
                 }))
               }
             })
 
             setServicesData(parsedGroups)
+            setSavedServicesData(JSON.stringify(parsedGroups))
           }
         }
       } catch (error) {
@@ -570,6 +596,7 @@ export default function VendorDashboardPage() {
     })
 
     updateServicesDataAndStorage(servicesData)
+    setSavedServicesData(JSON.stringify(servicesData))
 
     setTimeout(() => {
       setToast({
@@ -587,6 +614,8 @@ export default function VendorDashboardPage() {
   const handleSignOut = () => {
     router.push('/vendor/login')
   }
+
+  const servicesAreDirty = Boolean(savedServicesData) && JSON.stringify(servicesData) !== savedServicesData
 
   const handleAddNewServiceClick = () => {
     if (searchInputRef.current) {
@@ -628,7 +657,7 @@ export default function VendorDashboardPage() {
       id: Date.now().toString(),
       title: subServiceTitle,
       description: `Professional ${subServiceTitle} service provided with complete quality guarantee.`,
-      price: 'Rs. 1,800 – 3,200',
+      price: marketPrices[normalizeComparableName(subServiceTitle)] || 'Price unavailable',
       status: 'ACTIVE'
     }
 
@@ -652,23 +681,12 @@ export default function VendorDashboardPage() {
     setServicesData(updated)
   }
 
-  const handleSavePriceEdit = () => {
-    if (!editingService) return
-    const updated = [...servicesData]
-    const sub = updated[editingService.mainCatIndex].subServices.find(
-      (s) => s.id === editingService.subService.id
-    )
-    if (sub) {
-      sub.price = editPrice
-    }
-    setServicesData(updated)
-    setEditingService(null)
-  }
-
   return (
-    <div className="min-h-screen w-full bg-white grid grid-cols-1 md:grid-cols-12 font-sans overflow-hidden relative">
+    <>
+      <UnsavedChangesGuard isDirty={servicesAreDirty} onSave={handleSaveChanges} />
+      <div className="min-h-screen w-full bg-white grid grid-cols-1 md:grid-cols-12 font-sans overflow-hidden relative">
       
-      {/* Toast Notification */}
+      
       {toast.show && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-in-out">
           <div className="bg-[#2C2F45] text-white text-xs font-semibold px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3">
@@ -688,7 +706,7 @@ export default function VendorDashboardPage() {
         </div>
       )}
 
-      {/* Sidebar */}
+      
       <div className="md:col-span-3 lg:col-span-2.5 bg-[#3B3E56] text-white p-6 flex flex-col justify-between relative min-h-screen">
         <div>
           <div className="flex items-center gap-3 mb-10 pt-2">
@@ -752,11 +770,11 @@ export default function VendorDashboardPage() {
         </div>
       </div>
 
-      {/* Main Content Area */}
+      
       <div className="md:col-span-9 lg:col-span-9.5 bg-[#F8FAFC] p-6 md:p-10 flex flex-col justify-between min-h-screen overflow-y-auto">
         <div className="w-full max-w-6xl mx-auto space-y-6">
           
-          {/* TOP BAR HEADER */}
+          
           <div className="flex items-center justify-between pb-2">
             <div className="relative inline-block text-left">
               <span className="text-xs font-semibold text-slate-700">
@@ -777,7 +795,7 @@ export default function VendorDashboardPage() {
                 Sign Out
               </button>
 
-              {/* INTEGRATED NOTIFICATION POPOVER */}
+              
               <NotificationPopover />
 
               <button className="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-50 transition shadow-2xs cursor-pointer">
@@ -786,7 +804,7 @@ export default function VendorDashboardPage() {
             </div>
           </div>
 
-          {/* PAGE TITLE */}
+          
           <div className="flex items-center justify-between flex-wrap gap-4 pt-2">
             <div>
               <h1 className="text-2xl font-extrabold text-[#2C2F45]">
@@ -825,7 +843,7 @@ export default function VendorDashboardPage() {
             </section>
           )}
 
-          {/* SEARCH & FILTER BAR */}
+          
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
             <div className="md:col-span-6 relative">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
@@ -894,7 +912,7 @@ export default function VendorDashboardPage() {
             </div>
           </div>
 
-          {/* NEW: SELECTION SUMMARY OVERVIEW (elegant checklist cards) */}
+          
           {servicesData.length > 0 && (
             <div className="pt-1">
               <div className="flex items-center gap-2 mb-3">
@@ -911,7 +929,7 @@ export default function VendorDashboardPage() {
             </div>
           )}
 
-          {/* SERVICES DISPLAY */}
+          
           <div className="space-y-6 pt-2">
             {servicesData.length === 0 ? (
               <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-400 text-xs">
@@ -983,7 +1001,7 @@ export default function VendorDashboardPage() {
                         <div className="pt-3 mt-3 border-t border-slate-200/60 flex items-center justify-between">
                           <div>
                             <span className="text-[9px] font-bold text-slate-400 block tracking-wider uppercase">
-                              ESTIMATED PRICE RANGE
+                              FIXED MARKET PRICE
                             </span>
                             <span className="text-xs font-extrabold text-[#EE6C52]">
                               {subService.price}
@@ -991,21 +1009,6 @@ export default function VendorDashboardPage() {
                           </div>
 
                           <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingService({
-                                  mainCatIndex: mainIndex,
-                                  subService
-                                })
-                                setEditPrice(subService.price)
-                              }}
-                              className="px-2.5 py-1 border border-slate-200 text-slate-600 hover:text-[#EE6C52] hover:border-[#EE6C52] text-[10px] font-bold rounded-lg bg-white transition cursor-pointer flex items-center gap-1"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                              <span>Edit Price</span>
-                            </button>
-
                             <button
                               type="button"
                               onClick={() =>
@@ -1026,7 +1029,7 @@ export default function VendorDashboardPage() {
             )}
           </div>
 
-          {/* SAVE BUTTON */}
+          
           {servicesData.length > 0 && (
             <div className="pt-2 flex justify-end">
               <button
@@ -1042,55 +1045,7 @@ export default function VendorDashboardPage() {
         </div>
       </div>
 
-      {/* EDIT PRICE MODAL */}
-      {editingService && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-extrabold text-[#2C2F45]">
-                Edit Price: {editingService.subService.title}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setEditingService(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Price Range / Rate
-              </label>
-              <input
-                type="text"
-                value={editPrice}
-                onChange={(e) => setEditPrice(e.target.value)}
-                placeholder="e.g. Rs. 2,500 – 5,000"
-                className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#EE6C52] transition"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setEditingService(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSavePriceEdit}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-[#EE6C52] text-white hover:bg-orange-600 transition shadow-xs cursor-pointer"
-              >
-                Save Price
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
+    </>
   )
 }

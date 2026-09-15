@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { fetchAddresses, getCurrentUser, placeBooking, serviceFromCart } from '@/app/lib/booking-api'
+import { createCustomerAddress, fetchAddresses, getCurrentUser, placeBooking, serviceFromCart, updateCustomerAddress } from '@/app/lib/booking-api'
 import { 
   Camera, 
   LayoutGrid, 
@@ -347,6 +347,7 @@ export default function CartAndCheckoutPage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('')
   const [selectedVendor, setSelectedVendor] = useState<VendorProfile | null>(null)
   const [savedAddresses, setSavedAddresses] = useState<string[]>(DEFAULT_USER_ADDRESSES)
+  const [savedAddressIds, setSavedAddressIds] = useState<string[]>([])
   const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(0)
   const [billingDetails, setBillingDetails] = useState({ fullName: '', phone: '', email: '', address: '' })
 
@@ -363,7 +364,7 @@ export default function CartAndCheckoutPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    queueMicrotask(() => {
+    queueMicrotask(async () => {
       if (!localStorage.getItem('asaani_vendors')) {
         setStoredJson('asaani_vendors', DEFAULT_VENDOR_PROFILES)
       }
@@ -380,6 +381,21 @@ export default function CartAndCheckoutPage() {
       setSavedAddresses(getInitialSavedAddresses())
       setSelectedAddressIndex(getInitialSelectedAddressIndex())
       setBillingDetails(getInitialBillingDetails())
+
+      const auth = await getCurrentUser().catch(() => null)
+      if (auth?.role === 'customer' && auth.profile_id) {
+        const backendAddresses = await fetchAddresses(auth.profile_id).catch(() => [])
+        if (backendAddresses.length > 0) {
+          setSavedAddresses(backendAddresses.slice(0, 2).map((address) => address.line))
+          setSavedAddressIds(backendAddresses.slice(0, 2).map((address) => address.id))
+          const savedAddress = getInitialBillingDetails().address
+          const selectedIndex = backendAddresses.findIndex((address) => address.line === savedAddress)
+          setSelectedAddressIndex(selectedIndex >= 0 ? selectedIndex : 0)
+          if (selectedIndex < 0) {
+            setBillingDetails((previous) => ({ ...previous, address: backendAddresses[0].line }))
+          }
+        }
+      }
     })
   }, [])
 
@@ -387,8 +403,6 @@ export default function CartAndCheckoutPage() {
     setCartItems(items)
     localStorage.setItem('asaani_cart', JSON.stringify(items))
   }
-
-  // Quantity Handlers
   const handleIncreaseQty = (id: string) => {
     const updated = cartItems.map(item => {
       if (item.id === id) {
@@ -419,8 +433,6 @@ export default function CartAndCheckoutPage() {
   const handleClearCart = () => {
     updateLocalStorageCart([])
   }
-
-  // Handle Input Changes & save to LocalStorage
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     const updatedDetails = { ...billingDetails, [name]: value }
@@ -432,6 +444,50 @@ export default function CartAndCheckoutPage() {
       selectedTimeSlot,
       selectedVendor
     }))
+  }
+
+  const handleAddressBlur = async () => {
+    const addressLine = billingDetails.address.trim()
+    if (!addressLine) return
+
+    const auth = await getCurrentUser().catch(() => null)
+    if (auth?.role !== 'customer' || !auth.profile_id) return
+
+    try {
+      const addressId = savedAddressIds[selectedAddressIndex]
+      let savedAddress
+      if (addressId) {
+        savedAddress = await updateCustomerAddress(addressId, auth.profile_id, {
+          line: addressLine,
+          city: 'Lahore',
+          area: 'Lahore',
+        })
+      } else {
+        const addresses = await fetchAddresses(auth.profile_id)
+        if (addresses.length >= 2) return
+        savedAddress = await createCustomerAddress({
+          customer_id: auth.profile_id,
+          label: `Address ${addresses.length + 1}`,
+          line: addressLine,
+          city: 'Lahore',
+          area: 'Lahore',
+          latitude: 31.5204,
+          longitude: 74.3587,
+          is_default: addresses.length === 0,
+        })
+      }
+
+      const updatedAddresses = [...savedAddresses]
+      updatedAddresses[selectedAddressIndex] = savedAddress.line
+      setSavedAddresses(updatedAddresses.slice(0, 2))
+
+      const updatedAddressIds = [...savedAddressIds]
+      updatedAddressIds[selectedAddressIndex] = savedAddress.id
+      setSavedAddressIds(updatedAddressIds.slice(0, 2))
+      setStoredJson('asaani_user_addresses', updatedAddresses.slice(0, 2))
+    } catch (error) {
+      console.error('Unable to save customer address', error)
+    }
   }
 
   const handleAddressSelection = (index: number) => {
@@ -447,8 +503,6 @@ export default function CartAndCheckoutPage() {
       selectedVendor
     }))
   }
-
-  // Date selection (from calendar grid)
   const handleDateSelect = (dateKey: string) => {
     if (isDateFullyBooked(dateKey)) {
       return
@@ -474,8 +528,6 @@ export default function CartAndCheckoutPage() {
       selectedVendor: nextSlot ? getBestAvailableVendor(dateKey, nextSlot) : null
     }))
   }
-
-  // Time slot selection handler
   const handleTimeSlotSelect = (slot: string) => {
     const vendor = getBestAvailableVendor(selectedDate, slot)
     setSelectedVendor(vendor)
@@ -507,12 +559,8 @@ export default function CartAndCheckoutPage() {
       return prev + 1
     })
   }
-
-  // Don't let the user navigate to a month entirely in the past
   const isPrevMonthDisabled =
     viewYear === today.getFullYear() && viewMonth === today.getMonth()
-
-  // Build the calendar grid for the currently viewed month
   const calendarCells = useMemo(() => {
     const firstWeekday = new Date(viewYear, viewMonth, 1).getDay()
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
@@ -531,101 +579,16 @@ export default function CartAndCheckoutPage() {
     () => getUnavailableSlotsForDate(selectedDate),
     [selectedDate]
   )
-
-  // Calculations
   const visitingCharges = 500
   const subtotal = cartItems.reduce((acc, item) => {
     return acc + (item.numericPrice * item.quantity)
   }, 0)
   const totalAmount = subtotal > 0 ? subtotal + visitingCharges : 0
-
-  // Handle vendor request from modal
   const handleVendorRequest = (requestedVendor: VendorProfile) => {
     void handlePlaceOrder(requestedVendor.id)
   }
 
-  /*
-    const generatedOrderId = generateOrderId()
-    const serviceNameText = cartItems.length === 1 
-      ? cartItems[0].title 
-      : `${cartItems[0].title} (+${cartItems.length - 1} more)`
-
-    const finalOrder = {
-      orderId: generatedOrderId,
-      items: cartItems,
-      bookingDetails: billingDetails,
-      selectedDate,
-      selectedTimeSlot,
-      assignedVendor: requestedVendor,
-      subtotal,
-      visitingCharges,
-      totalAmount,
-      status: 'Confirmed',
-      createdAt: new Date().toISOString()
-    }
-
-    localStorage.setItem('asaani_latest_order', JSON.stringify(finalOrder))
-
-    const userNotification: BookingNotification = {
-      id: `user-${generatedOrderId}`,
-      message: `Your service for ${serviceNameText} has been confirmed with ${requestedVendor.name} on ${selectedDate} at ${selectedTimeSlot}.`,
-      type: 'user',
-      createdAt: new Date().toISOString(),
-      isRead: false
-    }
-
-    const vendorNotification: BookingNotification = {
-      id: `vendor-${generatedOrderId}`,
-      message: `${billingDetails.fullName} requested ${serviceNameText} at ${selectedDate} ${selectedTimeSlot}. Please review the booking and prepare for the visit.`,
-      type: 'vendor',
-      createdAt: new Date().toISOString(),
-      isRead: false
-    }
-
-    const existingUserNotifications = getStoredJson<BookingNotification[]>('asaani_user_notifications', [])
-    const existingVendorNotifications = getStoredJson<BookingNotification[]>('asaani_vendor_notifications', [])
-    const existingVendorportalNotifications = getStoredJson<BookingNotification[]>('vendor_notifications_v3', [])
-    setStoredJson('asaani_user_notifications', [userNotification, ...existingUserNotifications])
-    setStoredJson('asaani_vendor_notifications', [vendorNotification, ...existingVendorNotifications])
-    setStoredJson('vendor_notifications_v3', [
-      {
-        id: `vendor-${generatedOrderId}`,
-        type: 'booking_request',
-        title: 'New Booking Assigned',
-        message: `${billingDetails.fullName} booked ${serviceNameText} for ${selectedDate} at ${selectedTimeSlot}. Assigned vendor: ${requestedVendor.name}.`,
-        timestamp: 'Just now',
-        createdAt: new Date().toISOString(),
-        isRead: false,
-        customerName: billingDetails.fullName,
-        customerPhone: billingDetails.phone,
-        location: billingDetails.address,
-        service: serviceNameText,
-        date: selectedDate,
-        time: selectedTimeSlot,
-        amount: `Rs. ${totalAmount.toLocaleString()}`,
-        bookingStatus: 'accepted'
-      },
-      ...existingVendorportalNotifications
-    ])
-    window.dispatchEvent(new Event('asaani-notification-created'))
-
-    setSelectedVendor(requestedVendor)
-    setConfirmedOrderInfo({
-      orderId: generatedOrderId,
-      serviceName: serviceNameText
-    })
-
-    localStorage.removeItem('asaani_cart')
-    setCartItems([])
-
-    setShowVendorModal(false)
-    setShowModal(true)
-
-    setTimeout(() => {
-      router.push('/order-confirmation')
-    }, 5000)
-  }
-  */
+  
 
   const handlePlaceOrder = async (requestedVendorId?: string) => {
     if (cartItems.length === 0) {
@@ -650,11 +613,38 @@ export default function CartAndCheckoutPage() {
         return
       }
 
-      const addresses = await fetchAddresses(auth.profile_id)
-      const selectedAddress = addresses.find((address) => address.line === billingDetails.address)
-      if (!selectedAddress) {
-        alert('Please select a saved address before placing an order.')
+      let addresses = await fetchAddresses(auth.profile_id)
+      let selectedAddress = addresses.find((address) => address.line === billingDetails.address)
+
+      if (!billingDetails.address.trim()) {
+        alert('Please enter a service address before placing an order.')
         return
+      }
+
+      if (!selectedAddress) {
+        const editableAddressId = savedAddressIds[selectedAddressIndex]
+        if (editableAddressId) {
+          selectedAddress = await updateCustomerAddress(editableAddressId, auth.profile_id, {
+            line: billingDetails.address.trim(),
+            city: 'Lahore',
+            area: 'Lahore',
+          })
+        } else if (addresses.length < 2) {
+          selectedAddress = await createCustomerAddress({
+            customer_id: auth.profile_id,
+            label: `Address ${addresses.length + 1}`,
+            line: billingDetails.address.trim(),
+            city: 'Lahore',
+            area: 'Lahore',
+            latitude: 31.5204,
+            longitude: 74.3587,
+            is_default: addresses.length === 0,
+          })
+        } else {
+          alert('Unable to save this address. Please select one of your two address slots and try again.')
+          return
+        }
+        addresses = await fetchAddresses(auth.profile_id)
       }
 
       const requestedService = serviceFromCart(cartItems)
@@ -689,8 +679,9 @@ export default function CartAndCheckoutPage() {
         visitingCharges,
         totalAmount,
         status: booking.status,
-        createdAt: new Date().toISOString()
+        createdAt: booking.created_at
       }))
+      window.dispatchEvent(new Event('asaani-order-changed'))
       localStorage.removeItem('asaani_cart')
       setCartItems([])
       setConfirmedOrderInfo({ orderId: booking.id, serviceName: serviceNameText })
@@ -708,7 +699,7 @@ export default function CartAndCheckoutPage() {
         <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl border border-slate-100 relative">
             
-            {/* Close Button */}
+            
             <button
               onClick={() => setShowVendorModal(false)}
               className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-lg transition cursor-pointer"
@@ -716,7 +707,7 @@ export default function CartAndCheckoutPage() {
               <X className="w-5 h-5 text-slate-600" />
             </button>
 
-            {/* Header */}
+            
             <div className="space-y-2 mb-6 pr-8">
               <div className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-orange-500" />
@@ -727,7 +718,6 @@ export default function CartAndCheckoutPage() {
 
             <div className="space-y-3">
               {filteredVendors.map((vendor) => {
-                // availableSlot for future use: vendor.queue.length > 0 ? vendor.queue[0] : '09:00 AM'
                 const responseTime = vendor.rating >= 4.8 ? '10 mins' : vendor.rating >= 4.5 ? '20 mins' : '30 mins'
                 const workingHours = '9 AM - 7 PM'
                 
@@ -736,14 +726,14 @@ export default function CartAndCheckoutPage() {
                     key={vendor.id}
                     className="p-4 border border-slate-200 rounded-2xl hover:border-orange-300 hover:bg-orange-50/30 transition space-y-3"
                   >
-                    {/* Vendor Info Row */}
+                    
                     <div className="flex items-start gap-4">
-                      {/* Avatar */}
+                      
                       <div className="w-14 h-14 bg-linear-to-br from-slate-200 to-slate-300 rounded-full flex items-center justify-center shrink-0">
                         <span className="text-sm font-bold text-slate-700">{vendor.name.charAt(0)}</span>
                       </div>
 
-                      {/* Vendor Details */}
+                      
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="text-sm font-extrabold text-slate-900">{vendor.name}</h3>
@@ -753,7 +743,7 @@ export default function CartAndCheckoutPage() {
                           {vendor.specialty.join(' & ')}
                         </p>
 
-                        {/* Availability Info */}
+                        
                         <div className="grid grid-cols-2 gap-2 text-[11px]">
                           <div className="flex items-center gap-1.5 text-slate-600">
                             <Clock className="w-3.5 h-3.5 text-orange-500" />
@@ -783,7 +773,7 @@ export default function CartAndCheckoutPage() {
               })}
             </div>
 
-            {/* Footer Info */}
+            
             <div className="mt-5 pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500 font-medium">
               <div className="flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -804,15 +794,15 @@ export default function CartAndCheckoutPage() {
         <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center space-y-5 shadow-2xl border border-slate-100 relative overflow-hidden transition-all transform scale-100 animate-in fade-in zoom-in duration-300">
             
-            {/* 5-second Progress Bar Animation */}
+            
             <div className="absolute top-0 left-0 h-1.5 bg-[#EE6C52] w-full animate-[pulse_1s_infinite]" />
 
-            {/* Success Icon */}
+            
             <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-emerald-50/80 animate-bounce">
               <CheckCircle2 className="w-12 h-12" />
             </div>
 
-            {/* Popup Text Content */}
+            
             <div className="space-y-2">
               <h3 className="text-xl font-extrabold text-slate-900">
                 Order Confirmed!
@@ -822,7 +812,7 @@ export default function CartAndCheckoutPage() {
               </p>
             </div>
 
-            {/* Redirecting Loader */}
+            
             <div className="pt-3 border-t border-slate-100 flex items-center justify-center gap-2 text-xs font-bold text-slate-500">
               <Loader2 className="w-4 h-4 text-[#EE6C52] animate-spin" />
               <span>Redirecting to receipt in 5 seconds...</span>
@@ -832,7 +822,7 @@ export default function CartAndCheckoutPage() {
         </div>
       )}
 
-      {/* Top Bar */}
+      
       <div className="bg-[#EEF2FB] text-xs text-slate-600 py-2.5 px-4 md:px-12 flex justify-between items-center border-b border-slate-200/60">
         <div className="flex items-center gap-6">
           <span>AsaaniSay@gmail.com</span>
@@ -848,7 +838,7 @@ export default function CartAndCheckoutPage() {
         </div>
       </div>
 
-      {/* Header / Navbar */}
+      
       <header className="bg-white max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between border-b border-slate-100">
         <Link href="/" className="flex items-center gap-2">
           <div className="relative">
@@ -876,7 +866,7 @@ export default function CartAndCheckoutPage() {
         </Link>
       </header>
 
-      {/* Hero Banner Section */}
+      
       <section className="relative w-full bg-[#393E58] py-12 px-6 text-center text-white overflow-hidden">
         <div className="max-w-4xl mx-auto space-y-2 relative z-10">
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
@@ -888,14 +878,14 @@ export default function CartAndCheckoutPage() {
         </div>
       </section>
 
-      {/* Main Content Layout */}
+      
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* LEFT COLUMN: Selected Services & Billing Form */}
+          
           <div className="lg:col-span-7 space-y-8">
             
-            {/* Selected Services Box */}
+            
             <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200/80 space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-2">
@@ -950,7 +940,7 @@ export default function CartAndCheckoutPage() {
                         </div>
                       </div>
 
-                      {/* Quantity Controls & Remove */}
+                      
                       <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200">
                         <div className="flex items-center border border-slate-200 rounded-md bg-white">
                           <button 
@@ -987,7 +977,7 @@ export default function CartAndCheckoutPage() {
               )}
             </div>
 
-            {/* Billing & Booking Details Form */}
+            
             <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200/80 space-y-5">
               <h2 className="text-base font-extrabold text-slate-900 border-b border-slate-100 pb-3">
                 Billing & Booking Details
@@ -1052,6 +1042,7 @@ export default function CartAndCheckoutPage() {
                       placeholder="Flat 44B, Sector Y Block, DHA Phase 3, Lahore, Pakistan"
                       value={billingDetails.address}
                       onChange={handleInputChange}
+                      onBlur={() => void handleAddressBlur()}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium"
                     />
                   </div>
@@ -1081,16 +1072,16 @@ export default function CartAndCheckoutPage() {
 
           </div>
 
-          {/* RIGHT COLUMN: Date/Time Picker & Order Summary */}
+          
           <div className="lg:col-span-5 space-y-8">
             
-            {/* Date & Time Selection Widget */}
+            
             <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200/80 space-y-5">
               <h2 className="text-base font-extrabold text-slate-900 border-b border-slate-100 pb-3">
                 Select Service Date & Time
               </h2>
 
-              {/* Month Header with Prev/Next */}
+              
               <div className="flex items-center justify-between">
                 <button
                   type="button"
@@ -1118,7 +1109,7 @@ export default function CartAndCheckoutPage() {
                 </button>
               </div>
 
-              {/* Weekday labels */}
+              
               <div className="grid grid-cols-7 gap-1 text-center">
                 {WEEKDAY_LABELS.map((wd) => (
                   <span key={wd} className="text-[10px] font-bold text-slate-400">
@@ -1127,7 +1118,7 @@ export default function CartAndCheckoutPage() {
                 ))}
               </div>
 
-              {/* Calendar grid — full month */}
+              
               <div className="grid grid-cols-7 gap-1">
                 {calendarCells.map((cell, idx) => {
                   if (cell.day === null) {
@@ -1160,7 +1151,7 @@ export default function CartAndCheckoutPage() {
                 })}
               </div>
 
-              {/* Time slots — only meaningful once a date is picked */}
+              
               <div className="space-y-2 pt-2">
                 <label className="text-xs font-bold text-slate-700">
                   {selectedDate ? 'Select Time Slot' : 'Select a date first to see time slots'}
@@ -1230,7 +1221,7 @@ export default function CartAndCheckoutPage() {
                 <span>100% Satisfaction Guarantee Included</span>
               </div>
 
-              {/* Action Buttons */}
+              
               <div className="space-y-2.5 pt-2">
                 <button 
                   onClick={() => { void handlePlaceOrder() }}
@@ -1253,7 +1244,7 @@ export default function CartAndCheckoutPage() {
         </div>
       </main>
 
-      {/* Footer */}
+      
       <footer className="w-full bg-[#393E58] text-slate-200 pt-16 pb-8 font-sans mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-12">

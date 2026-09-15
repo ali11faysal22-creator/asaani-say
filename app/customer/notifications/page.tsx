@@ -42,7 +42,7 @@ export default function CustomerNotificationsPage() {
       }
     }
     loadNotifications()
-    const refreshTimer = window.setInterval(loadNotifications, 3000)
+    const refreshTimer = window.setInterval(loadNotifications, 5000)
     return () => { active = false; window.clearInterval(refreshTimer) }
   }, [])
 

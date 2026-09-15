@@ -15,6 +15,8 @@ import {
   ChevronUp
 } from 'lucide-react'
 
+const CUSTOMER_REQUEST_TIMEOUT_SECONDS = 180
+
 interface CartItem {
   id: string
   title: string
@@ -60,13 +62,15 @@ export default function OrderConfirmationPage() {
   const [order, setOrder] = useState<OrderData | null>(null)
   const [bookingStatus, setBookingStatus] = useState('pending')
   const [orderLoaded, setOrderLoaded] = useState(false)
-  const [secondsRemaining, setSecondsRemaining] = useState(60)
+  const [secondsRemaining, setSecondsRemaining] = useState(CUSTOMER_REQUEST_TIMEOUT_SECONDS)
   const [isRequestToastMinimized, setIsRequestToastMinimized] = useState(false)
   const [requestToastPosition, setRequestToastPosition] = useState<{ x: number; y: number } | null>(null)
   const [isDraggingRequestToast, setIsDraggingRequestToast] = useState(false)
   const [requestToastDragOffset, setRequestToastDragOffset] = useState({ x: 0, y: 0 })
   const [showVendorRequestToast, setShowVendorRequestToast] = useState(true)
   const [showAcceptedToast, setShowAcceptedToast] = useState(false)
+  const [showReassignmentToast, setShowReassignmentToast] = useState(false)
+  const [lastReassignmentAt, setLastReassignmentAt] = useState('')
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -104,7 +108,7 @@ export default function OrderConfirmationPage() {
     if (!order) return
     const updateCountdown = () => {
       const elapsed = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 1000)
-      const remaining = Math.max(0, 60 - elapsed)
+      const remaining = Math.max(0, CUSTOMER_REQUEST_TIMEOUT_SECONDS - elapsed)
       setSecondsRemaining(remaining)
       if (remaining === 0) setShowVendorRequestToast(false)
     }
@@ -122,12 +126,21 @@ export default function OrderConfirmationPage() {
         if (auth.role !== 'customer' || !auth.profile_id) return
         const bookings = await fetchCustomerBookings(auth.profile_id)
         const current = bookings.find((booking) => booking.id === order.orderId)
-        if (active && current && current.status.toLowerCase() !== bookingStatus) {
-          setBookingStatus(current.status.toLowerCase())
+        if (active && current) {
+          const nextStatus = current.status.toLowerCase()
+          const wasReassigned = nextStatus === 'pending' && current.created_at !== order.createdAt
+          if (wasReassigned && current.created_at !== lastReassignmentAt) {
+            setLastReassignmentAt(current.created_at)
+            setShowVendorRequestToast(true)
+            setShowReassignmentToast(true)
+            window.setTimeout(() => setShowReassignmentToast(false), 10000)
+          }
+          if (nextStatus === bookingStatus && !wasReassigned) return
+          setBookingStatus(nextStatus)
           setOrder((previous) => previous ? { ...previous, status: current.status } : previous)
           localStorage.setItem('asaani_latest_order', JSON.stringify({
             ...order,
-            status: current.status
+            status: current.status,
           }))
           if (current.status === 'accepted') {
             setShowVendorRequestToast(false)
@@ -137,15 +150,16 @@ export default function OrderConfirmationPage() {
             setShowVendorRequestToast(false)
           }
         }
-      } catch { /* The next polling cycle retries the status check. */ }
+      } catch {  }
     }
     checkBookingStatus()
     const statusTimer = window.setInterval(checkBookingStatus, 10000)
     return () => { active = false; window.clearInterval(statusTimer) }
-  }, [order, bookingStatus])
+  }, [order, bookingStatus, lastReassignmentAt])
 
   const minutes = Math.floor(secondsRemaining / 60).toString().padStart(2, '0')
   const seconds = (secondsRemaining % 60).toString().padStart(2, '0')
+  const isSearchingForVendor = bookingStatus !== 'accepted' && secondsRemaining === 0
 
   if (!orderLoaded) {
     return <div className="min-h-screen bg-[#F8FAFC]" />
@@ -190,8 +204,12 @@ export default function OrderConfirmationPage() {
         <p className="text-xs font-extrabold text-emerald-700">Order confirmed</p>
         <p className="mt-1 text-[11px] leading-relaxed text-slate-600">Your vendor confirmed this order and is ready to provide the selected service.</p>
       </div>}
+      {showReassignmentToast && <div className="fixed right-4 top-4 z-50 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-orange-100 bg-white p-4 shadow-xl">
+        <p className="text-xs font-extrabold text-orange-700">Finding another vendor</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-slate-600">We&apos;re searching for the best vendor. Thanks for waiting.</p>
+      </div>}
       
-      {/* Top Bar */}
+      
       <div className="bg-[#EEF2FB] text-xs text-slate-600 py-2.5 px-4 md:px-12 flex justify-between items-center border-b border-slate-200/60">
         <div className="flex items-center gap-6">
           <span>AsaaniSay@gmail.com</span>
@@ -203,7 +221,7 @@ export default function OrderConfirmationPage() {
         </div>
       </div>
 
-      {/* Header */}
+      
       <header className="bg-white max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between border-b border-slate-100">
         <Link href="/" className="flex items-center gap-2">
           <div className="relative">
@@ -231,7 +249,7 @@ export default function OrderConfirmationPage() {
         </Link>
       </header>
 
-      {/* Hero Banner Section */}
+      
       <section className="relative w-full bg-[#393E58] py-14 px-6 text-center text-white overflow-hidden">
         <div className="max-w-4xl mx-auto space-y-2 relative z-10">
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
@@ -241,16 +259,18 @@ export default function OrderConfirmationPage() {
             {bookingStatus === 'accepted'
               ? 'Your vendor has accepted the service request.'
               : bookingStatus === 'rejected'
-                ? 'Your vendor declined the request. Please choose another slot or vendor.'
+                ? (isSearchingForVendor ? 'We are finding another vendor for your service request.' : 'Your vendor declined the request. Please choose another slot or vendor.')
+                : isSearchingForVendor
+                  ? 'We are finding the best available vendor. Thank you for waiting.'
                 : 'Your service request has been registered. We are waiting for vendor acceptance.'}
           </p>
         </div>
       </section>
 
-      {/* Main Content Layout */}
+      
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
         
-        {/* Top Confirmation Card */}
+        
         <div className="bg-white rounded-2xl p-8 shadow-xs border border-slate-200/80 text-center space-y-3">
           <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-7 h-7" />
@@ -261,13 +281,13 @@ export default function OrderConfirmationPage() {
           </p>
         </div>
 
-        {/* Content Grid */}
+        
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* Left Column: Order & Customer Information */}
+          
           <div className="lg:col-span-6 space-y-6">
             
-            {/* Order Information */}
+            
             <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200/80 space-y-5">
               <h3 className="text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-3">
                 Order Information
@@ -289,7 +309,7 @@ export default function OrderConfirmationPage() {
                 <div className="flex justify-between items-center text-slate-600">
                   <span>Assigned Vendor</span>
                   <span className={`font-bold ${bookingStatus === 'accepted' ? 'text-emerald-600' : bookingStatus === 'rejected' ? 'text-red-600' : 'text-orange-600'}`}>
-                    {bookingStatus === 'accepted' ? 'Vendor accepted' : bookingStatus === 'rejected' ? 'Vendor declined' : 'Pending acceptance'}
+                    {bookingStatus === 'accepted' ? 'Vendor accepted' : isSearchingForVendor ? 'Finding a vendor' : bookingStatus === 'rejected' ? 'Vendor declined' : 'Pending acceptance'}
                   </span>
                 </div>
 
@@ -314,7 +334,7 @@ export default function OrderConfirmationPage() {
               </div>
             </div>
 
-            {/* Customer Information */}
+            
             <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200/80 space-y-5">
               <h3 className="text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-3">
                 Customer Information
@@ -342,10 +362,10 @@ export default function OrderConfirmationPage() {
 
           </div>
 
-          {/* Right Column: What's Next & Actions */}
+          
           <div className="lg:col-span-6 space-y-6">
             
-            {/* What's Next Box */}
+            
             <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200/80 space-y-5">
               <h3 className="text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-3">
                 What&apos;s Next?
@@ -390,13 +410,13 @@ export default function OrderConfirmationPage() {
               </div>
             </div>
 
-            {/* Satisfaction Guarantee Banner */}
+            
             <div className="bg-emerald-50 text-emerald-800 text-xs font-semibold p-3.5 rounded-xl flex items-center justify-center gap-2 border border-emerald-200/60">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>100% Satisfaction Guarantee Protected Booking</span>
             </div>
 
-            {/* Action Buttons */}
+            
             <div className="space-y-3">
               <Link href="/customer/orders" className="block w-full">
                 <button className="w-full bg-[#EE6C52] hover:bg-orange-600 text-white font-extrabold text-xs py-3.5 rounded-xl transition shadow-xs cursor-pointer">
@@ -417,7 +437,7 @@ export default function OrderConfirmationPage() {
 
       </main>
 
-      {/* Footer */}
+      
       <footer className="w-full bg-[#393E58] text-slate-200 pt-16 pb-8 font-sans mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-12">

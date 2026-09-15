@@ -41,23 +41,21 @@ export default function ContactPage() {
   return (
     <div className="w-full bg-slate-50 font-sans text-slate-800">
       
-      {/* 1. TOP BAR */}
+      
       <div className="bg-[#EEF2FB] text-xs text-slate-600 py-2.5 px-4 md:px-12 flex justify-between items-center border-b border-slate-100">
         <div className="flex items-center gap-6">
           <span>AsaaniSay@gmail.com</span>
           <span className="border-l border-slate-300 pl-6">+1 (333) 000-00000</span>
         </div>
         <div className="flex items-center gap-3 text-slate-700">
-          {/* <a href="#" className="hover:text-orange-500 transition">
-            <Instagram className="w-4 h-4"/>
-          </a> */}
+          
           <a href="#" className="hover:text-orange-500 transition">
             <Globe className="w-4 h-4"/>
           </a>
         </div>
       </div>
 
-      {/* 2. NAVBAR */}
+      
       <header className="bg-white max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between border-b border-slate-100">
         <Link href="/" className="flex items-center gap-2">
           <div className="relative">
@@ -70,7 +68,7 @@ export default function ContactPage() {
           </div>
         </Link>
 
-        {/* NAV LINKS */}
+        
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
           <Link href="/" className="hover:text-orange-500 transition">Home</Link>
           <Link href="/about-us" className="hover:text-orange-500 transition">About Us</Link>
@@ -86,7 +84,7 @@ export default function ContactPage() {
         </Link>
       </header>
 
-      {/* 3. HERO SECTION */}
+      
       <section className="bg-[#3B3E5B] text-white pt-16 pb-24 px-6 text-center">
         <div className="max-w-3xl mx-auto space-y-4">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight">
@@ -98,11 +96,11 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* 4. CONTACT CARDS (CLEAN OVERLAP FIX) */}
+      
       <section className="relative z-10 max-w-6xl mx-auto px-6 -mt-12 sm:-mt-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           
-          {/* Card 1 */}
+          
           <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-100 space-y-3">
             <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center">
               <Phone className="w-4 h-4" />
@@ -114,7 +112,7 @@ export default function ContactPage() {
             </div>
           </div>
 
-          {/* Card 2 */}
+          
           <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-100 space-y-3">
             <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center">
               <Mail className="w-4 h-4" />
@@ -126,7 +124,7 @@ export default function ContactPage() {
             </div>
           </div>
 
-          {/* Card 3 */}
+          
           <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-100 space-y-3">
             <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center">
               <MapPin className="w-4 h-4" />
@@ -138,7 +136,7 @@ export default function ContactPage() {
             </div>
           </div>
 
-          {/* Card 4 */}
+          
           <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-100 space-y-3">
             <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center">
               <Clock className="w-4 h-4" />
@@ -153,11 +151,11 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* 5. FORM & GOOGLE MAP SECTION */}
+      
       <section className="max-w-6xl mx-auto px-6 pt-12 pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
           
-          {/* LEFT: FORM */}
+          
           <div className="lg:col-span-6 bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm space-y-6">
             <div>
               <h2 className="text-xl font-bold text-slate-900">Send a Message</h2>
@@ -221,7 +219,7 @@ export default function ContactPage() {
             </form>
           </div>
 
-          {/* RIGHT: GOOGLE MAP */}
+          
           <div className="lg:col-span-6 space-y-4">
             <div>
               <h2 className="text-xl font-bold text-slate-900">Our Location</h2>
@@ -245,7 +243,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* 6. FAQ SECTION */}
+      
       <section className="bg-white py-16 border-t border-slate-100">
         <div className="max-w-4xl mx-auto px-6 space-y-8">
           
@@ -295,7 +293,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* 7. FOOTER */}
+      
       <footer className="w-full bg-[#393E58] text-slate-200 pt-16 pb-8 font-sans">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-12">
