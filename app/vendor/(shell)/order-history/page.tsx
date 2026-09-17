@@ -3,16 +3,14 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchVendorBookings, getStoredAuth, type BookingResult } from '@/app/lib/booking-api'
-import { 
-  ArrowLeft,
-  Search, 
-  Calendar, 
+import {
+  Search,
+  Calendar,
   ShoppingCart,
-  ChevronLeft, 
+  ChevronLeft,
   ChevronRight,
   Eye,
-  X,
-  Wrench
+  X
 } from 'lucide-react'
 
 interface OrderRecord {
@@ -76,57 +74,19 @@ export default function OrderHistoryPage() {
     .filter(o => o.status !== 'Cancelled')
     .reduce((acc, curr) => acc + curr.totalAmount, 0)
   return (
-    <div className="min-h-screen w-full bg-white grid grid-cols-1 md:grid-cols-12 font-sans text-slate-800">
-
-      
-      <div className="md:col-span-4 lg:col-span-3 bg-[#3B3E56] text-white p-6 flex flex-col min-h-screen">
-        <div className="flex items-center gap-3 mb-10 pt-2">
-          <div className="w-8 h-8 rounded-lg bg-[#EE6C52] flex items-center justify-center shadow-xs">
-            <Wrench className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-bold text-lg text-white">Asaani Say</span>
-        </div>
-
-        <button
-            type="button"
-            onClick={() => router.push('/vendor/dashboard')}
-            className="group inline-flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white bg-white/10 hover:bg-white/15 border border-white/10 px-3.5 py-2 rounded-xl transition-all duration-200 mb-8 cursor-pointer backdrop-blur-sm shadow-2xs"
-          >
-            <ArrowLeft className="w-4 h-4 text-slate-300 group-hover:text-white transition-transform duration-200 group-hover:-translate-x-1" />
-            <span>Back </span>
-          </button>
-      </div>
-
-      <div className="md:col-span-8 lg:col-span-9 bg-[#F8FAFC] min-h-screen flex flex-col">
-        <div className="flex-1">
-        
-        <section className="relative w-full bg-[#393E58] py-14 px-6 text-center text-white overflow-hidden">
-          <div className="max-w-4xl mx-auto space-y-2 relative z-10">
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
-              My Orders
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-2xl mx-auto leading-relaxed">
-              Your home service request has been processed successfully. Our certified professional is on the way to restore your comfort.
-            </p>
-          </div>
-        </section>
-
-        
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
-          
-          
+    <>
           <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/80 space-y-6">
             
             
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
               <div>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">My Orders</h2>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Review and manage your team&apos;s historical purchase records and active transactions.
+                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Order Summary</span>
+                <p className="text-xs text-slate-500 font-medium mt-1">
+                  Search, filter, and review your historical purchase records and active transactions.
                 </p>
               </div>
 
-              
+
               <div className="flex items-center gap-6 bg-slate-50 px-5 py-2.5 rounded-xl border border-slate-100 shrink-0">
                 <div className="text-right sm:text-left">
                   <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Total Spent</span>
@@ -316,10 +276,6 @@ export default function OrderHistoryPage() {
 
           </div>
 
-        </main>
-        </div>
-
-      
       {selectedOrderForModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl border border-slate-100 relative">
@@ -363,9 +319,7 @@ export default function OrderHistoryPage() {
           </div>
         </div>
       )}
-
-      </div>
-    </div>
+    </>
   )
 }
 

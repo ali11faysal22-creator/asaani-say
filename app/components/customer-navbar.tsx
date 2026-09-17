@@ -20,7 +20,6 @@ export default function CustomerNavbar({ active = '' }: { active?: string }) {
       getCurrentUser()
         .then((user) => {
           if (user.role === 'customer') {
-            localStorage.setItem('asaani_auth', JSON.stringify(user))
             setAuth(user)
             if (user.profile_id) {
               fetchCustomerNotifications(user.profile_id).then((items) => {

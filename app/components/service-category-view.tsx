@@ -20,7 +20,7 @@ import {
   Navigation,
   Loader2
 } from 'lucide-react'
-import { API_BASE, createCustomerAddress, fetchAddresses, fetchCategory, fetchDemoCustomer, formatSlotLabel, getCurrentUser, getStoredAuth, type CatalogCategory, type CatalogService, type DateRow } from '../lib/booking-api'
+import { API_BASE, createCustomerAddress, fetchAddresses, fetchCategory, fetchDemoCustomer, formatSlotLabel, getAccessToken, getCurrentUser, getStoredAuth, type CatalogCategory, type CatalogService, type DateRow } from '../lib/booking-api'
 import { categoryIcon } from '../lib/category-icons'
 import CustomerNavbar from './customer-navbar'
 
@@ -95,7 +95,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
     const serviceId = selectedServices[0]?.id || ''
     const serviceName = selectedServices[0]?.name || ''
 
-    fetch(`${API_BASE}/api/availability/slots?address_id=${selectedAddress}&date=${dateStr}&service_id=${serviceId}&service=${encodeURIComponent(serviceName)}`, { credentials: 'include' })
+    fetch(`${API_BASE}/api/availability/slots?address_id=${selectedAddress}&date=${dateStr}&service_id=${serviceId}&service=${encodeURIComponent(serviceName)}`)
       .then((res) => res.json())
       .then((data) => {
         setSlots(data.slots || [])
@@ -145,7 +145,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
       const serviceId = selectedServices[0]?.id || ''
       const serviceName = selectedServices[0]?.name || ''
 
-      fetch(`${API_BASE}/api/availability/dates?address_id=${selectedAddress}&service_id=${serviceId}&service=${encodeURIComponent(serviceName)}&days=30`, { credentials: 'include' })
+      fetch(`${API_BASE}/api/availability/dates?address_id=${selectedAddress}&service_id=${serviceId}&service=${encodeURIComponent(serviceName)}&days=30`)
         .then((res) => res.json())
         .then((data) => {
           const fetchedDates = data.dates || []
@@ -240,7 +240,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
           slot_start: selectedSlot.start,
           slot_end: selectedSlot.end,
         })
-        const vendorResponse = await fetch(`${API_BASE}/api/v1/vendors/search?${params}`, { credentials: 'include' })
+        const vendorResponse = await fetch(`${API_BASE}/api/v1/vendors/search?${params}`)
         if (!vendorResponse.ok) throw new Error('No vendor is available for this time slot')
         const matchingVendors = await vendorResponse.json() as AssignedVendor[]
         selectedVendor = matchingVendors[0]
@@ -258,10 +258,13 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
         slot_end: selectedSlot.end,
         notes: 'Please assign highest rated vendor',
       }
+      const token = getAccessToken()
       const res = await fetch(`${API_BASE}/api/bookings`, {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload),
       })
       if (res.ok) {
@@ -309,7 +312,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
       console.error(error)
       setBookingError(
         error instanceof TypeError && error.message === 'Failed to fetch'
-          ? 'Booking service is unavailable. Please make sure the backend is running at http://127.0.0.1:8000 and try again.'
+          ? 'Booking service is unavailable. Please make sure the backend is running at http://localhost:8000 and try again.'
           : 'Unable to connect to the booking service. Please try again.'
       )
     } finally {

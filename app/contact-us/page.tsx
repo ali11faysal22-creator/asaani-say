@@ -1,22 +1,65 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Clock, 
-  ChevronDown, 
-  Globe, 
-  Hand, 
-  Sparkles 
+import {
+  Phone,
+  Mail,
+  MapPin,
+  Clock,
+  ChevronDown,
+  Globe,
+  Hand,
+  Sparkles
 } from 'lucide-react';
+import { submitContactMessage } from '../lib/booking-api';
 
 export default function ContactPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
+  };
+
+  const [contactForm, setContactForm] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    subject: '',
+    message: '',
+  });
+  const [contactStatus, setContactStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [contactMessage, setContactMessage] = useState('');
+
+  const updateContactField = (field: keyof typeof contactForm) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setContactForm((prev) => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const handleContactSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setContactMessage('');
+    if (!contactForm.fullName || !contactForm.email || !contactForm.subject || !contactForm.message) {
+      setContactStatus('error');
+      setContactMessage('Please fill in your name, email, subject, and message.');
+      return;
+    }
+    setContactStatus('submitting');
+    try {
+      await submitContactMessage({
+        full_name: contactForm.fullName,
+        email: contactForm.email,
+        phone: contactForm.phone || undefined,
+        subject: contactForm.subject,
+        message: contactForm.message,
+      });
+      setContactStatus('success');
+      setContactMessage("Message sent! Our team will get back to you shortly.");
+      setContactForm({ fullName: '', email: '', phone: '', subject: '', message: '' });
+    } catch (error) {
+      setContactStatus('error');
+      setContactMessage(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
+    }
   };
 
   const faqs = [
@@ -162,21 +205,37 @@ export default function ContactPage() {
               <p className="text-xs text-slate-500 mt-1">Fill out the form below, and our team will get in touch with you shortly.</p>
             </div>
 
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-4 text-xs">
+            <form onSubmit={handleContactSubmit} className="space-y-4 text-xs">
+              {contactMessage && (
+                <p
+                  className={`text-xs font-semibold px-3 py-2 rounded-lg ${
+                    contactStatus === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                  }`}
+                >
+                  {contactMessage}
+                </p>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="font-semibold text-slate-700">Full Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="ENTER YOUR FULL NAME" 
+                  <input
+                    type="text"
+                    required
+                    value={contactForm.fullName}
+                    onChange={updateContactField('fullName')}
+                    placeholder="ENTER YOUR FULL NAME"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 transition bg-slate-50/50"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="font-semibold text-slate-700">Email Address</label>
-                  <input 
-                    type="email" 
-                    placeholder="YOUR EMAIL@GMAIL.COM" 
+                  <input
+                    type="email"
+                    required
+                    value={contactForm.email}
+                    onChange={updateContactField('email')}
+                    placeholder="YOUR EMAIL@GMAIL.COM"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 transition bg-slate-50/50"
                   />
                 </div>
@@ -185,17 +244,22 @@ export default function ContactPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="font-semibold text-slate-700">Phone Number</label>
-                  <input 
-                    type="text" 
-                    placeholder="ENTER YOUR PHONE NUMBER" 
+                  <input
+                    type="text"
+                    value={contactForm.phone}
+                    onChange={updateContactField('phone')}
+                    placeholder="ENTER YOUR PHONE NUMBER"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 transition bg-slate-50/50"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="font-semibold text-slate-700">Subject</label>
-                  <input 
-                    type="text" 
-                    placeholder="HOW CAN WE HELP?" 
+                  <input
+                    type="text"
+                    required
+                    value={contactForm.subject}
+                    onChange={updateContactField('subject')}
+                    placeholder="HOW CAN WE HELP?"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 transition bg-slate-50/50"
                   />
                 </div>
@@ -203,18 +267,22 @@ export default function ContactPage() {
 
               <div className="space-y-1">
                 <label className="font-semibold text-slate-700">Your Message</label>
-                <textarea 
-                  rows={4} 
-                  placeholder="DESCRIBE YOUR REQUEST OR HOME SERVICE NEEDS, TIME..." 
+                <textarea
+                  rows={4}
+                  required
+                  value={contactForm.message}
+                  onChange={updateContactField('message')}
+                  placeholder="DESCRIBE YOUR REQUEST OR HOME SERVICE NEEDS, TIME..."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 transition bg-slate-50/50 resize-none"
                 ></textarea>
               </div>
 
-              <button 
-                type="submit" 
-                className="w-full bg-[#EF6A42] hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow-md cursor-pointer"
+              <button
+                type="submit"
+                disabled={contactStatus === 'submitting'}
+                className="w-full bg-[#EF6A42] hover:bg-orange-600 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition shadow-md cursor-pointer"
               >
-                Submit Message
+                {contactStatus === 'submitting' ? 'Sending…' : 'Submit Message'}
               </button>
             </form>
           </div>

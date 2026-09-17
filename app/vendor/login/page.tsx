@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { loginUser, registerVendor } from '@/app/lib/booking-api'
+import { loginUser, registerVendor, setStoredAuth } from '@/app/lib/booking-api'
 import {
   Eye,
   EyeOff,
@@ -447,8 +447,7 @@ export default function VendorLoginPage() {
 
       const auth = await registerVendor(payload)
       if (auth?.role === 'vendor') {
-        sessionStorage.setItem('asaani_vendor_auth', JSON.stringify(auth))
-        localStorage.removeItem('asaani_auth')
+        setStoredAuth('vendor', auth)
         router.push('/vendor/dashboard')
       } else {
         alert('Vendor registration did not return a valid vendor session.')
@@ -470,8 +469,7 @@ export default function VendorLoginPage() {
     try {
       const auth = await loginUser({ identifier: emailOrPhone, password, role: 'vendor' })
       if (auth?.role === 'vendor') {
-        sessionStorage.setItem('asaani_vendor_auth', JSON.stringify(auth))
-        localStorage.removeItem('asaani_auth')
+        setStoredAuth('vendor', auth)
         router.push('/vendor/dashboard')
       }
     } catch (error) {

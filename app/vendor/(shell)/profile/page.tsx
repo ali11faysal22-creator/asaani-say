@@ -4,8 +4,6 @@ import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  Wrench,
-  ShieldCheck,
   Plus,
   X,
   CheckCircle2,
@@ -13,11 +11,10 @@ import {
   Camera,
   Check,
   Calendar,
-  Clock,
-  ArrowLeft
+  Clock
 } from 'lucide-react'
 import { API_BASE, fetchVendorProfile, formatSlotLabel, getStoredAuth, updateVendorProfile, uploadVendorProfileImage, type VendorProfileResponse } from '@/app/lib/booking-api'
-import UnsavedChangesGuard from '../components/unsaved-changes-guard'
+import UnsavedChangesGuard from '@/app/vendor/components/unsaved-changes-guard'
 
 interface DaySchedule {
   day: string
@@ -168,12 +165,6 @@ export default function VendorProfilePage() {
       setToast({ show: true, message: error instanceof Error ? error.message : 'Unable to upload profile picture', type: 'success' })
     }
   }
-  const handleSignOut = () => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('asaani_vendor_auth')
-    }
-    router.push('/vendor/login')
-  }
   const handleSaveChanges = async () => {
     setToast({ show: true, message: 'Saving profile details...', type: 'saving' })
     try {
@@ -237,10 +228,9 @@ export default function VendorProfilePage() {
   const profileIsDirty = profileReady && JSON.stringify(profile) !== savedProfile
 
   return (
-    <div className="min-h-screen w-full bg-white grid grid-cols-1 md:grid-cols-12 font-sans relative overflow-x-hidden">
+    <>
       <UnsavedChangesGuard isDirty={profileIsDirty} onSave={handleSaveChanges} />
-      
-      
+
       {toast.show && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300">
           <div className="bg-[#2C2F45] text-white text-xs font-semibold px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3">
@@ -260,76 +250,6 @@ export default function VendorProfilePage() {
         </div>
       )}
 
-      
-      <div className="md:col-span-4 lg:col-span-3 bg-[#3B3E56] text-white p-6 md:p-8 flex flex-col justify-between min-h-screen">
-        <div>
-          
-          
-          <Link
-            href="/vendor/dashboard"
-            className="group inline-flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white bg-white/10 hover:bg-white/15 border border-white/10 px-3.5 py-2 rounded-xl transition-all duration-200 mb-8 cursor-pointer backdrop-blur-sm shadow-2xs"
-          >
-            <ArrowLeft className="w-4 h-4 text-slate-300 group-hover:text-white transition-transform duration-200 group-hover:-translate-x-1" />
-            <span>Back </span>
-          </Link>
-
-          
-          <div className="flex items-center gap-3 mb-12">
-            <div className="w-9 h-9 rounded-xl bg-[#EE6C52] flex items-center justify-center shadow-xs">
-              <Wrench className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-extrabold text-xl tracking-tight text-white">
-              Asaani Say
-            </span>
-          </div>
-
-          <div className="space-y-4">
-            <h1 className="text-3xl lg:text-4xl font-extrabold leading-tight text-white">
-              Manage Your <br />
-              <span className="text-[#EE6C52]">Vendor Profile</span>
-            </h1>
-            <p className="text-xs lg:text-sm text-slate-300 leading-relaxed font-normal">
-              Enter your official business details below.
-            </p>
-          </div>
-        </div>
-
-        <div className="pt-8 border-t border-slate-600/50 flex items-center gap-2.5 text-xs text-slate-300">
-          <ShieldCheck className="w-4 h-4 text-[#EE6C52] shrink-0" />
-          <span>Your business dashboard is private and secure.</span>
-        </div>
-      </div>
-
-      
-      <div className="md:col-span-8 lg:col-span-9 bg-[#F8FAFC] p-6 md:p-10 lg:p-12 overflow-y-auto">
-        <div className="max-w-4xl mx-auto space-y-8">
-
-          
-          <div className="flex items-center justify-between pb-4 border-b border-slate-200/60">
-            <div>
-              <span className="text-xs font-bold text-slate-500 tracking-wide">
-                English
-              </span>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Link
-                href="/vendor/dashboard"
-                className="text-xs font-bold text-slate-700 hover:text-[#EE6C52] bg-white border border-slate-200 px-3.5 py-1.5 rounded-lg transition shadow-2xs cursor-pointer"
-              >
-                Dashboard
-              </Link>
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:border-[#EE6C52] hover:text-[#EE6C52] px-4 py-1.5 rounded-lg transition shadow-2xs cursor-pointer"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-
-          
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row items-center gap-6 justify-between">
             <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
               <div className="relative">
@@ -727,8 +647,6 @@ export default function VendorProfilePage() {
             </div>
 
           </div>
-        </div>
-      </div>
-    </div>
+    </>
   )
 }

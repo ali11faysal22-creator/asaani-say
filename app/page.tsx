@@ -4,6 +4,7 @@ import {Camera,LayoutGrid,Sparkles,ChevronDown,User,Star,Quote,Wrench,Drill,Sun,
 import Link from 'next/link'
 import Image from 'next/image'
 import CustomerNavbar from './components/customer-navbar'
+import { submitServiceRequest } from './lib/booking-api'
 interface ExpertItem {
   number: string
   name: string
@@ -103,6 +104,52 @@ export default function HeroSection() {
     setOpenFaqIndex((current) => (current === index ? null : index))
   }
 
+  const [orderForm, setOrderForm] = useState({
+    zipCode: '',
+    city: '',
+    service: '',
+    date: '',
+    time: '',
+    email: '',
+    phone: '',
+  })
+  const [orderStatus, setOrderStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
+  const [orderMessage, setOrderMessage] = useState('')
+
+  const updateOrderField = (field: keyof typeof orderForm) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setOrderForm((prev) => ({ ...prev, [field]: e.target.value }))
+  }
+
+  const handleOrderSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setOrderMessage('')
+    if (!orderForm.zipCode || !orderForm.city || !orderForm.service || !orderForm.date || !orderForm.time || !orderForm.email || !orderForm.phone) {
+      setOrderStatus('error')
+      setOrderMessage('Please fill in every field.')
+      return
+    }
+    setOrderStatus('submitting')
+    try {
+      await submitServiceRequest({
+        zip_code: orderForm.zipCode,
+        city: orderForm.city,
+        service_name: orderForm.service,
+        preferred_date: orderForm.date,
+        preferred_time: orderForm.time,
+        email: orderForm.email,
+        phone: orderForm.phone,
+      })
+      setOrderStatus('success')
+      setOrderMessage("Request sent! We'll match you with a professional shortly.")
+      setOrderForm({ zipCode: '', city: '', service: '', date: '', time: '', email: '', phone: '' })
+    } catch (error) {
+      setOrderStatus('error')
+      setOrderMessage(error instanceof Error ? error.message : 'Something went wrong. Please try again.')
+    }
+  }
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -143,32 +190,39 @@ export default function HeroSection() {
                {
                icon: <Wrench className="w-8 h-8 text-[#23263B]"/>,
                 title: 'Home Inspection',
-                desc: 'Are You Having Issues With Your Faucets And Sinks? Common Problems Can Include Leaky Faucets, Low Water Pressure, Clogged Drains, Hot Water Issues, Loose Faucet Handles, And More.',},
+                desc: 'Are You Having Issues With Your Faucets And Sinks? Common Problems Can Include Leaky Faucets, Low Water Pressure, Clogged Drains, Hot Water Issues, Loose Faucet Handles, And More.',
+                href: '/services/home-inspection',
+             },
              {
               icon: <Drill className="w-8 h-8 text-[#23263B]"/>,
               title: 'Home Repair Services',
                desc: 'A Smarter Way To Keep Up With Home Maintenance. We Provide Home Repair And Maintenance Services At Your Doorstep In Pakistan.',
+               href: '/services/handyman',
              },
           {
           icon: <Truck className="w-8 h-8 text-[#23263B]"/>,
           title: 'Home Shifting Services',
            desc: 'Asaani Say Helps To Take The Entire Relocation Burden Off From The Customers Shoulders And Helps To Provide The Most Trusted Shifting Service Solution',
+           href: '/services',
           },
        {
          icon: <Bug className="w-8 h-8 text-[#23263B]"/>,
         title: 'Pest Control Services',
          desc: 'We Provide Professional Pest Control Services For Your Home And Business. Book Highly Experienced In-House Professionals & Get It Done, Instantly.',
+         href: '/services/pest-control',
        },
      {
       icon: <Sparkles className="w-8 h-8 text-[#23263B]"/>,
       title: 'Cleaning Services',
       desc: 'Are You Having Issues With Your Faucets And Sinks? Common Problems Can Include Leaky Faucets, Low Water Pressure, Clogged Drains, Hot Water Issues, Loose Faucet Handles, And More.',
+      href: '/services',
      },
 
      {
       icon: <Sun className="w-8 h-8 text-[#23263B]"/>,
       title: 'Solar Panel Installation',
       desc: 'Servicely Offers Flexible Solutions For Installation, Removal And Repair Of Your AC Units At Competitive Prices In All Pakistani Cities.',
+      href: '/services',
      },
   ]
 
@@ -311,47 +365,68 @@ export default function HeroSection() {
               <h3 className="text-lg font-bold text-[#23263B] mb-6">
                 Order Service
               </h3>
-              <form className="space-y-4">
-        
+              <form className="space-y-4" onSubmit={handleOrderSubmit}>
+
+                {orderMessage && (
+                  <p
+                    className={`text-xs font-semibold px-3 py-2 rounded-lg ${
+                      orderStatus === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                    }`}
+                  >
+                    {orderMessage}
+                  </p>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                   <input
                     type="text"
+                    required
+                    value={orderForm.zipCode}
+                    onChange={updateOrderField('zipCode')}
                     placeholder="Zip Code*"
                     className="w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-[#EF6A42]/50 placeholder-slate-400"/>
                   <div className="relative">
-                    <select className="w-full bg-white text-slate-600 text-xs px-4 py-3 rounded-lg appearance-none border-none focus:outline-none focus:ring-2 focus:ring-[#EF6A42]/50 pr-8">
+                    <select
+                      required
+                      value={orderForm.city}
+                      onChange={updateOrderField('city')}
+                      className="w-full bg-white text-slate-600 text-xs px-4 py-3 rounded-lg appearance-none border-none focus:outline-none focus:ring-2 focus:ring-[#EF6A42]/50 pr-8">
                       <option value="">Select City</option>
-                      <option value="karachi">Karachi</option>
-                      <option value="lahore">Lahore</option>
-                      <option value="islamabad">Islamabad</option>
-                      <option value="multan">Multan</option>
-                      <option value="quetta">Quetta</option>
-                      <option value="peshawar">Peshawar</option>
-                      <option value="faisalabad">Faisalabad</option>
-                      <option value="gujranwala">Gujranwala</option>
+                      <option value="Karachi">Karachi</option>
+                      <option value="Lahore">Lahore</option>
+                      <option value="Islamabad">Islamabad</option>
+                      <option value="Multan">Multan</option>
+                      <option value="Quetta">Quetta</option>
+                      <option value="Peshawar">Peshawar</option>
+                      <option value="Faisalabad">Faisalabad</option>
+                      <option value="Gujranwala">Gujranwala</option>
                     </select>
                     <ChevronDown className="w-4 h-4 text-slate-600 absolute right-3 top-3.5 pointer-events-none" />
                   </div>
                 </div>
 
-     
+
                 <div>
                   <label className="block text-xs font-bold text-[#23263B] mb-1.5">
                     Select Job
                   </label>
                   <div className="relative">
-                    <select className="w-full bg-white text-slate-600 text-xs px-4 py-3 rounded-lg appearance-none border-none focus:outline-none focus:ring-2 focus:ring-[#EF6A42]/50 pr-8">
+                    <select
+                      required
+                      value={orderForm.service}
+                      onChange={updateOrderField('service')}
+                      className="w-full bg-white text-slate-600 text-xs px-4 py-3 rounded-lg appearance-none border-none focus:outline-none focus:ring-2 focus:ring-[#EF6A42]/50 pr-8">
                       <option value="">Select Service</option>
-                      <option value="plumbing">Plumbing</option>
-                      <option value="electrician">Electrician</option>
-                      <option value="cleaning">Cleaning</option>
-                      <option value="house inspection">House Inspection</option>
-                      <option value="home shifting service">Home Shifting Service</option>
-                      <option value="pest control service">Pest Control Services</option>
-                      <option value="painter">Painter</option>
-                      <option value="solar panel installation">Solar Panel Installation</option>
-                      <option value="geyser">Geyser</option>
-                      <option value="carpenter">Carpenter</option>
+                      <option value="Plumbing">Plumbing</option>
+                      <option value="Electrician">Electrician</option>
+                      <option value="Cleaning">Cleaning</option>
+                      <option value="House Inspection">House Inspection</option>
+                      <option value="Home Shifting Service">Home Shifting Service</option>
+                      <option value="Pest Control Services">Pest Control Services</option>
+                      <option value="Painter">Painter</option>
+                      <option value="Solar Panel Installation">Solar Panel Installation</option>
+                      <option value="Geyser">Geyser</option>
+                      <option value="Carpenter">Carpenter</option>
                     </select>
                     <ChevronDown className="w-4 h-4 text-slate-600 absolute right-3 top-3.5 pointer-events-none" />
                   </div>
@@ -361,31 +436,43 @@ export default function HeroSection() {
                     When Would You Like Us to Come?
                   </label>
                   <input
-                    type="text"
-                    placeholder="dd/mm/yy"
+                    type="date"
+                    required
+                    value={orderForm.date}
+                    onChange={updateOrderField('date')}
+                    min={new Date().toISOString().slice(0, 10)}
                     className="w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400"/>
-                    
+
                    <input
-                    type="text"
-                    placeholder="00:00 am/pm"
+                    type="time"
+                    required
+                    value={orderForm.time}
+                    onChange={updateOrderField('time')}
                      className="w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400"/>
 
                     <input
                     type="email"
+                    required
+                    value={orderForm.email}
+                    onChange={updateOrderField('email')}
                     placeholder="Your Email"
                      className="w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400"/>
 
                   <input
                     type="tel"
+                    required
+                    value={orderForm.phone}
+                    onChange={updateOrderField('phone')}
                     placeholder="Phone Number"
                     className="w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400"/>
                 </div>
 
-                
+
                 <button
-                  type="button"
-                  className="w-full bg-[#3A3E59] hover:bg-[#2C2F45] text-white font-semibold text-xs py-3.5 rounded-lg mt-3 transition shadow-md">
-                  Get A Price
+                  type="submit"
+                  disabled={orderStatus === 'submitting'}
+                  className="w-full bg-[#3A3E59] hover:bg-[#2C2F45] disabled:opacity-60 text-white font-semibold text-xs py-3.5 rounded-lg mt-3 transition shadow-md">
+                  {orderStatus === 'submitting' ? 'Sending…' : 'Get A Price'}
                 </button>
               </form>
             </div>
@@ -417,9 +504,10 @@ export default function HeroSection() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {services.map((item, index) => (
-            <div
+            <Link
               key={index}
-              className="bg-white rounded-2xl p-8 border border-orange-500 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-all duration-300" >
+              href={item.href}
+              className="bg-white rounded-2xl p-8 border border-orange-500 flex flex-col items-center text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer" >
               <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mb-6">
                 {item.icon}
               </div>
@@ -429,7 +517,7 @@ export default function HeroSection() {
               <p className="text-xs text-slate-500 leading-relaxed max-w-xs">
                 {item.desc}
               </p>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
@@ -654,9 +742,11 @@ export default function HeroSection() {
                         className="object-cover object-center"/>
                 </div>
 
-                   <button className="bg-[#3D425A] hover:bg-[#2C2F45] text-white text-xs sm:text-sm font-semibold px-8 py-3.5 rounded-lg transition-all duration-300 shadow-md">
+                   <Link
+                    href="/contact-us"
+                    className="bg-[#3D425A] hover:bg-[#2C2F45] text-white text-xs sm:text-sm font-semibold px-8 py-3.5 rounded-lg transition-all duration-300 shadow-md">
                     Contact-Us
-                </button>
+                </Link>
             </div>
         </div>
     </section>
@@ -716,7 +806,7 @@ export default function HeroSection() {
         </div>
       </section>
 
-      <section className="max-w-7xl max-auto px-4 sm:px-6 lg:px-8 py-16 font-sans border-t border-slate-100">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans border-t border-slate-100">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-16">
           <div className="lg:col-span-7 space-y-6">
             <div>

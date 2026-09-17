@@ -1,5 +1,5 @@
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export type ApiAddress = {
   id: string
@@ -99,12 +99,16 @@ export type BookingResult = {
   notifications: { title: string; body: string }[]
 }
 
+export type AuthRole = 'customer' | 'vendor' | 'admin'
+
 export type AuthResponse = {
   user_id: string
   profile_id: string
-  role: 'customer' | 'vendor'
+  role: AuthRole
   email: string
   message: string
+  access_token?: string | null
+  token_type?: string
 }
 
 export type CustomerNotification = {
@@ -133,6 +137,10 @@ export type VendorProfileResponse = {
   bio?: string | null
   member_since: string
   completed_jobs: number
+  average_rating?: number
+  review_count?: number
+  is_online?: boolean
+  is_verified?: boolean
   profile_image_url?: string | null
   addresses?: ApiAddress[]
   city?: string | null
@@ -154,34 +162,48 @@ export type VendorProfileResponse = {
 
 export type VendorBookingAction = 'accept' | 'reject'
 
-export function getStoredAuth(role: 'customer' | 'vendor'): AuthResponse | null {
+const AUTH_STORAGE_KEYS: Record<AuthRole, string> = {
+  customer: 'asaani_customer_auth',
+  vendor: 'asaani_vendor_auth',
+  admin: 'asaani_admin_auth',
+}
+
+// The JWT is the one credential actually sent with requests (Authorization: Bearer).
+// It lives in a single shared slot — whichever role logged in most recently — mirroring
+// the single-cookie-session behavior this replaced (only one active login per browser).
+const ACCESS_TOKEN_KEY = 'asaani_access_token'
+
+function authStorage(role: AuthRole): Storage {
+  return role === 'vendor' ? window.sessionStorage : window.localStorage
+}
+
+export function getStoredAuth(role: AuthRole): AuthResponse | null {
   if (typeof window === 'undefined') return null
-  const roleKey = role === 'customer' ? 'asaani_customer_auth' : 'asaani_vendor_auth'
-  const storage = role === 'vendor' ? window.sessionStorage : window.localStorage
-  const keys = role === 'vendor' ? [roleKey] : [roleKey, 'asaani_auth']
-  for (const key of keys) {
-    try {
-      const parsed = JSON.parse(storage.getItem(key) || 'null') as AuthResponse | null
-      if (parsed?.role === role && parsed.profile_id && parsed.user_id) return parsed
-    } catch {
-    }
+  try {
+    const parsed = JSON.parse(authStorage(role).getItem(AUTH_STORAGE_KEYS[role]) || 'null') as AuthResponse | null
+    if (parsed?.role === role && parsed.profile_id && parsed.user_id) return parsed
+  } catch {
   }
   return null
 }
 
-export function clearStoredAuth(role: 'customer' | 'vendor'): void {
+export function setStoredAuth(role: AuthRole, auth: AuthResponse): void {
   if (typeof window === 'undefined') return
-  const roleKey = role === 'customer' ? 'asaani_customer_auth' : 'asaani_vendor_auth'
-  const storage = role === 'vendor' ? window.sessionStorage : window.localStorage
-  storage.removeItem(roleKey)
-  if (role === 'vendor') return
-
-  try {
-    const shared = JSON.parse(window.localStorage.getItem('asaani_auth') || 'null') as AuthResponse | null
-    if (shared?.role === role) window.localStorage.removeItem('asaani_auth')
-  } catch {
-    window.localStorage.removeItem('asaani_auth')
+  authStorage(role).setItem(AUTH_STORAGE_KEYS[role], JSON.stringify(auth))
+  if (auth.access_token) {
+    window.localStorage.setItem(ACCESS_TOKEN_KEY, auth.access_token)
   }
+}
+
+export function clearStoredAuth(role: AuthRole): void {
+  if (typeof window === 'undefined') return
+  authStorage(role).removeItem(AUTH_STORAGE_KEYS[role])
+  window.localStorage.removeItem(ACCESS_TOKEN_KEY)
+}
+
+export function getAccessToken(): string | null {
+  if (typeof window === 'undefined') return null
+  return window.localStorage.getItem(ACCESS_TOKEN_KEY)
 }
 
 async function readError(res: Response): Promise<string> {
@@ -195,16 +217,21 @@ async function readError(res: Response): Promise<string> {
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getAccessToken()
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
-    credentials: 'include',
     headers: {
       ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers || {}),
     },
     cache: 'no-store',
   })
-  if (!res.ok) throw new Error(await readError(res))
+  if (!res.ok) {
+    const error = new Error(await readError(res)) as Error & { status?: number }
+    error.status = res.status
+    throw error
+  }
   if (res.status === 204) return undefined as T
   return res.json()
 }
@@ -266,30 +293,28 @@ export async function registerVendor(payload: {
 export async function loginUser(payload: {
   identifier: string
   password: string
-  role: 'customer' | 'vendor'
+  role: AuthRole
 }): Promise<AuthResponse> {
   return api('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) })
 }
 
 export async function getCurrentUser(): Promise<AuthResponse> {
-  if (typeof window !== 'undefined') {
-    const storedAuth = getStoredAuth('customer') || getStoredAuth('vendor')
-    if (storedAuth) return storedAuth
-  }
-
   try {
-    return await api('/api/auth/me')
+    const user = await api<AuthResponse>('/api/auth/me')
+    setStoredAuth(user.role, user)
+    return user
   } catch (error) {
+    const status = (error as { status?: number }).status
+    if (status === 401) {
+      // Access token is missing, invalid, or expired — the cached copy is stale, drop it.
+      clearStoredAuth('customer')
+      clearStoredAuth('vendor')
+      clearStoredAuth('admin')
+      throw error
+    }
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('asaani_auth')
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored) as AuthResponse
-          if (parsed?.role) return parsed
-        } catch {
-          console.warn('Falling through to backend auth response failure without a readable stored auth object.')
-        }
-      }
+      const stored = getStoredAuth('customer') || getStoredAuth('vendor') || getStoredAuth('admin')
+      if (stored) return stored
     }
     throw error
   }
@@ -325,10 +350,11 @@ export async function updateVendorProfile(vendorId: string, payload: {
 export async function uploadVendorProfileImage(vendorId: string, file: File): Promise<VendorProfileResponse> {
   const formData = new FormData()
   formData.append('image', file)
+  const token = getAccessToken()
   const res = await fetch(`${API_BASE}/api/v1/vendors/${encodeURIComponent(vendorId)}/profile-image`, {
     method: 'POST',
     body: formData,
-    credentials: 'include',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     cache: 'no-store',
   })
   if (!res.ok) throw new Error(await readError(res))
@@ -497,6 +523,151 @@ export function formatSlotLabel(hhmm: string): string {
   return `${h}:${m} ${period}`
 }
 
+
+export type AdminOverview = {
+  total_customers: number
+  total_vendors: number
+  verified_vendors: number
+  total_bookings: number
+  completed_bookings: number
+  total_revenue: number
+}
+
+export type AdminVendor = {
+  id: string
+  business_name: string
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  city: string | null
+  area: string | null
+  status: string
+  is_verified: boolean
+  is_online: boolean
+  average_rating: number
+  review_count: number
+  created_at: string
+}
+
+export type AdminCustomer = {
+  id: string
+  full_name: string
+  email: string
+  phone: string
+  default_address: string | null
+  created_at: string
+}
+
+export type AdminBooking = {
+  id: string
+  customer_name: string
+  vendor_name: string
+  service_name: string
+  status: string
+  scheduled_date: string
+  slot_start: string
+  slot_end: string
+  total_amount: number | null
+  created_at: string
+}
+
+export async function fetchAdminOverview(): Promise<AdminOverview> {
+  return api('/api/admin/overview')
+}
+
+export async function fetchAdminVendors(): Promise<AdminVendor[]> {
+  return api('/api/admin/vendors')
+}
+
+export async function setAdminVendorVerified(vendorId: string, isVerified: boolean): Promise<AdminVendor> {
+  return api(`/api/admin/vendors/${encodeURIComponent(vendorId)}/verify`, {
+    method: 'PATCH',
+    body: JSON.stringify({ is_verified: isVerified }),
+  })
+}
+
+export async function setAdminVendorStatus(vendorId: string, status: 'approved' | 'suspended'): Promise<AdminVendor> {
+  return api(`/api/admin/vendors/${encodeURIComponent(vendorId)}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
+}
+
+export async function fetchAdminCustomers(): Promise<AdminCustomer[]> {
+  return api('/api/admin/customers')
+}
+
+export async function fetchAdminBookings(): Promise<AdminBooking[]> {
+  return api('/api/admin/bookings')
+}
+
+export type ServiceRequest = {
+  id: string
+  zip_code: string
+  city: string
+  service_name: string
+  preferred_date: string
+  preferred_time: string
+  email: string
+  phone: string
+  status: 'new' | 'assigned' | 'closed'
+  assigned_vendor_id: string | null
+  assigned_vendor_name: string | null
+  created_at: string
+}
+
+export async function submitServiceRequest(payload: {
+  zip_code: string
+  city: string
+  service_name: string
+  preferred_date: string
+  preferred_time: string
+  email: string
+  phone: string
+}): Promise<ServiceRequest> {
+  return api('/api/service-requests', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export async function fetchAdminServiceRequests(): Promise<ServiceRequest[]> {
+  return api('/api/admin/service-requests')
+}
+
+export async function assignServiceRequestVendor(requestId: string, vendorId: string): Promise<ServiceRequest> {
+  return api(`/api/admin/service-requests/${encodeURIComponent(requestId)}/assign`, {
+    method: 'PATCH',
+    body: JSON.stringify({ vendor_id: vendorId }),
+  })
+}
+
+export type ContactMessage = {
+  id: string
+  full_name: string
+  email: string
+  phone: string | null
+  subject: string
+  message: string
+  is_read: boolean
+  created_at: string
+}
+
+export async function submitContactMessage(payload: {
+  full_name: string
+  email: string
+  phone?: string
+  subject: string
+  message: string
+}): Promise<ContactMessage> {
+  return api('/api/contact-messages', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export async function fetchAdminContactMessages(): Promise<ContactMessage[]> {
+  return api('/api/admin/contact-messages')
+}
+
+export async function markContactMessageRead(messageId: string): Promise<ContactMessage> {
+  return api(`/api/admin/contact-messages/${encodeURIComponent(messageId)}/read`, { method: 'PATCH' })
+}
 
 export function serviceNameFromCart(items: { title: string }[]): string {
   return serviceFromCart(items).service || 'Plumbing Services'

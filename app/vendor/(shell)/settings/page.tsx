@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchVendorProfile, getStoredAuth, updateVendorProfile } from '@/app/lib/booking-api';
-import UnsavedChangesGuard from '../components/unsaved-changes-guard';
+import UnsavedChangesGuard from '@/app/vendor/components/unsaved-changes-guard';
 import {
   Wrench,
   User,
@@ -11,12 +11,10 @@ import {
   CreditCard,
   Check,
   X,
-  ArrowLeft,
   Clock,
   Save,
   Lock,
-  Calendar,
-  ShieldQuestion
+  Calendar
 } from 'lucide-react';
 
 const ALL_MAIN_SERVICES = [
@@ -196,7 +194,7 @@ export default function VendorSettingsPage() {
     const loadBackendProfile = async () => {
       const auth = getStoredAuth('vendor')
       if (!auth?.profile_id) {
-        setLoading(false)
+        router.push('/vendor/login')
         return
       }
       try {
@@ -251,7 +249,7 @@ export default function VendorSettingsPage() {
       }
     }
 
-  }, []);
+  }, [router]);
 
   const settingsSnapshot = JSON.stringify({ mainServices, subServices, availability, accountInfo, profileMeta });
 
@@ -347,16 +345,8 @@ export default function VendorSettingsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-800 flex">
+    <>
       <UnsavedChangesGuard isDirty={Boolean(savedSettings) && settingsSnapshot !== savedSettings} onSave={async () => { await saveAccountDetails(); syncToLocalStorage(); }} />
       {toastMessage && (
         <div className="fixed bottom-5 right-5 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">
@@ -365,51 +355,29 @@ export default function VendorSettingsPage() {
         </div>
       )}
 
-      
-      <div className="w-72 shrink-0 bg-[#3B3E56] text-white flex flex-col justify-between min-h-screen sticky top-0">
-        <div>
-          <div className="px-6 pt-6">
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-fit overflow-x-auto">
+          {NAV_ITEMS.map(({ key, label, icon: Icon }) => (
             <button
-              onClick={() => router.push('/vendor/dashboard')}
-              className="roup inline-flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white bg-white/10 hover:bg-white/15 border border-white/10 px-3.5 py-2 rounded-xl transition-all duration-200 mb-8 cursor-pointer backdrop-blur-sm shadow-2xs"
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+                activeTab === key
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
             >
-              <ArrowLeft className="w-4 h-4" /> Back
+              <Icon className="w-4 h-4" />
+              <span>{label}</span>
             </button>
-          </div>
-
-          <div className="flex items-center gap-3 px-6 pt-6 pb-8">
-            <div className="w-11 h-11 rounded-xl bg-orange-500 flex items-center justify-center shrink-0">
-              <Wrench className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-lg font-bold">Asaani Say</span>
-          </div>
-
-          <div className="px-4 space-y-2">
-            {NAV_ITEMS.map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setActiveTab(key)}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold transition ${
-                  activeTab === key
-                    ? 'bg-orange-500 text-white'
-                    : 'text-white/60 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
 
-        <div className="px-5 py-6 flex items-start gap-2 text-white/40 text-xs leading-relaxed">
-          <ShieldQuestion className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>Your settings are saved automatically and kept secure.</span>
-        </div>
-      </div>
-
-      
-      <div className="flex-1 px-8 py-8 space-y-6 max-w-3xl">
+        {loading ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-16 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
+          </div>
+        ) : (
+        <>
         {activeTab === 'services' && (
             <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">
               <div className="border-b border-gray-100 pb-4">
@@ -615,7 +583,8 @@ export default function VendorSettingsPage() {
               </div>
             </div>
           )}
-      </div>
+        </>
+        )}
 
       {isMainModalOpen && (
         <MainServicesPopover
@@ -633,7 +602,7 @@ export default function VendorSettingsPage() {
           onSave={handleSaveSubServices}
         />
       )}
-    </div>
+    </>
   );
 }
 

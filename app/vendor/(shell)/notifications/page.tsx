@@ -1,12 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import Link from 'next/link'
 import {
   Wrench,
-  ShieldCheck,
   User,
-  Settings,
   Bell,
   Trash2,
   Calendar,
@@ -17,7 +14,6 @@ import {
   CreditCard,
   CheckCheck,
   ChevronRight,
-  ArrowLeft,
   X
 } from 'lucide-react'
 import { decideVendorBooking, deleteVendorNotification, fetchVendorBookings, fetchVendorNotifications, getStoredAuth, markVendorNotificationRead, updateVendorBookingStatus, type BookingResult } from '@/app/lib/booking-api'
@@ -237,82 +233,7 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter(n => !n.isRead).length
 
   return (
-    <div className="min-h-screen w-full bg-white grid grid-cols-1 md:grid-cols-12 font-sans relative overflow-x-hidden">
-
-      
-      <div className="md:col-span-4 lg:col-span-3 bg-[#3B3E56] text-white p-6 md:p-8 flex flex-col justify-between min-h-screen">
-        <div>
-
-          
-          <Link
-            href="/vendor/dashboard"
-            className="group inline-flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white bg-white/10 hover:bg-white/15 border border-white/10 px-3.5 py-2 rounded-xl transition-all duration-200 mb-8 cursor-pointer backdrop-blur-sm shadow-2xs"
-          >
-            <ArrowLeft className="w-4 h-4 text-slate-300 group-hover:text-white transition-transform duration-200 group-hover:-translate-x-1" />
-            <span>Back </span>
-          </Link>
-
-          
-          <div className="flex items-center gap-3 mb-12">
-            <div className="w-9 h-9 rounded-xl bg-[#EE6C52] flex items-center justify-center shadow-xs">
-              <Wrench className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-extrabold text-xl tracking-tight text-white">
-              Asaani Say
-            </span>
-          </div>
-
-          <div className="space-y-4">
-            <h1 className="text-2xl lg:text-3xl font-extrabold leading-tight text-white">
-              Manage Your <br />
-              <span className="text-orange-500">Vendor Notifications</span>
-            </h1>
-            <p className="text-xs lg:text-sm text-slate-300 leading-relaxed font-normal">
-              View and respond to real-time customer booking requests, payment updates, and service schedules,all in one place.
-            </p>
-          </div>
-
-        </div>
-
-        <div className="pt-8 border-t border-slate-600/50 flex items-center gap-2.5 text-xs text-slate-300">
-          <ShieldCheck className="w-4 h-4 text-[#EE6C52] shrink-0" />
-          <span>Your business dashboard is private and secure.</span>
-        </div>
-      </div>
-
-      
-      <div className="md:col-span-8 lg:col-span-9 bg-[#F8FAFC] min-h-screen overflow-y-auto">
-
-        
-        <header className="h-16 px-8 flex items-center justify-between border-b border-slate-200/80 bg-white/50 backdrop-blur-sm">
-          <div className="text-xs font-medium text-slate-600">English</div>
-
-          <div className="flex items-center gap-4">
-            <Link href="/vendor/dashboard" className="text-xs font-bold text-slate-800 hover:text-[#EE6C52] transition">
-              Dashboard
-            </Link>
-            <Link href="/vendor/settings" className="p-1.5 rounded-full hover:bg-slate-100 transition cursor-pointer">
-              <Settings className="w-4 h-4 text-slate-600" />
-            </Link>
-          </div>
-        </header>
-
-        
-        <div className="p-8 space-y-6">
-          
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <h2 className="text-2xl font-extrabold text-[#EE6C52] tracking-tight">
-                Alerts & Activity
-              </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                View real-time customer booking alerts, schedule updates, and payment details.
-              </p>
-            </div>
-
-          </div>
-
-          
+    <>
           <div className="flex items-center justify-between bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-xs flex-wrap gap-2">
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
               {(['All', 'Unread'] as const).map(tab => (
@@ -524,8 +445,6 @@ export default function NotificationsPage() {
               )}
             </div>
           </div>
-        </div>
-      </div>
 
       {assignmentConflict && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4" role="dialog" aria-modal="true" aria-labelledby="assignment-conflict-title">
@@ -584,6 +503,6 @@ export default function NotificationsPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

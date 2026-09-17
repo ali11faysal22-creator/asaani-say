@@ -2,7 +2,7 @@
 import React,{useState} from 'react'
 import {Eye,EyeOff,} from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { loginUser, registerCustomer } from '../../lib/booking-api'
+import { loginUser, registerCustomer, setStoredAuth } from '../../lib/booking-api'
 
 export default function CustomerAuthPage(){
   const router = useRouter()
@@ -30,8 +30,7 @@ const handleAuthSubmit: React.SubmitEventHandler<HTMLFormElement>=async (e)=>{
     const authResult = await (isRegister
       ? await registerCustomer({ full_name: name, email, password, phone: phone || undefined, address: address || undefined })
       : await loginUser({ identifier: emailOrPhone, password, role: 'customer' }))
-    localStorage.setItem('asaani_customer_auth', JSON.stringify(authResult))
-    localStorage.removeItem('asaani_auth')
+    setStoredAuth('customer', authResult)
     window.dispatchEvent(new Event('asaani-auth-changed'))
     router.push('/')
   } catch (requestError) {
