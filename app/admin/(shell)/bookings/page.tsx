@@ -2,16 +2,26 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye } from 'lucide-react'
-import { fetchAdminBookings, getCurrentUser, type AdminBooking } from '@/app/lib/booking-api'
+import { Eye, ListChecks, Repeat, UserPlus } from 'lucide-react'
+import {
+  API_BASE,
+  fetchAdminBookings,
+  fetchAdminVendors,
+  getCurrentUser,
+  type AdminBooking,
+  type AdminVendor,
+} from '@/app/lib/booking-api'
 import { StatusBadge, bookingStatusTone } from '../../components/status-badge'
 import { TableToolbar } from '../../components/table-toolbar'
 import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
+import { BookingStatusModal } from '../../components/booking-status-modal'
+import { VendorReassignModal } from '../../components/vendor-reassign-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
 
 const FILTERS = [
   { key: 'all', label: 'All' },
+  { key: 'unassigned', label: 'Needs Vendor' },
   { key: 'pending', label: 'Pending' },
   { key: 'active', label: 'In Progress' },
   { key: 'completed', label: 'Completed' },
@@ -21,6 +31,7 @@ const FILTERS = [
 type FilterKey = (typeof FILTERS)[number]['key']
 
 function bucketForStatus(status: string): FilterKey {
+  if (status === 'unassigned') return 'unassigned'
   if (status === 'completed') return 'completed'
   if (status === 'pending') return 'pending'
   if (status === 'rejected' || status === 'cancelled') return 'cancelled'
@@ -32,16 +43,19 @@ export default function AdminBookingsPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [bookings, setBookings] = useState<AdminBooking[]>([])
+  const [vendors, setVendors] = useState<AdminVendor[]>([])
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterKey>('all')
   const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null)
+  const [statusBooking, setStatusBooking] = useState<AdminBooking | null>(null)
+  const [reassignBooking, setReassignBooking] = useState<AdminBooking | null>(null)
 
   const loadData = async () => {
-    try {
-      setBookings(await fetchAdminBookings())
-    } catch (loadError) {
-      console.error('Unable to load bookings', loadError)
-    }
+    const [bookingsResult, vendorsResult] = await Promise.allSettled([fetchAdminBookings(), fetchAdminVendors()])
+    if (bookingsResult.status === 'fulfilled') setBookings(bookingsResult.value)
+    else console.error('Unable to load bookings', bookingsResult.reason)
+    if (vendorsResult.status === 'fulfilled') setVendors(vendorsResult.value)
+    else console.error('Unable to load vendors', vendorsResult.reason)
   }
 
   useEffect(() => {
@@ -83,11 +97,17 @@ export default function AdminBookingsPage() {
       if (!q) return true
       return (
         b.customer_name.toLowerCase().includes(q) ||
-        b.vendor_name.toLowerCase().includes(q) ||
-        b.service_name.toLowerCase().includes(q)
+        (b.vendor_name || '').toLowerCase().includes(q) ||
+        b.service_name.toLowerCase().includes(q) ||
+        (b.city || '').toLowerCase().includes(q)
       )
     })
   }, [bookings, search, filter])
+
+  const applyUpdate = (updated: AdminBooking) => {
+    setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
+    setSelectedBooking((prev) => (prev && prev.id === updated.id ? updated : prev))
+  }
 
   if (loading) {
     return (
@@ -130,6 +150,7 @@ export default function AdminBookingsPage() {
               <th className="px-4 py-3 font-bold">Customer</th>
               <th className="px-4 py-3 font-bold">Vendor</th>
               <th className="px-4 py-3 font-bold">Service</th>
+              <th className="px-4 py-3 font-bold">City</th>
               <th className="px-4 py-3 font-bold">Date</th>
               <th className="px-4 py-3 font-bold">Amount</th>
               <th className="px-4 py-3 font-bold">Status</th>
@@ -140,8 +161,18 @@ export default function AdminBookingsPage() {
             {filtered.map((booking) => (
               <tr key={booking.id} className="hover:bg-slate-50/80 transition">
                 <td className="px-4 py-3 font-semibold text-slate-800">{booking.customer_name}</td>
-                <td className="px-4 py-3 text-slate-500">{booking.vendor_name}</td>
+                <td className="px-4 py-3 text-slate-500">
+                  {booking.vendor_name ? (
+                    <>
+                      <p className="text-slate-800 font-semibold">{booking.vendor_contact_name || booking.vendor_name}</p>
+                      {booking.vendor_contact_name && <p className="text-[11px] text-slate-400">{booking.vendor_name}</p>}
+                    </>
+                  ) : (
+                    <span className="font-semibold text-amber-600">Needs vendor</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-slate-500">{booking.service_name}</td>
+                <td className="px-4 py-3 text-slate-500">{booking.city || '—'}</td>
                 <td className="px-4 py-3 text-slate-500">
                   {booking.scheduled_date}
                   <span className="text-slate-400"> · {booking.slot_start}–{booking.slot_end}</span>
@@ -151,15 +182,21 @@ export default function AdminBookingsPage() {
                   <StatusBadge label={booking.status.replace('_', ' ')} tone={bookingStatusTone(booking.status)} />
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-end">
+                  <div className="flex items-center justify-end gap-1.5">
                     <IconActionButton icon={Eye} label="View details" onClick={() => setSelectedBooking(booking)} />
+                    <IconActionButton icon={ListChecks} label="Change status" onClick={() => setStatusBooking(booking)} />
+                    {booking.vendor_id ? (
+                      <IconActionButton icon={Repeat} label="Reassign vendor" onClick={() => setReassignBooking(booking)} />
+                    ) : (
+                      <IconActionButton icon={UserPlus} label="Assign vendor" onClick={() => setReassignBooking(booking)} />
+                    )}
                   </div>
                 </td>
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
                   {bookings.length === 0 ? 'No bookings yet.' : 'No bookings match your filters.'}
                 </td>
               </tr>
@@ -171,18 +208,70 @@ export default function AdminBookingsPage() {
       {selectedBooking && (
         <DetailModal
           title={selectedBooking.service_name}
-          subtitle={`${selectedBooking.customer_name} → ${selectedBooking.vendor_name}`}
+          subtitle={`${selectedBooking.customer_name} → ${selectedBooking.vendor_contact_name || selectedBooking.vendor_name || 'Unassigned'}`}
           onClose={() => setSelectedBooking(null)}
           fields={[
             { label: 'Customer', value: selectedBooking.customer_name },
-            { label: 'Vendor', value: selectedBooking.vendor_name },
+            {
+              label: 'Vendor',
+              value: selectedBooking.vendor_name
+                ? `${selectedBooking.vendor_contact_name || selectedBooking.vendor_name}${selectedBooking.vendor_contact_name ? ` (${selectedBooking.vendor_name})` : ''}`
+                : 'Needs vendor',
+            },
             { label: 'Service', value: selectedBooking.service_name },
+            { label: 'City', value: [selectedBooking.city, selectedBooking.area].filter(Boolean).join(', ') || '—' },
             { label: 'Scheduled', value: `${selectedBooking.scheduled_date} · ${selectedBooking.slot_start}–${selectedBooking.slot_end}` },
             { label: 'Amount', value: selectedBooking.total_amount != null ? `Rs. ${selectedBooking.total_amount.toLocaleString()}` : '—' },
             { label: 'Status', value: <StatusBadge label={selectedBooking.status.replace('_', ' ')} tone={bookingStatusTone(selectedBooking.status)} /> },
             { label: 'Created', value: new Date(selectedBooking.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) },
+            ...(selectedBooking.photos.length > 0
+              ? [{
+                  label: 'Photos',
+                  value: (
+                    <div className="flex flex-wrap justify-end gap-1.5">
+                      {selectedBooking.photos.map((url) => (
+                        <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
+                          <img src={`${API_BASE}${url}`} alt="Completion" className="h-12 w-12 rounded-lg border border-slate-200 object-cover" />
+                        </a>
+                      ))}
+                    </div>
+                  ),
+                }]
+              : []),
           ]}
+          footer={
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const booking = selectedBooking
+                  setSelectedBooking(null)
+                  setStatusBooking(booking)
+                }}
+                className="flex-1 rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
+              >
+                Change status
+              </button>
+              <button
+                onClick={() => {
+                  const booking = selectedBooking
+                  setSelectedBooking(null)
+                  setReassignBooking(booking)
+                }}
+                className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 cursor-pointer"
+              >
+                {selectedBooking.vendor_id ? 'Reassign vendor' : 'Assign vendor'}
+              </button>
+            </div>
+          }
         />
+      )}
+
+      {statusBooking && (
+        <BookingStatusModal booking={statusBooking} onClose={() => setStatusBooking(null)} onUpdated={applyUpdate} />
+      )}
+
+      {reassignBooking && (
+        <VendorReassignModal booking={reassignBooking} vendors={vendors} onClose={() => setReassignBooking(null)} onUpdated={applyUpdate} />
       )}
     </div>
   )

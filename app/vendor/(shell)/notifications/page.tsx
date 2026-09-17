@@ -16,7 +16,7 @@ import {
   ChevronRight,
   X
 } from 'lucide-react'
-import { decideVendorBooking, deleteVendorNotification, fetchVendorBookings, fetchVendorNotifications, getStoredAuth, markVendorNotificationRead, updateVendorBookingStatus, type BookingResult } from '@/app/lib/booking-api'
+import { API_BASE, completeVendorBookingWithPhotos, decideVendorBooking, deleteVendorNotification, fetchVendorBookings, fetchVendorNotifications, getStoredAuth, markVendorNotificationRead, updateVendorBookingStatus, type BookingResult } from '@/app/lib/booking-api'
 
 export interface NotificationItem {
   id: string
@@ -45,6 +45,8 @@ export default function NotificationsPage() {
   const [filterTab, setFilterTab] = useState<'All' | 'Unread'>('All')
   const [actionInProgress, setActionInProgress] = useState(false)
   const [assignmentConflict, setAssignmentConflict] = useState<NotificationItem | null>(null)
+  const [showCompletionUpload, setShowCompletionUpload] = useState(false)
+  const [completionPhotos, setCompletionPhotos] = useState<File[]>([])
 
   useEffect(() => {
     let active = true
@@ -220,6 +222,23 @@ export default function NotificationsPage() {
       setNotifications((items) => items.map((item) => item.bookingId === bookingId ? { ...item, booking: updatedBooking } : item))
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Unable to update tracking status')
+    } finally {
+      setActionInProgress(false)
+    }
+  }
+
+  const handleCompleteBooking = async () => {
+    const bookingId = selectedNotif?.bookingId
+    if (!bookingId || !selectedNotif?.booking) return
+    setActionInProgress(true)
+    try {
+      const updatedBooking = await completeVendorBookingWithPhotos(bookingId, completionPhotos)
+      setSelectedNotif((item) => item ? { ...item, booking: updatedBooking } : item)
+      setNotifications((items) => items.map((item) => item.bookingId === bookingId ? { ...item, booking: updatedBooking } : item))
+      setShowCompletionUpload(false)
+      setCompletionPhotos([])
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Unable to complete order')
     } finally {
       setActionInProgress(false)
     }
@@ -431,7 +450,42 @@ export default function NotificationsPage() {
                       <div className="flex flex-wrap gap-2">
                         {selectedNotif.booking.status === 'accepted' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('on_the_way')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Mark on the way</button>}
                         {selectedNotif.booking.status === 'on_the_way' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('in_progress')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Mark arrived</button>}
-                        {selectedNotif.booking.status === 'in_progress' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('completed')} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Complete order</button>}
+                        {selectedNotif.booking.status === 'in_progress' && !showCompletionUpload && <button type="button" disabled={actionInProgress} onClick={() => setShowCompletionUpload(true)} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Complete order</button>}
+                      </div>
+                      {selectedNotif.booking.status === 'in_progress' && showCompletionUpload && (
+                        <div className="mt-3 space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3">
+                          <p className="text-[11px] font-bold text-emerald-700">Add photos of the completed job (optional)</p>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                            onChange={(event) => setCompletionPhotos(Array.from(event.target.files || []))}
+                            className="block w-full text-[11px] text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-white"
+                          />
+                          {completionPhotos.length > 0 && (
+                            <p className="text-[10px] text-slate-500">{completionPhotos.length} photo{completionPhotos.length === 1 ? '' : 's'} selected</p>
+                          )}
+                          <div className="flex gap-2">
+                            <button type="button" disabled={actionInProgress} onClick={() => void handleCompleteBooking()} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">
+                              {actionInProgress ? 'Completing…' : 'Confirm completion'}
+                            </button>
+                            <button type="button" disabled={actionInProgress} onClick={() => { setShowCompletionUpload(false); setCompletionPhotos([]) }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {selectedNotif.booking && selectedNotif.booking.status === 'completed' && selectedNotif.booking.photos.length > 0 && (
+                    <div className="mt-4 border-t border-slate-100 pt-4">
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Completion photos</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedNotif.booking.photos.map((url) => (
+                          <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
+                            <img src={`${API_BASE}${url}`} alt="Completion" className="h-16 w-16 rounded-lg object-cover border border-slate-200" />
+                          </a>
+                        ))}
                       </div>
                     </div>
                   )}

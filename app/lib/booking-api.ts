@@ -30,6 +30,7 @@ export type CatalogService = {
   price: number | null
   price_label: string | null
   image_url: string | null
+  is_active: boolean
   sort_order: number
 }
 
@@ -47,6 +48,8 @@ export type CatalogCategory = {
   seo_why: string | null
   highlights: string[]
   href: string
+  is_active: boolean
+  sort_order: number
   services: CatalogService[]
 }
 
@@ -95,8 +98,9 @@ export type BookingResult = {
   slot_start: string
   slot_end: string
   address: ApiAddress
-  vendor: AssignedVendor
+  vendor: AssignedVendor | null
   notifications: { title: string; body: string }[]
+  photos: string[]
 }
 
 export type AuthRole = 'customer' | 'vendor' | 'admin'
@@ -272,7 +276,7 @@ export async function registerCustomer(payload: {
 }
 
 export async function registerVendor(payload: {
-  email: string
+  email?: string
   password: string
   first_name: string
   last_name: string
@@ -280,6 +284,11 @@ export async function registerVendor(payload: {
   business_name: string
   business_email?: string
   business_phone?: string
+  postal_code?: string
+  cnic: string
+  experience_years: string
+  service_areas: string[]
+  contact_preferences?: string[]
   house_address?: string
   categories?: string[]
   services?: string[]
@@ -378,6 +387,20 @@ export async function decideVendorBooking(vendorId: string, bookingId: string, a
     method: 'PATCH',
     body: JSON.stringify({ action }),
   })
+}
+
+export async function completeVendorBookingWithPhotos(bookingId: string, files: File[]): Promise<BookingResult> {
+  const formData = new FormData()
+  files.forEach((file) => formData.append('photos', file))
+  const token = getAccessToken()
+  const res = await fetch(`${API_BASE}/api/v1/vendor/bookings/${encodeURIComponent(bookingId)}/complete`, {
+    method: 'POST',
+    body: formData,
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error(await readError(res))
+  return res.json()
 }
 
 export async function updateVendorBookingStatus(vendorId: string, bookingId: string, action: 'on_the_way' | 'in_progress' | 'completed'): Promise<BookingResult> {
@@ -561,8 +584,14 @@ export type AdminCustomer = {
 
 export type AdminBooking = {
   id: string
+  customer_id: string
   customer_name: string
-  vendor_name: string
+  vendor_id: string | null
+  vendor_name: string | null
+  vendor_contact_name: string | null
+  city: string | null
+  area: string | null
+  service_id: string
   service_name: string
   status: string
   scheduled_date: string
@@ -570,10 +599,19 @@ export type AdminBooking = {
   slot_end: string
   total_amount: number | null
   created_at: string
+  photos: string[]
 }
 
 export async function fetchAdminOverview(): Promise<AdminOverview> {
   return api('/api/admin/overview')
+}
+
+export async function fetchAdminNotifications(): Promise<Array<{ id: string; user_id: string; title: string; body: string; type: string; is_read: boolean; created_at?: string }>> {
+  return api('/api/admin/notifications')
+}
+
+export async function markAdminNotificationRead(notificationId: string): Promise<void> {
+  return api(`/api/admin/notifications/${encodeURIComponent(notificationId)}/read`, { method: 'PATCH' })
 }
 
 export async function fetchAdminVendors(): Promise<AdminVendor[]> {
@@ -602,6 +640,20 @@ export async function fetchAdminBookings(): Promise<AdminBooking[]> {
   return api('/api/admin/bookings')
 }
 
+export async function setAdminBookingStatus(bookingId: string, statusValue: string): Promise<AdminBooking> {
+  return api(`/api/admin/bookings/${encodeURIComponent(bookingId)}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: statusValue }),
+  })
+}
+
+export async function reassignAdminBookingVendor(bookingId: string, vendorId: string): Promise<AdminBooking> {
+  return api(`/api/admin/bookings/${encodeURIComponent(bookingId)}/vendor`, {
+    method: 'PATCH',
+    body: JSON.stringify({ vendor_id: vendorId }),
+  })
+}
+
 export type ServiceRequest = {
   id: string
   zip_code: string
@@ -614,6 +666,7 @@ export type ServiceRequest = {
   status: 'new' | 'assigned' | 'closed'
   assigned_vendor_id: string | null
   assigned_vendor_name: string | null
+  assigned_vendor_contact_name: string | null
   created_at: string
 }
 
@@ -667,6 +720,77 @@ export async function fetchAdminContactMessages(): Promise<ContactMessage[]> {
 
 export async function markContactMessageRead(messageId: string): Promise<ContactMessage> {
   return api(`/api/admin/contact-messages/${encodeURIComponent(messageId)}/read`, { method: 'PATCH' })
+}
+
+export async function fetchAdminCategories(): Promise<CatalogCategory[]> {
+  return api('/api/admin/categories')
+}
+
+export async function createAdminCategory(payload: {
+  name: string
+  slug?: string
+  display_name?: string
+  icon?: string
+  icon_class?: string
+  hero_image?: string
+  tagline?: string
+  highlights?: string[]
+  is_active?: boolean
+  sort_order?: number
+}): Promise<CatalogCategory> {
+  return api('/api/admin/categories', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export async function updateAdminCategory(
+  categoryId: string,
+  payload: Partial<{
+    name: string
+    display_name: string
+    icon: string
+    icon_class: string
+    hero_image: string
+    tagline: string
+    highlights: string[]
+    is_active: boolean
+    sort_order: number
+  }>
+): Promise<CatalogCategory> {
+  return api(`/api/admin/categories/${encodeURIComponent(categoryId)}`, { method: 'PATCH', body: JSON.stringify(payload) })
+}
+
+export async function deleteAdminCategory(categoryId: string): Promise<void> {
+  return api(`/api/admin/categories/${encodeURIComponent(categoryId)}`, { method: 'DELETE' })
+}
+
+export async function createAdminService(payload: {
+  category_id: string
+  name: string
+  slug?: string
+  subtitle?: string
+  price?: number
+  image_url?: string
+  is_active?: boolean
+  sort_order?: number
+}): Promise<CatalogService> {
+  return api('/api/admin/services', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export async function updateAdminService(
+  serviceId: string,
+  payload: Partial<{
+    name: string
+    subtitle: string
+    price: number
+    image_url: string
+    is_active: boolean
+    sort_order: number
+  }>
+): Promise<CatalogService> {
+  return api(`/api/admin/services/${encodeURIComponent(serviceId)}`, { method: 'PATCH', body: JSON.stringify(payload) })
+}
+
+export async function deleteAdminService(serviceId: string): Promise<void> {
+  return api(`/api/admin/services/${encodeURIComponent(serviceId)}`, { method: 'DELETE' })
 }
 
 export function serviceNameFromCart(items: { title: string }[]): string {

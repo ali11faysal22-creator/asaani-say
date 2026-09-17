@@ -3,17 +3,18 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { LogOut, Menu } from 'lucide-react'
 import { clearStoredAuth, logoutUser } from '@/app/lib/booking-api'
-import AdminNotificationPopover from './admin-notification-popover'
-import { ADMIN_PAGE_META, DEFAULT_ADMIN_PAGE_META } from './admin-page-meta'
+import CustomerNotificationPopover from './customer-notification-popover'
+import { resolveCustomerPageMeta } from './customer-page-meta'
 
-export default function AdminTopbar({ onMenuClick }: { onMenuClick: () => void }) {
+export default function CustomerTopbar({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { title, subtitle } = (pathname && ADMIN_PAGE_META[pathname]) || DEFAULT_ADMIN_PAGE_META
+  const { title, subtitle } = resolveCustomerPageMeta(pathname)
 
   const handleSignOut = () => {
-    clearStoredAuth('admin')
-    router.push('/admin/login')
+    clearStoredAuth('customer')
+    window.dispatchEvent(new Event('asaani-auth-changed'))
+    router.push('/customer/login')
     logoutUser().catch(() => {})
   }
 
@@ -34,7 +35,7 @@ export default function AdminTopbar({ onMenuClick }: { onMenuClick: () => void }
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <AdminNotificationPopover />
+          <CustomerNotificationPopover />
           <button
             type="button"
             onClick={handleSignOut}

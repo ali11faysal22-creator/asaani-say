@@ -2,15 +2,17 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ClipboardList, Inbox, LayoutDashboard, Mail, ShieldCheck, Store, Users, X } from 'lucide-react'
+import { CalendarDays, ClipboardList, Inbox, LayoutDashboard, Mail, Package, ShieldCheck, Store, Users, X } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/calendar', label: 'Job Calendar', icon: CalendarDays },
   { href: '/admin/service-requests', label: 'Service Requests', icon: Inbox },
   { href: '/admin/contact-messages', label: 'Contact Messages', icon: Mail },
   { href: '/admin/vendors', label: 'Vendors', icon: Store },
   { href: '/admin/customers', label: 'Customers', icon: Users },
   { href: '/admin/bookings', label: 'Bookings', icon: ClipboardList },
+  { href: '/admin/services', label: 'Services', icon: Package },
 ] as const
 
 function Brand() {

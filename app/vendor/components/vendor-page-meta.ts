@@ -6,12 +6,10 @@ export const VENDOR_PAGE_META: Record<string, { title: string; subtitle: string;
   '/vendor/profile': {
     title: 'Vendor Profile',
     subtitle: 'Manage your official business details and public listing.',
-    contentClassName: 'max-w-4xl',
   },
   '/vendor/settings': {
     title: 'Settings',
     subtitle: 'Manage your services, account, payout and security preferences.',
-    contentClassName: 'max-w-3xl',
   },
   '/vendor/notifications': {
     title: 'Notifications',
@@ -23,4 +21,4 @@ export const VENDOR_PAGE_META: Record<string, { title: string; subtitle: string;
   },
 }
 
-export const DEFAULT_VENDOR_PAGE_META = { title: 'Dashboard', subtitle: undefined as string | undefined, contentClassName: 'max-w-6xl' }
+export const DEFAULT_VENDOR_PAGE_META = { title: 'Dashboard', subtitle: undefined as string | undefined, contentClassName: 'w-full' }

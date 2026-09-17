@@ -2,34 +2,40 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { History, LayoutDashboard, ShieldCheck, User, Settings, Wrench, X } from 'lucide-react'
+import { Hand, LayoutDashboard, ListChecks, ShieldCheck, Sparkles, X } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { href: '/vendor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/vendor/profile', label: 'Profile', icon: User },
-  { href: '/vendor/settings', label: 'Settings', icon: Settings },
-  { href: '/vendor/order-history', label: 'My Orders', icon: History },
+  { href: '/customer/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/customer/orders', label: 'My Orders', icon: ListChecks },
 ] as const
 
 function Brand() {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-9 h-9 rounded-xl bg-[#EE6C52] flex items-center justify-center shadow-xs shrink-0">
-        <Wrench className="w-4.5 h-4.5 text-white" />
+      <div className="w-9 h-9 rounded-xl bg-[#EE6C52] flex items-center justify-center shadow-xs shrink-0 relative">
+        <Hand className="w-4.5 h-4.5 text-white" />
+        <Sparkles className="w-3 h-3 text-white absolute -top-1 -right-1" />
       </div>
       <div className="leading-tight min-w-0">
         <span className="font-extrabold text-base tracking-tight text-white block truncate">Asaani Say</span>
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vendor Portal</span>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Customer Portal</span>
       </div>
     </div>
   )
+}
+
+function isActive(pathname: string | null, href: string): boolean {
+  if (!pathname) return false
+  if (pathname === href) return true
+  if (href === '/customer/orders' && pathname.startsWith('/customer/tracking/')) return true
+  return false
 }
 
 function NavList({ pathname, onNavigate }: { pathname: string | null; onNavigate?: () => void }) {
   return (
     <nav className="space-y-1">
       {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href
+        const active = isActive(pathname, href)
         return (
           <Link
             key={href}
@@ -52,12 +58,12 @@ function TrustNote() {
   return (
     <div className="pt-6 mt-6 border-t border-white/10 flex items-start gap-2.5 text-[11px] text-slate-400 leading-relaxed">
       <ShieldCheck className="w-4 h-4 text-[#EE6C52] shrink-0 mt-0.5" />
-      <span>Your vendor account and service data are kept private and secure.</span>
+      <span>Your account and booking history are kept private and secure.</span>
     </div>
   )
 }
 
-export default function VendorSidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => void }) {
+export default function CustomerSidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => void }) {
   const pathname = usePathname()
 
   return (

@@ -23,6 +23,14 @@ export const ADMIN_PAGE_META: Record<string, { title: string; subtitle: string }
     title: 'Bookings',
     subtitle: 'Every booking placed across all vendors.',
   },
+  '/admin/services': {
+    title: 'Services',
+    subtitle: 'Manage service categories and the sub-services within them.',
+  },
+  '/admin/calendar': {
+    title: 'Job Calendar',
+    subtitle: 'Ongoing and upcoming jobs by date — filter by city.',
+  },
 }
 
 export const DEFAULT_ADMIN_PAGE_META = { title: 'Admin Console', subtitle: undefined as string | undefined }

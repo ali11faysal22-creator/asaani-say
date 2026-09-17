@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, ClipboardList, ShieldCheck, Store, Users, Wallet } from 'lucide-react'
+import { CheckCircle2, ClipboardList, ShieldCheck, Store, UserPlus, Users, Wallet } from 'lucide-react'
 import {
   fetchAdminBookings,
   fetchAdminOverview,
@@ -13,17 +13,18 @@ import {
   type AdminOverview,
   type AdminVendor,
 } from '@/app/lib/booking-api'
-import { CHART_BLUE, STATUS_CRITICAL, STATUS_GOOD, STATUS_WARNING } from '@/app/components/charts/palette'
+import { CHART_ACCENT, CHART_BLUE, STATUS_CRITICAL, STATUS_GOOD, STATUS_WARNING } from '@/app/components/charts/palette'
 import { StatTile } from '@/app/components/charts/stat-tile'
 import { TrendLineChart, type TrendPoint } from '@/app/components/charts/trend-line-chart'
 import { StatusStackedBar } from '@/app/components/charts/status-stacked-bar'
 import { RankedBarList } from '@/app/components/charts/ranked-bar-list'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
 
-type BookingBucket = 'completed' | 'active' | 'pending' | 'cancelled'
+type BookingBucket = 'completed' | 'active' | 'pending' | 'unassigned' | 'cancelled'
 
 function bucketForStatus(status: string): BookingBucket {
   if (status === 'completed') return 'completed'
+  if (status === 'unassigned') return 'unassigned'
   if (status === 'pending') return 'pending'
   if (status === 'rejected' || status === 'cancelled') return 'cancelled'
   return 'active'
@@ -80,8 +81,9 @@ export default function AdminDashboardPage() {
     const completed = bookings.filter((b) => bucketForStatus(b.status) === 'completed').length
     const active = bookings.filter((b) => bucketForStatus(b.status) === 'active').length
     const pending = bookings.filter((b) => bucketForStatus(b.status) === 'pending').length
+    const unassigned = bookings.filter((b) => bucketForStatus(b.status) === 'unassigned').length
     const cancelled = bookings.filter((b) => bucketForStatus(b.status) === 'cancelled').length
-    return { completed, active, pending, cancelled, total: bookings.length }
+    return { completed, active, pending, unassigned, cancelled, total: bookings.length }
   }, [bookings])
 
   const trend = useMemo<TrendPoint[]>(() => {
@@ -105,7 +107,9 @@ export default function AdminDashboardPage() {
   const topVendors = useMemo<[string, number][]>(() => {
     const counts = new Map<string, number>()
     bookings.forEach((b) => {
-      counts.set(b.vendor_name, (counts.get(b.vendor_name) || 0) + 1)
+      if (!b.vendor_name) return
+      const label = b.vendor_contact_name ? `${b.vendor_contact_name} (${b.vendor_name})` : b.vendor_name
+      counts.set(label, (counts.get(label) || 0) + 1)
     })
     return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
@@ -125,7 +129,13 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+        <StatTile
+          label="Needs Vendor"
+          value={statusStats.unassigned}
+          sublabel={statusStats.unassigned > 0 ? 'Awaiting assignment' : undefined}
+          icon={UserPlus}
+        />
         <StatTile
           label="Vendors"
           value={totalVendors}
@@ -152,6 +162,7 @@ export default function AdminDashboardPage() {
               { key: 'completed', label: 'Completed', value: statusStats.completed, color: STATUS_GOOD },
               { key: 'active', label: 'In Progress', value: statusStats.active, color: CHART_BLUE },
               { key: 'pending', label: 'Pending', value: statusStats.pending, color: STATUS_WARNING },
+              { key: 'unassigned', label: 'Needs Vendor', value: statusStats.unassigned, color: CHART_ACCENT },
               { key: 'cancelled', label: 'Cancelled', value: statusStats.cancelled, color: STATUS_CRITICAL },
             ]}
           />

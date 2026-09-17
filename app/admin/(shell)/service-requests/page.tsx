@@ -162,7 +162,14 @@ export default function AdminServiceRequestsPage() {
                 <td className="px-4 py-3">
                   <StatusBadge label={request.status} tone={statusTone(request.status)} />
                 </td>
-                <td className="px-4 py-3 text-slate-500">{request.assigned_vendor_name || '—'}</td>
+                <td className="px-4 py-3 text-slate-500">
+                  {request.assigned_vendor_name ? (
+                    <>
+                      <p className="text-slate-800 font-semibold">{request.assigned_vendor_contact_name || request.assigned_vendor_name}</p>
+                      {request.assigned_vendor_contact_name && <p className="text-[11px] text-slate-400">{request.assigned_vendor_name}</p>}
+                    </>
+                  ) : '—'}
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1.5">
                     <IconActionButton icon={Eye} label="View details" onClick={() => setSelectedRequest(request)} />
@@ -193,7 +200,12 @@ export default function AdminServiceRequestsPage() {
             { label: 'Preferred date', value: selectedRequest.preferred_date },
             { label: 'Preferred time', value: selectedRequest.preferred_time },
             { label: 'Status', value: <StatusBadge label={selectedRequest.status} tone={statusTone(selectedRequest.status)} /> },
-            { label: 'Assigned vendor', value: selectedRequest.assigned_vendor_name || 'Not assigned yet' },
+            {
+              label: 'Assigned vendor',
+              value: selectedRequest.assigned_vendor_name
+                ? `${selectedRequest.assigned_vendor_contact_name || selectedRequest.assigned_vendor_name}${selectedRequest.assigned_vendor_contact_name ? ` (${selectedRequest.assigned_vendor_name})` : ''}`
+                : 'Not assigned yet',
+            },
             { label: 'Submitted', value: new Date(selectedRequest.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) },
           ]}
           footer={
@@ -226,7 +238,7 @@ export default function AdminServiceRequestsPage() {
                 <option value="">Select a vendor…</option>
                 {vendors.map((vendor) => (
                   <option key={vendor.id} value={vendor.id}>
-                    {vendor.business_name} {vendor.city ? `(${vendor.city})` : ''}
+                    {vendor.first_name} {vendor.last_name} — {vendor.business_name} {vendor.city ? `(${vendor.city})` : ''}
                   </option>
                 ))}
               </select>

@@ -3,6 +3,8 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { loginUser, registerVendor, setStoredAuth } from '@/app/lib/booking-api'
+import { PhoneInput, combinePhoneNumber } from '@/app/components/phone-input'
+import { DEFAULT_COUNTRY_ISO, COUNTRY_CODES } from '@/app/lib/country-codes'
 import {
   Eye,
   EyeOff,
@@ -13,6 +15,8 @@ import {
   Check,
   CalendarDays
 } from 'lucide-react'
+
+const DEFAULT_DIAL_CODE = COUNTRY_CODES.find((c) => c.iso === DEFAULT_COUNTRY_ISO)?.dial || '+92'
 
 const SERVICES_DATA: Record<string, string[]> = {
   'Home Inspection': [
@@ -176,7 +180,6 @@ export default function VendorLoginPage() {
     firstName: '',
     lastName: '',
     contactNumber: '',
-    emailAddress: '',
     houseAddress: '',
     businessName: '',
     businessEmail: '',
@@ -202,6 +205,10 @@ export default function VendorLoginPage() {
   const [selectedSubServices, setSelectedSubServices] = useState<string[]>([])
   const [showOtherInput] = useState(false)
   const [sameWhatsappNumber, setSameWhatsappNumber] = useState(false)
+  const [formError, setFormError] = useState('')
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [contactCountryCode, setContactCountryCode] = useState(DEFAULT_DIAL_CODE)
+  const [whatsappCountryCode, setWhatsappCountryCode] = useState(DEFAULT_DIAL_CODE)
   const saveVendorSelections = (
     categories: string[],
     subServices: string[],
@@ -220,7 +227,6 @@ export default function VendorLoginPage() {
     setVendorDetails((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === 'contactNumber' && sameWhatsappNumber ? { businessPhone: value } : {}),
     }))
   }
   const toggleDay = (day: string) => {
@@ -282,10 +288,11 @@ export default function VendorLoginPage() {
     }
 
     if (selectedCategories.length >= 2) {
-      alert('YOU CAN ONLY SELECT 2 MAIN CATEGORIES')
+      setFormError('You can only select 2 main categories.')
       return
     }
 
+    setFormError('')
     const updatedCategories = [...selectedCategories, categoryName]
     setSelectedCategories(updatedCategories)
     setActiveCategory(categoryName)
@@ -374,16 +381,26 @@ export default function VendorLoginPage() {
 
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError('')
+    if (password.length < 8) {
+      setFormError('Password must be at least 8 characters.')
+      return
+    }
     if (password !== confirmPassword) {
-      alert('Passwords do not match!')
+      setFormError('Passwords do not match.')
       return
     }
     const nameParts = name.trim().split(/\s+/).filter(Boolean)
+    const identifier = email.trim()
+    const identifierIsEmail = identifier.includes('@')
+    if (identifier && !identifierIsEmail) {
+      setEmail('')
+    }
     setVendorDetails((prev) => ({
       ...prev,
-      emailAddress: email,
       firstName: nameParts[0] || prev.firstName,
       lastName: nameParts.slice(1).join(' ') || nameParts[0] || prev.lastName,
+      contactNumber: identifier && !identifierIsEmail ? identifier : prev.contactNumber,
     }))
     setRegStep(2)
   }
@@ -391,13 +408,14 @@ export default function VendorLoginPage() {
   const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    setFormError('')
 
     if (selectedCategories.length === 0 && !showOtherInput) {
-      alert('Please select at least 1 main category or specify custom service.')
+      setFormError('Please select at least 1 main category or specify a custom service.')
       return
     }
     if (selectedSubServices.length === 0 && !showOtherInput) {
-      alert('Please select sub-services for your selected categories.')
+      setFormError('Please select sub-services for your selected categories.')
       return
     }
 
@@ -405,10 +423,11 @@ export default function VendorLoginPage() {
       (day) => availability[day].isSelected && availability[day].slots.length > 0
     )
     if (!hasAvailability) {
-      alert('Please select at least one working day and time slot.')
+      setFormError('Please select at least one working day and time slot.')
       return
     }
 
+    setIsProcessing(true)
     try {
       const servicesByCategory = selectedCategories.reduce<Record<string, string[]>>(
         (groupedServices, category) => {
@@ -422,20 +441,22 @@ export default function VendorLoginPage() {
       )
 
       const payload = {
-        email,
+        email: email.trim() || undefined,
         password,
         first_name: vendorDetails.firstName,
         last_name: vendorDetails.lastName,
-        contact_number: vendorDetails.contactNumber,
+        contact_number: combinePhoneNumber(contactCountryCode, vendorDetails.contactNumber),
         business_name: vendorDetails.businessName,
-        business_email: vendorDetails.businessEmail,
-        business_phone: vendorDetails.businessPhone,
+        business_email: vendorDetails.businessEmail.trim() || undefined,
+        business_phone: vendorDetails.businessPhone.trim()
+          ? combinePhoneNumber(whatsappCountryCode, vendorDetails.businessPhone)
+          : undefined,
         cnic: vendorDetails.cnic,
         experience_years: vendorDetails.experienceYears,
-        postal_code: vendorDetails.postalCode,
+        postal_code: vendorDetails.postalCode.trim() || undefined,
         service_areas: vendorDetails.serviceAreas.split(',').map((area) => area.trim()).filter(Boolean),
         contact_preferences: [],
-        house_address: vendorDetails.houseAddress,
+        house_address: vendorDetails.houseAddress.trim() || undefined,
         categories: selectedCategories,
         services: selectedSubServices,
         services_by_category: servicesByCategory,
@@ -450,36 +471,45 @@ export default function VendorLoginPage() {
         setStoredAuth('vendor', auth)
         router.push('/vendor/dashboard')
       } else {
-        alert('Vendor registration did not return a valid vendor session.')
+        setFormError('Vendor registration did not return a valid vendor session.')
       }
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Vendor registration failed')
+      setFormError(error instanceof Error ? error.message : 'Vendor registration failed. Please try again.')
+    } finally {
+      setIsProcessing(false)
     }
   }
 
   const handleSignInSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    setFormError('')
 
     if (!emailOrPhone || !password) {
-      alert('Please fill in all credentials.')
+      setFormError('Please enter your email/phone and password.')
       return
     }
 
+    setIsProcessing(true)
     try {
       const auth = await loginUser({ identifier: emailOrPhone, password, role: 'vendor' })
       if (auth?.role === 'vendor') {
         setStoredAuth('vendor', auth)
         router.push('/vendor/dashboard')
+      } else {
+        setFormError('This account is not registered as a vendor.')
       }
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Vendor login failed')
+      setFormError(error instanceof Error ? error.message : 'Vendor login failed. Please try again.')
+    } finally {
+      setIsProcessing(false)
     }
   }
 
   const handleTabSwitch = (registerMode: boolean) => {
     setIsRegister(registerMode)
     setRegStep(1)
+    setFormError('')
   }
 
   return (
@@ -564,6 +594,9 @@ export default function VendorLoginPage() {
                 </div>
 
                 <form onSubmit={handleSignInSubmit} className="space-y-4">
+                  {formError && (
+                    <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{formError}</p>
+                  )}
                   <div>
                     <input
                       type="text"
@@ -608,9 +641,10 @@ export default function VendorLoginPage() {
 
                   <button
                     type="submit"
-                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl text-xs transition shadow-md cursor-pointer"
+                    disabled={isProcessing}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl text-xs transition shadow-md cursor-pointer disabled:opacity-60"
                   >
-                    Sign in
+                    {isProcessing ? 'Signing in…' : 'Sign in'}
                   </button>
                 </form>
               </div>
@@ -629,6 +663,9 @@ export default function VendorLoginPage() {
                 </div>
 
                 <form onSubmit={handleNextStep} className="space-y-4">
+                  {formError && (
+                    <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{formError}</p>
+                  )}
                   <div>
                     <input
                       type="text"
@@ -642,11 +679,10 @@ export default function VendorLoginPage() {
 
                   <div>
                     <input
-                      type="email"
-                      required
+                      type="text"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter Your Email"
+                      placeholder="Email or Phone Number"
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                     />
                   </div>
@@ -700,7 +736,7 @@ export default function VendorLoginPage() {
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setRegStep(1)}
+                    onClick={() => { setRegStep(1); setFormError('') }}
                     className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition text-slate-600"
                     title="Go Back"
                   >
@@ -717,6 +753,9 @@ export default function VendorLoginPage() {
                 </div>
 
                 <form onSubmit={handleFinalSubmit} className="flex flex-col space-y-5">
+                  {formError && (
+                    <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{formError}</p>
+                  )}
                   <div className="space-y-3">
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Personal Details
@@ -745,25 +784,31 @@ export default function VendorLoginPage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input
-                        type="text"
-                        name="contactNumber"
-                        required
+                      <PhoneInput
+                        countryCode={contactCountryCode}
+                        onCountryCodeChange={(dial) => {
+                          setContactCountryCode(dial)
+                          if (sameWhatsappNumber) setWhatsappCountryCode(dial)
+                        }}
+                        localNumber={vendorDetails.contactNumber}
+                        onLocalNumberChange={(value) => {
+                          setVendorDetails((prev) => ({
+                            ...prev,
+                            contactNumber: value,
+                            ...(sameWhatsappNumber ? { businessPhone: value } : {}),
+                          }))
+                        }}
                         placeholder="CONTACT NUMBER"
-                        value={vendorDetails.contactNumber}
-                        onChange={handleInputChange}
-                        className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
+                        required
                       />
 
                       <div className="space-y-2">
-                        <input
-                          type="tel"
-                          name="businessPhone"
-                          required
-                          placeholder="WHATSAPP NUMBER"
-                          value={vendorDetails.businessPhone}
-                          onChange={handleInputChange}
-                          className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
+                        <PhoneInput
+                          countryCode={whatsappCountryCode}
+                          onCountryCodeChange={setWhatsappCountryCode}
+                          localNumber={vendorDetails.businessPhone}
+                          onLocalNumberChange={(value) => setVendorDetails((prev) => ({ ...prev, businessPhone: value }))}
+                          placeholder="WHATSAPP NUMBER (optional)"
                         />
                         <label className="flex items-center gap-2 text-[10px] font-semibold text-slate-500">
                           <input
@@ -772,7 +817,10 @@ export default function VendorLoginPage() {
                             onChange={(event) => {
                               const checked = event.target.checked
                               setSameWhatsappNumber(checked)
-                              if (checked) setVendorDetails((prev) => ({ ...prev, businessPhone: prev.contactNumber }))
+                              if (checked) {
+                                setWhatsappCountryCode(contactCountryCode)
+                                setVendorDetails((prev) => ({ ...prev, businessPhone: prev.contactNumber }))
+                              }
                             }}
                             className="h-3.5 w-3.5 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
                           />
@@ -782,20 +830,9 @@ export default function VendorLoginPage() {
                     </div>
 
                     <input
-                      type="email"
-                      name="emailAddress"
-                      required
-                      placeholder="EMAIL ADDRESS"
-                      value={vendorDetails.emailAddress}
-                      onChange={handleInputChange}
-                      className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
-                    />
-
-                    <input
                       type="text"
                       name="houseAddress"
-                      required
-                      placeholder="HOUSE ADDRESS"
+                      placeholder="HOUSE ADDRESS (optional)"
                       value={vendorDetails.houseAddress}
                       onChange={handleInputChange}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
@@ -829,8 +866,7 @@ export default function VendorLoginPage() {
                       <input
                         type="email"
                         name="businessEmail"
-                        required
-                        placeholder="BUSINESS EMAIL ADDRESS"
+                        placeholder="BUSINESS EMAIL ADDRESS (optional)"
                         value={vendorDetails.businessEmail}
                         onChange={handleInputChange}
                         className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
@@ -951,7 +987,7 @@ export default function VendorLoginPage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                      <input type="text" name="postalCode" required placeholder="POSTAL CODE" value={vendorDetails.postalCode} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
+                      <input type="text" name="postalCode" placeholder="POSTAL CODE (optional)" value={vendorDetails.postalCode} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
                       <input type="text" name="serviceAreas" required placeholder="SERVICE AREAS (COMMA SEPARATED)" value={vendorDetails.serviceAreas} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
                     </div>
                   </div>
@@ -1100,9 +1136,10 @@ export default function VendorLoginPage() {
                   <div className="order-3 pt-4 flex justify-end">
                     <button
                       type="submit"
-                      className="px-10 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl text-xs transition shadow-md uppercase tracking-wider cursor-pointer"
+                      disabled={isProcessing}
+                      className="px-10 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl text-xs transition shadow-md uppercase tracking-wider cursor-pointer disabled:opacity-60"
                     >
-                      Submit Registration
+                      {isProcessing ? 'Submitting…' : 'Submit Registration'}
                     </button>
                   </div>
                 </form>

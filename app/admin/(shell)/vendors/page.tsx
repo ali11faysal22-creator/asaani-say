@@ -135,12 +135,12 @@ export default function AdminVendorsPage() {
               <tr key={vendor.id} className="hover:bg-slate-50/80 transition">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <InitialsAvatar name={vendor.business_name} />
+                    <InitialsAvatar name={`${vendor.first_name} ${vendor.last_name}`} />
                     <div className="min-w-0">
-                      <p className="font-bold text-slate-800 truncate">{vendor.business_name}</p>
-                      <p className="text-slate-400 text-[11px] truncate">
+                      <p className="font-bold text-slate-800 truncate">
                         {vendor.first_name} {vendor.last_name}
                       </p>
+                      <p className="text-slate-400 text-[11px] truncate">{vendor.business_name}</p>
                     </div>
                   </div>
                 </td>
@@ -189,8 +189,8 @@ export default function AdminVendorsPage() {
 
       {selectedVendor && (
         <DetailModal
-          title={selectedVendor.business_name}
-          subtitle={`${selectedVendor.first_name} ${selectedVendor.last_name}`}
+          title={`${selectedVendor.first_name} ${selectedVendor.last_name}`}
+          subtitle={selectedVendor.business_name}
           onClose={() => setSelectedVendor(null)}
           fields={[
             { label: 'Email', value: selectedVendor.email },

@@ -48,7 +48,7 @@ export default function NotificationPopover() {
           visual: { kind: 'clock' },
         })))
       } catch (error) {
-        console.error('Unable to load dashboard notifications', error)
+        console.warn('Unable to load dashboard notifications', error)
       }
     }
     loadNotifications()

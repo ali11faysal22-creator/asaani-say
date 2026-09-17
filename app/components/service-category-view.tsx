@@ -57,7 +57,7 @@ interface BookingResponse {
   customer_name: string
   customer_phone?: string | null
   address: AddressItem
-  vendor: AssignedVendor
+  vendor: AssignedVendor | null
 }
 
 export default function ServiceCategoryView({ slug }: { slug: string }) {
@@ -80,7 +80,6 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   const [loadingDates, setLoadingDates] = useState(false)
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [vendors, setVendors] = useState<AssignedVendor[]>([])
   const [bookingData, setBookingData] = useState<BookingResponse | null>(null)
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
   const [bookingError, setBookingError] = useState('')
@@ -230,33 +229,15 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
     setBookingError('')
 
     try {
-      let selectedVendor = vendors[0]
-      if (!selectedVendor) {
-        const params = new URLSearchParams({
-          address_id: selectedAddress,
-          date: selectedDate,
-          service_id: selectedServices[0].id,
-          service: selectedServices[0].name,
-          slot_start: selectedSlot.start,
-          slot_end: selectedSlot.end,
-        })
-        const vendorResponse = await fetch(`${API_BASE}/api/v1/vendors/search?${params}`)
-        if (!vendorResponse.ok) throw new Error('No vendor is available for this time slot')
-        const matchingVendors = await vendorResponse.json() as AssignedVendor[]
-        selectedVendor = matchingVendors[0]
-        if (!selectedVendor) throw new Error('No vendor is available for this time slot')
-      }
-      await new Promise((resolve) => window.setTimeout(resolve, 5000))
       const payload = {
         customer_id: customerId,
         service_id: selectedServices[0].id,
-        vendor_id: selectedVendor.id,
         service: selectedServices[0].name,
         address_id: selectedAddress,
         date: selectedDate,
         slot_start: selectedSlot.start,
         slot_end: selectedSlot.end,
-        notes: 'Please assign highest rated vendor',
+        notes: 'Please assign a vendor',
       }
       const token = getAccessToken()
       const res = await fetch(`${API_BASE}/api/bookings`, {
@@ -415,7 +396,6 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
               onClick={() => {
                 setIsSlotModalOpen(false)
                 setBookingData(null)
-                setVendors([])
               }}
               className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
             >
@@ -555,6 +535,8 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                   )}
                 </div>
 
+                {bookingError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{bookingError}</p>}
+
                 <button
                   disabled={!selectedDate || !selectedSlot || isSubmitting}
                   onClick={() => void handleConfirmBooking()}
@@ -562,23 +544,6 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                 >
                   <span className="inline-flex items-center justify-center gap-2">{isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}{isSubmitting ? 'Confirming booking...' : 'Confirm booking'}</span>
                 </button>
-
-                {vendors.length > 0 && (
-                  <div className="space-y-3 pt-2 border-t border-slate-100">
-                    {bookingError && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{bookingError}</p>}
-                    <div>
-                      <h4 className="text-sm font-extrabold text-slate-900">Service Request Sent</h4>
-                      <p className="text-[11px] text-slate-500 leading-relaxed">Your order is received. If the vendor does not respond within 1 minute, another available vendor will be assigned automatically.</p>
-                    </div>
-                    <button
-                      disabled={isSubmitting}
-                      onClick={handleConfirmBooking}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-extrabold text-sm py-3.5 rounded-xl transition shadow-md cursor-pointer"
-                    >
-                      <span className="inline-flex items-center justify-center gap-2">{isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}{isSubmitting ? 'Submitting Request...' : 'Confirm Request & Done'}</span>
-                    </button>
-                  </div>
-                )}
               </>
             ) : (
               
@@ -588,10 +553,10 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <h3 className="text-xl font-extrabold text-slate-900">Booking Confirmed!</h3>
-                  <p className="text-xs text-slate-500">Highest rated vendor automatically assigned within 10 km</p>
+                  <p className="text-xs text-slate-500">Our team is reviewing your request and will assign a vendor shortly</p>
                 </div>
 
-                
+                {bookingData.vendor ? (
                 <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center font-bold text-lg shrink-0">
@@ -633,13 +598,20 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                     </div>
                   </div>
                 </div>
+                ) : (
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center shrink-0">
+                    <UserCheck className="w-6 h-6" />
+                  </div>
+                  <p className="text-xs text-slate-500">We&apos;ll notify you as soon as a vendor is assigned to your request.</p>
+                </div>
+                )}
 
                 <button
                   onClick={() => {
                     setBookingData(null)
                     setIsSlotModalOpen(false)
                     setSelectedServices([])
-                    setVendors([])
                   }}
                   className="w-full bg-[#3A3E59] text-white font-bold text-xs py-3 rounded-xl cursor-pointer"
                 >
