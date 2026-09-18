@@ -7,6 +7,8 @@ export function combinePhoneNumber(dial: string, localNumber: string): string {
   return cleaned ? `${dial}${cleaned}` : ''
 }
 
+const DEFAULT_MAX_LOCAL_DIGITS = 10
+
 export function PhoneInput({
   countryCode,
   onCountryCodeChange,
@@ -14,6 +16,7 @@ export function PhoneInput({
   onLocalNumberChange,
   placeholder = 'Phone number',
   required = false,
+  maxDigits = DEFAULT_MAX_LOCAL_DIGITS,
 }: {
   countryCode: string
   onCountryCodeChange: (dial: string) => void
@@ -21,6 +24,7 @@ export function PhoneInput({
   onLocalNumberChange: (value: string) => void
   placeholder?: string
   required?: boolean
+  maxDigits?: number
 }) {
   return (
     <div className="flex w-full overflow-hidden rounded-xl border border-slate-200/90 bg-white focus-within:border-orange-500 transition">
@@ -38,9 +42,10 @@ export function PhoneInput({
       </select>
       <input
         type="tel"
+        inputMode="numeric"
         required={required}
         value={localNumber}
-        onChange={(e) => onLocalNumberChange(e.target.value)}
+        onChange={(e) => onLocalNumberChange(e.target.value.replace(/\D/g, '').slice(0, maxDigits))}
         placeholder={placeholder}
         className="w-full min-w-0 px-3 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none"
       />

@@ -91,8 +91,15 @@ export type BookingResult = {
   total_amount?: number | null
   created_at: string
   accepted_at?: string | null
+  reached_at?: string | null
   started_at?: string | null
+  paused_at?: string | null
+  payment_requested_at?: string | null
+  payment_received_at?: string | null
   completed_at?: string | null
+  cannot_start_reason?: string | null
+  rating?: number | null
+  rating_comment?: string | null
   service_name: string
   date: string
   slot_start: string
@@ -164,7 +171,18 @@ export type VendorProfileResponse = {
   schedule?: unknown
 }
 
-export type VendorBookingAction = 'accept' | 'reject'
+export type VendorBookingAction =
+  | 'accept'
+  | 'reject'
+  | 'on_the_way'
+  | 'reached'
+  | 'work_started'
+  | 'cannot_start'
+  | 'pause'
+  | 'resume'
+  | 'work_complete'
+  | 'request_payment'
+  | 'payment_received'
 
 const AUTH_STORAGE_KEYS: Record<AuthRole, string> = {
   customer: 'asaani_customer_auth',
@@ -183,14 +201,16 @@ const ACCESS_TOKEN_KEYS: Record<AuthRole, string> = {
   admin: 'asaani_admin_token',
 }
 
-function authStorage(role: AuthRole): Storage {
-  return role === 'vendor' ? window.sessionStorage : window.localStorage
+// All roles persist in localStorage so a session survives closing and reopening the
+// browser (previously vendor used sessionStorage, which logged them out per tab/session).
+function authStorage(): Storage {
+  return window.localStorage
 }
 
 export function getStoredAuth(role: AuthRole): AuthResponse | null {
   if (typeof window === 'undefined') return null
   try {
-    const parsed = JSON.parse(authStorage(role).getItem(AUTH_STORAGE_KEYS[role]) || 'null') as AuthResponse | null
+    const parsed = JSON.parse(authStorage().getItem(AUTH_STORAGE_KEYS[role]) || 'null') as AuthResponse | null
     if (parsed?.role === role && parsed.profile_id && parsed.user_id) return parsed
   } catch {
   }
@@ -199,21 +219,21 @@ export function getStoredAuth(role: AuthRole): AuthResponse | null {
 
 export function setStoredAuth(role: AuthRole, auth: AuthResponse): void {
   if (typeof window === 'undefined') return
-  authStorage(role).setItem(AUTH_STORAGE_KEYS[role], JSON.stringify(auth))
+  authStorage().setItem(AUTH_STORAGE_KEYS[role], JSON.stringify(auth))
   if (auth.access_token) {
-    authStorage(role).setItem(ACCESS_TOKEN_KEYS[role], auth.access_token)
+    authStorage().setItem(ACCESS_TOKEN_KEYS[role], auth.access_token)
   }
 }
 
 export function clearStoredAuth(role: AuthRole): void {
   if (typeof window === 'undefined') return
-  authStorage(role).removeItem(AUTH_STORAGE_KEYS[role])
-  authStorage(role).removeItem(ACCESS_TOKEN_KEYS[role])
+  authStorage().removeItem(AUTH_STORAGE_KEYS[role])
+  authStorage().removeItem(ACCESS_TOKEN_KEYS[role])
 }
 
 export function getAccessToken(role: AuthRole): string | null {
   if (typeof window === 'undefined') return null
-  return authStorage(role).getItem(ACCESS_TOKEN_KEYS[role])
+  return authStorage().getItem(ACCESS_TOKEN_KEYS[role])
 }
 
 function anyAccessToken(): string | null {
@@ -428,15 +448,27 @@ export async function completeVendorBookingWithPhotos(bookingId: string, files: 
   return res.json()
 }
 
-export async function updateVendorBookingStatus(vendorId: string, bookingId: string, action: 'on_the_way' | 'in_progress' | 'completed'): Promise<BookingResult> {
+export async function updateVendorBookingStatus(
+  vendorId: string,
+  bookingId: string,
+  action: Exclude<VendorBookingAction, 'accept' | 'reject'>,
+  reason?: string,
+): Promise<BookingResult> {
   return api(`/api/v1/vendor/bookings/${encodeURIComponent(bookingId)}/status?vendor_id=${encodeURIComponent(vendorId)}`, {
     method: 'PATCH',
-    body: JSON.stringify({ action }),
+    body: JSON.stringify({ action, reason }),
   })
 }
 
 export async function fetchCustomerBookings(customerId: string): Promise<BookingResult[]> {
   return api(`/api/v1/customer/bookings?customer_id=${encodeURIComponent(customerId)}`)
+}
+
+export async function rateBooking(bookingId: string, rating: number, comment?: string): Promise<BookingResult> {
+  return api(`/api/v1/customer/bookings/${encodeURIComponent(bookingId)}/rate`, {
+    method: 'POST',
+    body: JSON.stringify({ rating, comment }),
+  })
 }
 
 export async function fetchCustomerNotifications(customerId: string): Promise<CustomerNotification[]> {
@@ -625,6 +657,11 @@ export type AdminBooking = {
   total_amount: number | null
   created_at: string
   photos: string[]
+  cannot_start_reason: string | null
+  rating: number | null
+  admin_hold: boolean
+  payment_requested_at: string | null
+  payment_received_at: string | null
 }
 
 export async function fetchAdminOverview(): Promise<AdminOverview> {
@@ -665,19 +702,26 @@ export async function fetchAdminBookings(): Promise<AdminBooking[]> {
   return api('/api/admin/bookings')
 }
 
-export async function setAdminBookingStatus(bookingId: string, statusValue: string): Promise<AdminBooking> {
-  return api(`/api/admin/bookings/${encodeURIComponent(bookingId)}/status`, {
-    method: 'PATCH',
-    body: JSON.stringify({ status: statusValue }),
-  })
-}
-
-export async function reassignAdminBookingVendor(bookingId: string, vendorId: string): Promise<AdminBooking> {
-  return api(`/api/admin/bookings/${encodeURIComponent(bookingId)}/vendor`, {
+// These only work while a booking is still UNASSIGNED — they're a manual fallback for
+// when auto-dispatch can't find or keep a vendor, not a general override.
+export async function assignAdminBookingVendor(bookingId: string, vendorId: string): Promise<AdminBooking> {
+  return api(`/api/admin/bookings/${encodeURIComponent(bookingId)}/assign`, {
     method: 'PATCH',
     body: JSON.stringify({ vendor_id: vendorId }),
   })
 }
+
+export async function cancelAdminBooking(bookingId: string): Promise<AdminBooking> {
+  return api(`/api/admin/bookings/${encodeURIComponent(bookingId)}/cancel`, { method: 'PATCH' })
+}
+
+export async function holdAdminBooking(bookingId: string, hold: boolean): Promise<AdminBooking> {
+  return api(`/api/admin/bookings/${encodeURIComponent(bookingId)}/hold`, {
+    method: 'PATCH',
+    body: JSON.stringify({ hold }),
+  })
+}
+
 
 export type ServiceRequest = {
   id: string

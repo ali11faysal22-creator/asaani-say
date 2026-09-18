@@ -229,6 +229,10 @@ export default function VendorLoginPage() {
       [name]: value,
     }))
   }
+  const handleCnicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const cleaned = e.target.value.replace(/[^0-9-]/g, '').slice(0, 15)
+    setVendorDetails((prev) => ({ ...prev, cnic: cleaned }))
+  }
   const toggleDay = (day: string) => {
     setAvailability((prev) => {
       const updatedAvailability = {
@@ -604,6 +608,7 @@ export default function VendorLoginPage() {
                       value={emailOrPhone}
                       onChange={(e) => setEmailOrPhone(e.target.value)}
                       placeholder="Enter Email or Phone"
+                      maxLength={100}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                     />
                   </div>
@@ -683,6 +688,7 @@ export default function VendorLoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Email or Phone Number"
+                      maxLength={100}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                     />
                   </div>
@@ -839,7 +845,7 @@ export default function VendorLoginPage() {
                     />
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input type="text" name="cnic" required placeholder="CNIC REGISTRATION NUMBER" value={vendorDetails.cnic} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
+                      <input type="text" inputMode="numeric" name="cnic" required maxLength={15} placeholder="CNIC (e.g. 12345-1234567-1)" value={vendorDetails.cnic} onChange={handleCnicChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
                       <input type="text" name="experienceYears" required placeholder="YEARS OF EXPERIENCE" value={vendorDetails.experienceYears} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
                     </div>
 

@@ -2,14 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Eye, ListChecks, MapPin, Repeat, UserPlus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, MapPin, Wrench } from 'lucide-react'
 import { API_BASE, fetchAdminBookings, fetchAdminVendors, getCurrentUser, type AdminBooking, type AdminVendor } from '@/app/lib/booking-api'
 import { CHART_BLUE, STATUS_CRITICAL, STATUS_GOOD, STATUS_WARNING } from '@/app/components/charts/palette'
 import { StatusBadge, bookingStatusTone } from '../../components/status-badge'
 import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
-import { BookingStatusModal } from '../../components/booking-status-modal'
-import { VendorReassignModal } from '../../components/vendor-reassign-modal'
+import { UnassignedBookingActionsModal } from '../../components/unassigned-booking-actions-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -41,8 +40,7 @@ export default function AdminCalendarPage() {
   })
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null)
-  const [statusBooking, setStatusBooking] = useState<AdminBooking | null>(null)
-  const [reassignBooking, setReassignBooking] = useState<AdminBooking | null>(null)
+  const [resolveBooking, setResolveBooking] = useState<AdminBooking | null>(null)
 
   const loadData = async () => {
     const [bookingsResult, vendorsResult] = await Promise.allSettled([fetchAdminBookings(), fetchAdminVendors()])
@@ -50,6 +48,12 @@ export default function AdminCalendarPage() {
     else console.error('Unable to load bookings', bookingsResult.reason)
     if (vendorsResult.status === 'fulfilled') setVendors(vendorsResult.value)
     else console.error('Unable to load vendors', vendorsResult.reason)
+  }
+
+  const applyUpdate = (updated: AdminBooking) => {
+    setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
+    setSelectedBooking((prev) => (prev && prev.id === updated.id ? updated : prev))
+    setResolveBooking((prev) => (prev && prev.id === updated.id ? updated : prev))
   }
 
   useEffect(() => {
@@ -125,11 +129,6 @@ export default function AdminCalendarPage() {
 
   const todayKey = dateKey(new Date())
   const selectedDayBookings = selectedDate ? bookingsByDate.get(selectedDate) || [] : []
-
-  const applyUpdate = (updated: AdminBooking) => {
-    setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
-    setSelectedBooking((prev) => (prev && prev.id === updated.id ? updated : prev))
-  }
 
   if (loading) {
     return (
@@ -253,11 +252,8 @@ export default function AdminCalendarPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <StatusBadge label={booking.status.replace('_', ' ')} tone={bookingStatusTone(booking.status)} />
                   <IconActionButton icon={Eye} label="View details" onClick={() => setSelectedBooking(booking)} />
-                  <IconActionButton icon={ListChecks} label="Change status" onClick={() => setStatusBooking(booking)} />
-                  {booking.vendor_id ? (
-                    <IconActionButton icon={Repeat} label="Reassign vendor" onClick={() => setReassignBooking(booking)} />
-                  ) : (
-                    <IconActionButton icon={UserPlus} label="Assign vendor" onClick={() => setReassignBooking(booking)} />
+                  {booking.status === 'unassigned' && (
+                    <IconActionButton icon={Wrench} label="Resolve — no vendor accepted" tone="danger" onClick={() => setResolveBooking(booking)} />
                   )}
                 </div>
               </div>
@@ -298,15 +294,30 @@ export default function AdminCalendarPage() {
                 }]
               : []),
           ]}
+          footer={
+            selectedBooking.status === 'unassigned' ? (
+              <button
+                onClick={() => {
+                  const booking = selectedBooking
+                  setSelectedBooking(null)
+                  setResolveBooking(booking)
+                }}
+                className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
+              >
+                No vendor accepted — resolve
+              </button>
+            ) : undefined
+          }
         />
       )}
 
-      {statusBooking && (
-        <BookingStatusModal booking={statusBooking} onClose={() => setStatusBooking(null)} onUpdated={applyUpdate} />
-      )}
-
-      {reassignBooking && (
-        <VendorReassignModal booking={reassignBooking} vendors={vendors} onClose={() => setReassignBooking(null)} onUpdated={applyUpdate} />
+      {resolveBooking && (
+        <UnassignedBookingActionsModal
+          booking={resolveBooking}
+          vendors={vendors}
+          onClose={() => setResolveBooking(null)}
+          onUpdated={applyUpdate}
+        />
       )}
     </div>
   )

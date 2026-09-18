@@ -107,6 +107,15 @@ export default function VendorDashboardPage() {
 
   return (
     <div className="space-y-6">
+      <div>
+        <p className="text-sm font-bold text-slate-700">
+          Welcome back, {profile?.first_name || 'there'}
+        </p>
+        {profile?.business_name && (
+          <p className="text-xs text-slate-400">{profile.business_name}</p>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatTile label="Total Bookings" value={stats.total} icon={ListChecks} />
         <StatTile label="Pending Requests" value={stats.pending} icon={Clock} />

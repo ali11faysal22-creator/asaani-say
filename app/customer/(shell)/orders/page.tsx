@@ -37,11 +37,16 @@ export default function CustomerOrdersPage() {
     return () => { active = false; window.clearInterval(refreshTimer) }
   }, [router])
 
-  const canTrack = (order: BookingResult) => ['accepted', 'on_the_way', 'in_progress', 'completed'].includes(order.status)
+  const TRACKABLE_STATUSES = ['accepted', 'on_the_way', 'reached', 'in_progress', 'paused', 'work_completed', 'payment_requested', 'completed']
+  const canTrack = (order: BookingResult) => TRACKABLE_STATUSES.includes(order.status)
   const statusLabel = (status: string) =>
     status === 'accepted' ? 'Confirmed'
       : status === 'on_the_way' ? 'Vendor on the way'
-      : status === 'in_progress' ? 'Vendor arrived'
+      : status === 'reached' ? 'Vendor arrived'
+      : status === 'in_progress' ? 'Work in progress'
+      : status === 'paused' ? 'Work paused'
+      : status === 'work_completed' ? 'Work finished'
+      : status === 'payment_requested' ? 'Payment requested'
       : status === 'completed' ? 'Completed'
       : status === 'rejected' ? 'Vendor declined'
       : status === 'cancelled' ? 'Cancelled'
@@ -134,7 +139,7 @@ export default function CustomerOrdersPage() {
             <div className="mt-5 grid gap-4 border-y border-slate-100 py-5 text-xs sm:grid-cols-2">
               <div><p className="text-slate-400">Customer name</p><p className="mt-1 font-bold text-slate-900">{selectedOrder.customer_name}</p></div>
               <div><p className="text-slate-400">Order ID</p><p className="mt-1 break-all font-bold text-slate-900">{selectedOrder.id}</p></div>
-              <div><p className="text-slate-400">Status</p><p className="mt-1 font-bold capitalize text-orange-600">{selectedOrder.status.replace('_', ' ')}</p></div>
+              <div><p className="text-slate-400">Status</p><p className="mt-1 font-bold capitalize text-orange-600">{selectedOrder.status.replace(/_/g, ' ')}</p></div>
               <div><p className="text-slate-400">Payment</p><p className="mt-1 font-bold text-emerald-600">{selectedOrder.total_amount == null ? 'Not available' : `Rs. ${selectedOrder.total_amount.toLocaleString()}`}</p></div>
               <div><p className="text-slate-400">Vendor name</p><p className="mt-1 font-bold text-slate-900">{selectedOrder.vendor?.business_name || 'Not assigned yet'}</p></div>
               <div><p className="text-slate-400">Customer phone</p><p className="mt-1 font-bold text-slate-900">{selectedOrder.customer_phone || 'Not available'}</p></div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, ListChecks, Repeat, UserPlus } from 'lucide-react'
+import { Eye, Wrench } from 'lucide-react'
 import {
   API_BASE,
   fetchAdminBookings,
@@ -15,8 +15,7 @@ import { StatusBadge, bookingStatusTone } from '../../components/status-badge'
 import { TableToolbar } from '../../components/table-toolbar'
 import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
-import { BookingStatusModal } from '../../components/booking-status-modal'
-import { VendorReassignModal } from '../../components/vendor-reassign-modal'
+import { UnassignedBookingActionsModal } from '../../components/unassigned-booking-actions-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
 
 const FILTERS = [
@@ -38,6 +37,13 @@ function bucketForStatus(status: string): FilterKey {
   return 'active'
 }
 
+function paymentInfo(booking: AdminBooking): { label: string; className: string } {
+  if (booking.payment_received_at) return { label: 'Paid', className: 'bg-emerald-100 text-emerald-700' }
+  if (booking.payment_requested_at) return { label: 'Requested', className: 'bg-amber-100 text-amber-700' }
+  if (booking.status === 'cancelled' || booking.status === 'rejected') return { label: 'N/A', className: 'bg-slate-100 text-slate-400' }
+  return { label: 'Not yet', className: 'bg-slate-100 text-slate-500' }
+}
+
 export default function AdminBookingsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -47,8 +53,7 @@ export default function AdminBookingsPage() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterKey>('all')
   const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null)
-  const [statusBooking, setStatusBooking] = useState<AdminBooking | null>(null)
-  const [reassignBooking, setReassignBooking] = useState<AdminBooking | null>(null)
+  const [resolveBooking, setResolveBooking] = useState<AdminBooking | null>(null)
 
   const loadData = async () => {
     const [bookingsResult, vendorsResult] = await Promise.allSettled([fetchAdminBookings(), fetchAdminVendors()])
@@ -56,6 +61,12 @@ export default function AdminBookingsPage() {
     else console.error('Unable to load bookings', bookingsResult.reason)
     if (vendorsResult.status === 'fulfilled') setVendors(vendorsResult.value)
     else console.error('Unable to load vendors', vendorsResult.reason)
+  }
+
+  const applyUpdate = (updated: AdminBooking) => {
+    setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
+    setSelectedBooking((prev) => (prev && prev.id === updated.id ? updated : prev))
+    setResolveBooking((prev) => (prev && prev.id === updated.id ? updated : prev))
   }
 
   useEffect(() => {
@@ -104,11 +115,6 @@ export default function AdminBookingsPage() {
     })
   }, [bookings, search, filter])
 
-  const applyUpdate = (updated: AdminBooking) => {
-    setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
-    setSelectedBooking((prev) => (prev && prev.id === updated.id ? updated : prev))
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -153,6 +159,7 @@ export default function AdminBookingsPage() {
               <th className="px-4 py-3 font-bold">City</th>
               <th className="px-4 py-3 font-bold">Date</th>
               <th className="px-4 py-3 font-bold">Amount</th>
+              <th className="px-4 py-3 font-bold">Payment</th>
               <th className="px-4 py-3 font-bold">Status</th>
               <th className="px-4 py-3 font-bold text-right">Actions</th>
             </tr>
@@ -179,16 +186,21 @@ export default function AdminBookingsPage() {
                 </td>
                 <td className="px-4 py-3 text-slate-500">{booking.total_amount != null ? `Rs. ${booking.total_amount.toLocaleString()}` : '—'}</td>
                 <td className="px-4 py-3">
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black ${paymentInfo(booking).className}`}>
+                    {paymentInfo(booking).label}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
                   <StatusBadge label={booking.status.replace('_', ' ')} tone={bookingStatusTone(booking.status)} />
+                  {booking.admin_hold && (
+                    <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">On hold</span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1.5">
                     <IconActionButton icon={Eye} label="View details" onClick={() => setSelectedBooking(booking)} />
-                    <IconActionButton icon={ListChecks} label="Change status" onClick={() => setStatusBooking(booking)} />
-                    {booking.vendor_id ? (
-                      <IconActionButton icon={Repeat} label="Reassign vendor" onClick={() => setReassignBooking(booking)} />
-                    ) : (
-                      <IconActionButton icon={UserPlus} label="Assign vendor" onClick={() => setReassignBooking(booking)} />
+                    {booking.status === 'unassigned' && (
+                      <IconActionButton icon={Wrench} label="Resolve — no vendor accepted" tone="danger" onClick={() => setResolveBooking(booking)} />
                     )}
                   </div>
                 </td>
@@ -196,7 +208,7 @@ export default function AdminBookingsPage() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
                   {bookings.length === 0 ? 'No bookings yet.' : 'No bookings match your filters.'}
                 </td>
               </tr>
@@ -222,6 +234,14 @@ export default function AdminBookingsPage() {
             { label: 'City', value: [selectedBooking.city, selectedBooking.area].filter(Boolean).join(', ') || '—' },
             { label: 'Scheduled', value: `${selectedBooking.scheduled_date} · ${selectedBooking.slot_start}–${selectedBooking.slot_end}` },
             { label: 'Amount', value: selectedBooking.total_amount != null ? `Rs. ${selectedBooking.total_amount.toLocaleString()}` : '—' },
+            {
+              label: 'Payment',
+              value: (
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${paymentInfo(selectedBooking).className}`}>
+                  {paymentInfo(selectedBooking).label}
+                </span>
+              ),
+            },
             { label: 'Status', value: <StatusBadge label={selectedBooking.status.replace('_', ' ')} tone={bookingStatusTone(selectedBooking.status)} /> },
             { label: 'Created', value: new Date(selectedBooking.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) },
             ...(selectedBooking.photos.length > 0
@@ -240,38 +260,29 @@ export default function AdminBookingsPage() {
               : []),
           ]}
           footer={
-            <div className="flex items-center gap-2">
+            selectedBooking.status === 'unassigned' ? (
               <button
                 onClick={() => {
                   const booking = selectedBooking
                   setSelectedBooking(null)
-                  setStatusBooking(booking)
+                  setResolveBooking(booking)
                 }}
-                className="flex-1 rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
+                className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
               >
-                Change status
+                No vendor accepted — resolve
               </button>
-              <button
-                onClick={() => {
-                  const booking = selectedBooking
-                  setSelectedBooking(null)
-                  setReassignBooking(booking)
-                }}
-                className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 cursor-pointer"
-              >
-                {selectedBooking.vendor_id ? 'Reassign vendor' : 'Assign vendor'}
-              </button>
-            </div>
+            ) : undefined
           }
         />
       )}
 
-      {statusBooking && (
-        <BookingStatusModal booking={statusBooking} onClose={() => setStatusBooking(null)} onUpdated={applyUpdate} />
-      )}
-
-      {reassignBooking && (
-        <VendorReassignModal booking={reassignBooking} vendors={vendors} onClose={() => setReassignBooking(null)} onUpdated={applyUpdate} />
+      {resolveBooking && (
+        <UnassignedBookingActionsModal
+          booking={resolveBooking}
+          vendors={vendors}
+          onClose={() => setResolveBooking(null)}
+          onUpdated={applyUpdate}
+        />
       )}
     </div>
   )
