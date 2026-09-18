@@ -32,7 +32,7 @@ export default function CustomerDashboardPage() {
     let active = true
     const load = async () => {
       try {
-        const auth = await getCurrentUser()
+        const auth = await getCurrentUser('customer')
         if (auth.role !== 'customer') {
           router.push('/customer/login')
           return

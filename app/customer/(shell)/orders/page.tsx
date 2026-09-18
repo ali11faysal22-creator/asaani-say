@@ -16,7 +16,7 @@ export default function CustomerOrdersPage() {
     let active = true
     const loadOrders = async () => {
       try {
-        const auth = await getCurrentUser()
+        const auth = await getCurrentUser('customer')
         if (auth.role !== 'customer') {
           router.push('/customer/login')
           return

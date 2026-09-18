@@ -122,7 +122,7 @@ export default function OrderConfirmationPage() {
     let active = true
     const checkBookingStatus = async () => {
       try {
-        const auth = await getCurrentUser()
+        const auth = await getCurrentUser('customer')
         if (auth.role !== 'customer' || !auth.profile_id) return
         const bookings = await fetchCustomerBookings(auth.profile_id)
         const current = bookings.find((booking) => booking.id === order.orderId)

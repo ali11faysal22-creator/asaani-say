@@ -17,7 +17,7 @@ export default function CustomerNavbar({ active = '' }: { active?: string }) {
     const load = () => {
       if (notificationLoadInFlight.current) return
       notificationLoadInFlight.current = true
-      getCurrentUser()
+      getCurrentUser('customer')
         .then((user) => {
           if (user.role === 'customer') {
             setAuth(user)

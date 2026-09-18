@@ -382,7 +382,7 @@ export default function CartAndCheckoutPage() {
       setSelectedAddressIndex(getInitialSelectedAddressIndex())
       setBillingDetails(getInitialBillingDetails())
 
-      const auth = await getCurrentUser().catch(() => null)
+      const auth = await getCurrentUser('customer').catch(() => null)
       if (auth?.role === 'customer' && auth.profile_id) {
         const backendAddresses = await fetchAddresses(auth.profile_id).catch(() => [])
         if (backendAddresses.length > 0) {
@@ -450,7 +450,7 @@ export default function CartAndCheckoutPage() {
     const addressLine = billingDetails.address.trim()
     if (!addressLine) return
 
-    const auth = await getCurrentUser().catch(() => null)
+    const auth = await getCurrentUser('customer').catch(() => null)
     if (auth?.role !== 'customer' || !auth.profile_id) return
 
     try {
@@ -607,7 +607,7 @@ export default function CartAndCheckoutPage() {
     }
 
     try {
-      const auth = await getCurrentUser()
+      const auth = await getCurrentUser('customer')
       if (auth.role !== 'customer' || !auth.profile_id) {
         alert('Please sign in as a customer before placing an order.')
         return

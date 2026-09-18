@@ -110,7 +110,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   useEffect(() => {
     const loadCustomer = async () => {
       try {
-        const auth = getStoredAuth('customer') || await getCurrentUser().catch(() => null)
+        const auth = getStoredAuth('customer') || await getCurrentUser('customer').catch(() => null)
         const customer = auth?.role === 'customer' && auth.profile_id
           ? { id: auth.profile_id, addresses: await fetchAddresses(auth.profile_id) }
           : await fetchDemoCustomer()
@@ -216,7 +216,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   const handleConfirmBooking = async () => {
     if (!customerId || !selectedDate || !selectedSlot || selectedServices.length === 0) return
     try {
-      const auth = getStoredAuth('customer') || await getCurrentUser().catch(() => null)
+      const auth = getStoredAuth('customer') || await getCurrentUser('customer').catch(() => null)
       if (auth?.role !== 'customer') {
         setShowAuthPrompt(true)
         return
@@ -239,7 +239,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
         slot_end: selectedSlot.end,
         notes: 'Please assign a vendor',
       }
-      const token = getAccessToken()
+      const token = getAccessToken('customer')
       const res = await fetch(`${API_BASE}/api/bookings`, {
         method: 'POST',
         headers: {

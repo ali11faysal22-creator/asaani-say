@@ -20,7 +20,7 @@ export default function CustomerNotificationsPage() {
     let active = true
     const loadNotifications = async () => {
       try {
-        const auth = await getCurrentUser()
+        const auth = await getCurrentUser('customer')
         if (auth.role !== 'customer') {
           router.push('/customer/login')
           return

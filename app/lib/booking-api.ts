@@ -172,10 +172,16 @@ const AUTH_STORAGE_KEYS: Record<AuthRole, string> = {
   admin: 'asaani_admin_auth',
 }
 
-// The JWT is the one credential actually sent with requests (Authorization: Bearer).
-// It lives in a single shared slot — whichever role logged in most recently — mirroring
-// the single-cookie-session behavior this replaced (only one active login per browser).
-const ACCESS_TOKEN_KEY = 'asaani_access_token'
+// Each role keeps its own JWT, colocated with that role's auth blob. Dashboards for
+// different roles can therefore stay logged in side by side (e.g. admin open in one tab
+// while a vendor account is exercised in another) without one login clobbering another's
+// bearer token — which previously caused background pollers to send the wrong role's
+// token and get 403'd ("Admin access required" etc.) once a different role logged in.
+const ACCESS_TOKEN_KEYS: Record<AuthRole, string> = {
+  customer: 'asaani_customer_token',
+  vendor: 'asaani_vendor_token',
+  admin: 'asaani_admin_token',
+}
 
 function authStorage(role: AuthRole): Storage {
   return role === 'vendor' ? window.sessionStorage : window.localStorage
@@ -195,19 +201,32 @@ export function setStoredAuth(role: AuthRole, auth: AuthResponse): void {
   if (typeof window === 'undefined') return
   authStorage(role).setItem(AUTH_STORAGE_KEYS[role], JSON.stringify(auth))
   if (auth.access_token) {
-    window.localStorage.setItem(ACCESS_TOKEN_KEY, auth.access_token)
+    authStorage(role).setItem(ACCESS_TOKEN_KEYS[role], auth.access_token)
   }
 }
 
 export function clearStoredAuth(role: AuthRole): void {
   if (typeof window === 'undefined') return
   authStorage(role).removeItem(AUTH_STORAGE_KEYS[role])
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY)
+  authStorage(role).removeItem(ACCESS_TOKEN_KEYS[role])
 }
 
-export function getAccessToken(): string | null {
+export function getAccessToken(role: AuthRole): string | null {
   if (typeof window === 'undefined') return null
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY)
+  return authStorage(role).getItem(ACCESS_TOKEN_KEYS[role])
+}
+
+function anyAccessToken(): string | null {
+  return getAccessToken('admin') || getAccessToken('vendor') || getAccessToken('customer')
+}
+
+// Endpoint paths already encode which role they belong to — use that to pick the
+// matching token instead of guessing from whichever role logged in most recently.
+function roleForPath(path: string): AuthRole | null {
+  if (path.startsWith('/api/admin')) return 'admin'
+  if (path.startsWith('/api/v1/vendor')) return 'vendor'
+  if (path.startsWith('/api/v1/customer') || path.startsWith('/api/v1/addresses') || path.startsWith('/api/bookings')) return 'customer'
+  return null
 }
 
 async function readError(res: Response): Promise<string> {
@@ -220,8 +239,10 @@ async function readError(res: Response): Promise<string> {
   }
 }
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = getAccessToken()
+async function api<T>(path: string, initWithRole?: RequestInit & { authRole?: AuthRole }): Promise<T> {
+  const { authRole, ...init } = initWithRole || {}
+  const role = authRole ?? roleForPath(path)
+  const token = role ? getAccessToken(role) : anyAccessToken()
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
@@ -307,22 +328,26 @@ export async function loginUser(payload: {
   return api('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) })
 }
 
-export async function getCurrentUser(): Promise<AuthResponse> {
+export async function getCurrentUser(role?: AuthRole): Promise<AuthResponse> {
   try {
-    const user = await api<AuthResponse>('/api/auth/me')
+    const user = await api<AuthResponse>('/api/auth/me', role ? { authRole: role } : undefined)
     setStoredAuth(user.role, user)
     return user
   } catch (error) {
     const status = (error as { status?: number }).status
     if (status === 401) {
       // Access token is missing, invalid, or expired — the cached copy is stale, drop it.
-      clearStoredAuth('customer')
-      clearStoredAuth('vendor')
-      clearStoredAuth('admin')
+      if (role) {
+        clearStoredAuth(role)
+      } else {
+        clearStoredAuth('customer')
+        clearStoredAuth('vendor')
+        clearStoredAuth('admin')
+      }
       throw error
     }
     if (typeof window !== 'undefined') {
-      const stored = getStoredAuth('customer') || getStoredAuth('vendor') || getStoredAuth('admin')
+      const stored = role ? getStoredAuth(role) : (getStoredAuth('customer') || getStoredAuth('vendor') || getStoredAuth('admin'))
       if (stored) return stored
     }
     throw error
@@ -359,7 +384,7 @@ export async function updateVendorProfile(vendorId: string, payload: {
 export async function uploadVendorProfileImage(vendorId: string, file: File): Promise<VendorProfileResponse> {
   const formData = new FormData()
   formData.append('image', file)
-  const token = getAccessToken()
+  const token = getAccessToken('vendor')
   const res = await fetch(`${API_BASE}/api/v1/vendors/${encodeURIComponent(vendorId)}/profile-image`, {
     method: 'POST',
     body: formData,
@@ -392,7 +417,7 @@ export async function decideVendorBooking(vendorId: string, bookingId: string, a
 export async function completeVendorBookingWithPhotos(bookingId: string, files: File[]): Promise<BookingResult> {
   const formData = new FormData()
   files.forEach((file) => formData.append('photos', file))
-  const token = getAccessToken()
+  const token = getAccessToken('vendor')
   const res = await fetch(`${API_BASE}/api/v1/vendor/bookings/${encodeURIComponent(bookingId)}/complete`, {
     method: 'POST',
     body: formData,

@@ -55,7 +55,7 @@ export default function AdminDashboardPage() {
     let active = true
     const init = async () => {
       try {
-        const user = await getCurrentUser()
+        const user = await getCurrentUser('admin')
         if (user.role !== 'admin') {
           router.push('/admin/login')
           return

@@ -31,7 +31,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
     if (!bookingId) return
     let active = true
     const load = async () => {
-      const auth = await getCurrentUser().catch(() => null)
+      const auth = await getCurrentUser('customer').catch(() => null)
       if (!auth || auth.role !== 'customer') {
         router.push('/customer/login')
         return
