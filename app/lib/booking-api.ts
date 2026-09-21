@@ -156,6 +156,9 @@ export type VendorProfileResponse = {
   addresses?: ApiAddress[]
   city?: string | null
   area?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  service_radius_km?: number
   categories: string[]
   services: string[]
   services_by_category?: Record<string, string[]>
@@ -312,6 +315,8 @@ export async function registerCustomer(payload: {
   address?: string
   city?: string
   area?: string
+  latitude?: number
+  longitude?: number
 }): Promise<AuthResponse> {
   return api('/api/auth/register/customer', { method: 'POST', body: JSON.stringify(payload) })
 }
@@ -336,6 +341,9 @@ export async function registerVendor(payload: {
   services_by_category?: Record<string, string[]>
   custom_service?: string
   availability?: Record<string, { isSelected: boolean; slots: string[] }>
+  latitude?: number
+  longitude?: number
+  service_radius_km?: number
 }): Promise<AuthResponse> {
   return api('/api/auth/register/vendor', { method: 'POST', body: JSON.stringify(payload) })
 }

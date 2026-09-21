@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { loginUser, registerVendor, setStoredAuth } from '@/app/lib/booking-api'
 import { PhoneInput, combinePhoneNumber } from '@/app/components/phone-input'
 import { DEFAULT_COUNTRY_ISO, COUNTRY_CODES } from '@/app/lib/country-codes'
+import { LocationPicker } from '@/app/components/location-picker'
 import {
   Eye,
   EyeOff,
@@ -209,6 +210,9 @@ export default function VendorLoginPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [contactCountryCode, setContactCountryCode] = useState(DEFAULT_DIAL_CODE)
   const [whatsappCountryCode, setWhatsappCountryCode] = useState(DEFAULT_DIAL_CODE)
+  const [vendorLatitude, setVendorLatitude] = useState(31.5204)
+  const [vendorLongitude, setVendorLongitude] = useState(74.3587)
+  const [serviceRadiusKm, setServiceRadiusKm] = useState(10)
   const saveVendorSelections = (
     categories: string[],
     subServices: string[],
@@ -461,6 +465,9 @@ export default function VendorLoginPage() {
         service_areas: vendorDetails.serviceAreas.split(',').map((area) => area.trim()).filter(Boolean),
         contact_preferences: [],
         house_address: vendorDetails.houseAddress.trim() || undefined,
+        latitude: vendorLatitude,
+        longitude: vendorLongitude,
+        service_radius_km: serviceRadiusKm,
         categories: selectedCategories,
         services: selectedSubServices,
         services_by_category: servicesByCategory,
@@ -806,6 +813,7 @@ export default function VendorLoginPage() {
                         }}
                         placeholder="CONTACT NUMBER"
                         required
+                        fieldId="vendor-contact"
                       />
 
                       <div className="space-y-2">
@@ -815,6 +823,7 @@ export default function VendorLoginPage() {
                           localNumber={vendorDetails.businessPhone}
                           onLocalNumberChange={(value) => setVendorDetails((prev) => ({ ...prev, businessPhone: value }))}
                           placeholder="WHATSAPP NUMBER (optional)"
+                          fieldId="vendor-whatsapp"
                         />
                         <label className="flex items-center gap-2 text-[10px] font-semibold text-slate-500">
                           <input
@@ -995,6 +1004,17 @@ export default function VendorLoginPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                       <input type="text" name="postalCode" placeholder="POSTAL CODE (optional)" value={vendorDetails.postalCode} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
                       <input type="text" name="serviceAreas" required placeholder="SERVICE AREAS (COMMA SEPARATED)" value={vendorDetails.serviceAreas} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
+                    </div>
+
+                    <div className="pt-2">
+                      <LocationPicker
+                        label="Your service location"
+                        latitude={vendorLatitude}
+                        longitude={vendorLongitude}
+                        radiusKm={serviceRadiusKm}
+                        onLocationChange={(lat, lng) => { setVendorLatitude(lat); setVendorLongitude(lng) }}
+                        onRadiusChange={setServiceRadiusKm}
+                      />
                     </div>
                   </div>
 

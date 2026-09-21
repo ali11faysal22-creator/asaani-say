@@ -17,6 +17,7 @@ export function PhoneInput({
   placeholder = 'Phone number',
   required = false,
   maxDigits = DEFAULT_MAX_LOCAL_DIGITS,
+  fieldId = 'phone',
 }: {
   countryCode: string
   onCountryCodeChange: (dial: string) => void
@@ -25,6 +26,9 @@ export function PhoneInput({
   placeholder?: string
   required?: boolean
   maxDigits?: number
+  /** Unique per instance so browsers/password managers can't group separate phone
+   * fields (e.g. vendor contact vs. WhatsApp) together for autofill purposes. */
+  fieldId?: string
 }) {
   return (
     <div className="flex w-full overflow-hidden rounded-xl border border-slate-200/90 bg-white focus-within:border-orange-500 transition">
@@ -32,6 +36,10 @@ export function PhoneInput({
         value={countryCode}
         onChange={(e) => onCountryCodeChange(e.target.value)}
         aria-label="Country code"
+        name={`${fieldId}-dial-code`}
+        autoComplete="new-password"
+        data-lpignore="true"
+        data-1p-ignore="true"
         className="shrink-0 border-r border-slate-200/90 bg-slate-50 px-2 py-3 text-xs text-slate-700 focus:outline-none cursor-pointer"
       >
         {COUNTRY_CODES.map((country) => (
@@ -44,6 +52,10 @@ export function PhoneInput({
         type="tel"
         inputMode="numeric"
         required={required}
+        name={`${fieldId}-local-number`}
+        autoComplete="new-password"
+        data-lpignore="true"
+        data-1p-ignore="true"
         value={localNumber}
         onChange={(e) => onLocalNumberChange(e.target.value.replace(/\D/g, '').slice(0, maxDigits))}
         placeholder={placeholder}

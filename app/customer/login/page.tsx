@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Hand, ShieldCheck, Sparkles } from 'lucide-react'
 import { loginUser, registerCustomer, setStoredAuth } from '../../lib/booking-api'
 import { PhoneInput, combinePhoneNumber } from '../../components/phone-input'
+import { LocationPicker } from '../../components/location-picker'
 import { DEFAULT_COUNTRY_ISO, COUNTRY_CODES } from '../../lib/country-codes'
 
 const DEFAULT_DIAL_CODE = COUNTRY_CODES.find((c) => c.iso === DEFAULT_COUNTRY_ISO)?.dial || '+92'
@@ -19,6 +20,8 @@ export default function CustomerAuthPage() {
   const [phone, setPhone] = useState('')
   const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_DIAL_CODE)
   const [address, setAddress] = useState('')
+  const [homeLatitude, setHomeLatitude] = useState(31.5204)
+  const [homeLongitude, setHomeLongitude] = useState(74.3587)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -34,7 +37,15 @@ export default function CustomerAuthPage() {
     setIsProcessing(true)
     try {
       const authResult = await (isRegister
-        ? registerCustomer({ full_name: name, email, password, phone: phone ? combinePhoneNumber(phoneCountryCode, phone) : undefined, address: address || undefined })
+        ? registerCustomer({
+            full_name: name,
+            email,
+            password,
+            phone: phone ? combinePhoneNumber(phoneCountryCode, phone) : undefined,
+            address: address || undefined,
+            latitude: homeLatitude,
+            longitude: homeLongitude,
+          })
         : loginUser({ identifier: emailOrPhone, password, role: 'customer' }))
       setStoredAuth('customer', authResult)
       window.dispatchEvent(new Event('asaani-auth-changed'))
@@ -159,6 +170,7 @@ export default function CustomerAuthPage() {
                     onLocalNumberChange={setPhone}
                     placeholder="Phone number"
                     required
+                    fieldId="customer-phone"
                   />
 
                   <textarea
@@ -167,6 +179,14 @@ export default function CustomerAuthPage() {
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="Home address"
                     className="min-h-20 w-full resize-none bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
+                  />
+
+                  <LocationPicker
+                    label="Confirm your location on the map"
+                    hint="Drag the pin, or tap anywhere on the map, to pin your address exactly — this helps us match you with nearby vendors."
+                    latitude={homeLatitude}
+                    longitude={homeLongitude}
+                    onLocationChange={(lat, lng) => { setHomeLatitude(lat); setHomeLongitude(lng) }}
                   />
 
                   <div className="relative">

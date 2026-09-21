@@ -2,13 +2,20 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CalendarClock, Clock, ListChecks, Star, Wallet } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { CalendarClock, Clock, ListChecks, MapPin, Star, Wallet } from 'lucide-react'
 import { fetchVendorBookings, fetchVendorProfile, getStoredAuth, type BookingResult, type VendorProfileResponse } from '@/app/lib/booking-api'
 import { CHART_BLUE, STATUS_CRITICAL, STATUS_GOOD, STATUS_WARNING } from '@/app/components/charts/palette'
 import { StatTile } from '@/app/components/charts/stat-tile'
 import { TrendLineChart, type TrendPoint } from '@/app/components/charts/trend-line-chart'
 import { StatusStackedBar } from '@/app/components/charts/status-stacked-bar'
 import { RankedBarList } from '@/app/components/charts/ranked-bar-list'
+import type { VendorJobPin } from '../../components/vendor-jobs-map'
+
+const VendorJobsMap = dynamic(
+  () => import('../../components/vendor-jobs-map').then((mod) => mod.VendorJobsMap),
+  { ssr: false, loading: () => <div className="h-[320px] w-full animate-pulse rounded-xl bg-slate-100" /> }
+)
 
 type BookingBucket = 'completed' | 'active' | 'pending' | 'cancelled'
 
@@ -97,6 +104,27 @@ export default function VendorDashboardPage() {
       .slice(0, 5)
   }, [bookings])
 
+  // Once a customer's request is confirmed (accepted through to payment), the vendor
+  // can see exactly where that job is on a map — not just the address text.
+  const activeJobs = useMemo<VendorJobPin[]>(
+    () =>
+      bookings
+        .filter((b) => bucketForStatus(b.status) === 'active')
+        .map((b) => ({
+          id: b.id,
+          lat: b.address.latitude,
+          lng: b.address.longitude,
+          customerName: b.customer_name,
+          customerPhone: b.customer_phone ?? null,
+          serviceName: b.service_name,
+          status: b.status,
+          addressLine: b.address.line,
+        })),
+    [bookings]
+  )
+  const vendorLocation: [number, number] | null =
+    profile?.latitude != null && profile?.longitude != null ? [profile.latitude, profile.longitude] : null
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -127,6 +155,26 @@ export default function VendorDashboardPage() {
           sublabel={profile?.review_count ? `${profile.review_count} reviews` : 'No reviews yet'}
           icon={Star}
         />
+      </div>
+
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <p className="flex items-center gap-1.5 text-sm font-bold text-slate-900">
+              <MapPin className="h-4 w-4 text-[#EE6C52]" /> Confirmed job locations
+            </p>
+            <p className="text-xs text-slate-400">Where your accepted orders are, once you&apos;ve confirmed them.</p>
+          </div>
+        </div>
+        {activeJobs.length === 0 ? (
+          <div className="flex h-[220px] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-200 text-center">
+            <MapPin className="h-6 w-6 text-slate-300" />
+            <p className="text-xs font-bold text-slate-500">No confirmed jobs right now</p>
+            <p className="text-[11px] text-slate-400">Accepted orders will show up here on the map.</p>
+          </div>
+        ) : (
+          <VendorJobsMap vendorLocation={vendorLocation} jobs={activeJobs} />
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-stretch">
