@@ -4,6 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Counter from '../components/counter'; 
+import CustomerNavbar from '../components/customer-navbar';
 import { 
   CheckCircle2, 
   ShieldCheck,
@@ -11,9 +12,7 @@ import {
   Clock,
   HeartHandshake,
   Camera,
-  LayoutGrid,
-  Hand,
-  Sparkles
+  LayoutGrid
 } from 'lucide-react';
 
 export default function AboutUsPage() {
@@ -37,33 +36,7 @@ export default function AboutUsPage() {
       </div>
 
       
-      <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between border-b border-slate-100">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="relative">
-            <Hand size={28} strokeWidth={2} className="text-black"/>
-            <Sparkles size={14} strokeWidth={2} className="text-[#EF6A42] absolute -top-1 -right-1"/>
-          </div>
-          <div className="flex flex-col leading-tight">
-            <span className="font-extrabold text-xl tracking-tight text-orange-500">Asaani</span>
-            <span className="font-bold text-lg tracking-tight -mt-1.5 text-orange-500">Say</span>
-          </div>
-        </Link>
-
-        
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-          <Link href="/" className="text-slate-900 font-semibold hover:text-orange-500">Home</Link>
-          <Link href="/about-us" className="hover:text-orange-500 transition text-orange-500 font-bold">About Us</Link>
-          <Link href="/services" className="hover:text-orange-500 transition">Services</Link>
-          <Link href="/contact" className="hover:text-orange-500 transition">Contact Us</Link>
-          <Link href="/blog" className="hover:text-orange-500 transition">Blog</Link>
-        </nav>
-
-        <Link href="/login">
-          <button className="hidden md:inline-flex items-center gap-2 bg-[#3A3E59] hover:bg-[#2C2F45] text-white px-5 py-2.5 rounded-lg text-sm font-medium transition shadow-sm cursor-pointer">
-            <span>Get Started</span>
-          </button>
-        </Link>
-      </header>
+      <CustomerNavbar active="about" />
 
       
       <main className="space-y-20 py-12">
