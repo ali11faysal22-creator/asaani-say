@@ -19,10 +19,13 @@ import {
   Truck,
   Wrench,
 } from 'lucide-react'
-import { API_BASE, fetchCustomerBookings, formatSlotLabel, getCurrentUser, type BookingResult } from '@/app/lib/booking-api'
+import { API_BASE, cancelCustomerBooking, fetchCustomerBookings, formatSlotLabel, getCurrentUser, type BookingResult } from '@/app/lib/booking-api'
 import { InitialsAvatar } from '@/app/components/initials-avatar'
 import { ResponseCountdown } from '@/app/components/response-countdown'
 import { VendorRatingForm } from '@/app/customer/components/vendor-rating-form'
+import { BookingRescheduleForm } from '@/app/customer/components/booking-reschedule-form'
+
+const DECISION_MISS_THRESHOLD = 4
 
 const statusSteps = [
   { key: 'accepted', label: 'Confirmed', shortLabel: 'Confirmed', detail: 'Vendor confirmed your service request.', icon: CheckCircle2 },
@@ -63,6 +66,9 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
   const [booking, setBooking] = useState<BookingResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(new Date())
+  const [decisionMode, setDecisionMode] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState('')
 
   useEffect(() => { void params.then(({ id }) => setBookingId(id)) }, [params])
   useEffect(() => {
@@ -112,13 +118,74 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
       </div>
     )
   }
+
+  const needsDecision = (booking.vendor_miss_count || 0) >= DECISION_MISS_THRESHOLD && ['unassigned', 'pending'].includes(booking.status)
+
+  const runCancelOrder = async () => {
+    if (!window.confirm('Cancel this order? This cannot be undone.')) return
+    setCancelling(true)
+    setCancelError('')
+    try {
+      setBooking(await cancelCustomerBooking(booking.id))
+    } catch (requestError) {
+      setCancelError(requestError instanceof Error ? requestError.message : 'Could not cancel this order.')
+    } finally {
+      setCancelling(false)
+    }
+  }
+
+  const decisionBanner = needsDecision && (
+    <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+      {decisionMode ? (
+        <>
+          <p className="text-xs font-bold text-orange-800">Pick a different date/time</p>
+          <div className="mt-3">
+            <BookingRescheduleForm booking={booking} onRescheduled={(updated) => { setBooking(updated); setDecisionMode(false) }} />
+          </div>
+          <button type="button" onClick={() => setDecisionMode(false)} className="mt-2 text-[11px] font-bold text-slate-400 hover:text-slate-600">
+            Back
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-orange-500" />
+            <div className="text-xs text-orange-800">
+              <p className="font-semibold">
+                {booking.vendor_miss_count} nearby vendors haven&apos;t responded to your {booking.service_name} order yet.
+              </p>
+              <p className="mt-0.5">You can keep waiting, pick a different date/time, or cancel.</p>
+            </div>
+          </div>
+          {cancelError && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-600">{cancelError}</p>}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={() => setDecisionMode(true)} className="rounded-lg bg-[#EE6C52] px-3 py-2 text-[11px] font-bold text-white hover:bg-orange-600">
+              Pick a different time
+            </button>
+            <button
+              type="button"
+              disabled={cancelling}
+              onClick={() => void runCancelOrder()}
+              className="rounded-lg border border-red-200 bg-white px-3 py-2 text-[11px] font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
+            >
+              {cancelling ? 'Cancelling…' : 'Cancel order'}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+
   if (!booking.vendor) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-24 text-center text-slate-700">
-        <Truck className="h-8 w-8 text-orange-300" />
-        <p className="text-sm font-bold">We&apos;re assigning a vendor for this order.</p>
-        <p className="text-xs text-slate-400">Tracking will be available once a vendor accepts your request.</p>
-        <Link href="/customer/orders" className="text-xs font-bold text-orange-600">Back to orders</Link>
+      <div className="space-y-4">
+        <div className="flex flex-col items-center justify-center gap-3 py-16 text-center text-slate-700">
+          <Truck className="h-8 w-8 text-orange-300" />
+          <p className="text-sm font-bold">We&apos;re assigning a vendor for this order.</p>
+          <p className="text-xs text-slate-400">Tracking will be available once a vendor accepts your request.</p>
+          <Link href="/customer/orders" className="text-xs font-bold text-orange-600">Back to orders</Link>
+        </div>
+        {decisionBanner}
       </div>
     )
   }
@@ -162,6 +229,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
           </div>
         </div>
 
+        {needsDecision && decisionBanner}
         {booking.status === 'pending' && (
           <div className="flex items-center gap-3 rounded-2xl border border-orange-200 bg-orange-50 p-4">
             <Clock3 className="h-5 w-5 shrink-0 text-orange-500" />

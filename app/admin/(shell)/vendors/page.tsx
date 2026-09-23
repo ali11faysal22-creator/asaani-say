@@ -125,6 +125,7 @@ export default function AdminVendorsPage() {
               <th className="px-4 py-3 font-bold">Contact</th>
               <th className="px-4 py-3 font-bold">Location</th>
               <th className="px-4 py-3 font-bold">Rating</th>
+              <th className="px-4 py-3 font-bold">Missed requests</th>
               <th className="px-4 py-3 font-bold">Status</th>
               <th className="px-4 py-3 font-bold">Verified</th>
               <th className="px-4 py-3 font-bold text-right">Actions</th>
@@ -153,6 +154,13 @@ export default function AdminVendorsPage() {
                   {vendor.average_rating.toFixed(1)} <span className="text-slate-400">({vendor.review_count})</span>
                 </td>
                 <td className="px-4 py-3">
+                  {vendor.missed_response_count >= 5 ? (
+                    <StatusBadge label={`${vendor.missed_response_count} missed`} tone="critical" />
+                  ) : (
+                    <span className="text-slate-400">{vendor.missed_response_count}</span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
                   <StatusBadge label={vendor.status} tone={vendorStatusTone(vendor.status)} />
                 </td>
                 <td className="px-4 py-3">
@@ -178,7 +186,7 @@ export default function AdminVendorsPage() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
                   {vendors.length === 0 ? 'No vendors yet.' : 'No vendors match your search.'}
                 </td>
               </tr>
@@ -197,6 +205,7 @@ export default function AdminVendorsPage() {
             { label: 'Phone', value: selectedVendor.phone },
             { label: 'Location', value: [selectedVendor.city, selectedVendor.area].filter(Boolean).join(', ') || '—' },
             { label: 'Rating', value: `${selectedVendor.average_rating.toFixed(1)} (${selectedVendor.review_count} reviews)` },
+            { label: 'Missed requests', value: `${selectedVendor.missed_response_count} times didn't respond in time` },
             { label: 'Status', value: <StatusBadge label={selectedVendor.status} tone={vendorStatusTone(selectedVendor.status)} /> },
             { label: 'Verified', value: <StatusBadge label={selectedVendor.is_verified ? 'Verified' : 'Unverified'} tone={selectedVendor.is_verified ? 'good' : 'warning'} /> },
             { label: 'Online now', value: selectedVendor.is_online ? 'Yes' : 'No' },

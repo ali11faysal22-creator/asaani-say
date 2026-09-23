@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import CustomerSidebar from './customer-sidebar'
 import CustomerTopbar from './customer-topbar'
 import CustomerRatingPrompt from './customer-rating-prompt'
+import CustomerDecisionPrompt from './customer-decision-prompt'
 import { resolveCustomerPageMeta } from './customer-page-meta'
 
 export default function CustomerShell({ children }: { children: ReactNode }) {
@@ -15,6 +16,7 @@ export default function CustomerShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen w-full bg-[#F8FAFC] flex font-sans">
       <CustomerRatingPrompt />
+      <CustomerDecisionPrompt />
       <CustomerSidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
 
       <div className="flex-1 min-w-0 flex flex-col">

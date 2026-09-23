@@ -92,6 +92,7 @@ export type BookingResult = {
   created_at: string
   vendor_assigned_at?: string | null
   vendor_response_deadline?: string | null
+  vendor_miss_count?: number
   accepted_at?: string | null
   reached_at?: string | null
   started_at?: string | null
@@ -485,6 +486,24 @@ export async function rateBooking(bookingId: string, rating: number, comment?: s
   })
 }
 
+// Both only work while a booking is still unassigned/pending — the customer's own escape
+// hatch once too many vendors in a row haven't responded.
+export async function rescheduleCustomerBooking(
+  bookingId: string,
+  date: string,
+  slotStart: string,
+  slotEnd?: string
+): Promise<BookingResult> {
+  return api(`/api/v1/customer/bookings/${encodeURIComponent(bookingId)}/reschedule`, {
+    method: 'PATCH',
+    body: JSON.stringify({ date, slot_start: slotStart, slot_end: slotEnd }),
+  })
+}
+
+export async function cancelCustomerBooking(bookingId: string): Promise<BookingResult> {
+  return api(`/api/v1/customer/bookings/${encodeURIComponent(bookingId)}/cancel`, { method: 'PATCH' })
+}
+
 export async function fetchCustomerNotifications(customerId: string): Promise<CustomerNotification[]> {
   return api(`/api/v1/customer/notifications?customer_id=${encodeURIComponent(customerId)}`)
 }
@@ -641,6 +660,7 @@ export type AdminVendor = {
   is_online: boolean
   average_rating: number
   review_count: number
+  missed_response_count: number
   created_at: string
 }
 
