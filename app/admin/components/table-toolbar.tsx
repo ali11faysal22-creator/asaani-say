@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { RefreshCw, Search } from 'lucide-react'
 
 export function TableToolbar({
@@ -10,6 +11,7 @@ export function TableToolbar({
   totalCount,
   onRefresh,
   refreshing,
+  extraFilters,
 }: {
   search: string
   onSearchChange: (value: string) => void
@@ -18,18 +20,22 @@ export function TableToolbar({
   totalCount: number
   onRefresh?: () => void
   refreshing?: boolean
+  extraFilters?: ReactNode
 }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-      <div className="relative w-full sm:w-72">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={placeholder}
-          className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#EE6C52] transition shadow-2xs"
-        />
+      <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative w-full sm:w-72">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder={placeholder}
+            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#EE6C52] transition shadow-2xs"
+          />
+        </div>
+        {extraFilters}
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <p className="text-[11px] font-semibold text-slate-400">

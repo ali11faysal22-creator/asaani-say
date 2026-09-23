@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Eye, MapPin, Wrench } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, MapPin, Search, Wrench } from 'lucide-react'
 import { API_BASE, fetchAdminBookings, getCurrentUser, type AdminBooking } from '@/app/lib/booking-api'
 import { CHART_BLUE, STATUS_CRITICAL, STATUS_GOOD, STATUS_WARNING } from '@/app/components/charts/palette'
 import { StatusBadge, bookingStatusTone } from '../../components/status-badge'
@@ -11,6 +11,7 @@ import { DetailModal } from '../../components/detail-modal'
 import { UnassignedBookingActionsModal } from '../../components/unassigned-booking-actions-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
 import { ResponseCountdown } from '@/app/components/response-countdown'
+import { BookingTimeline } from '@/app/components/booking-timeline'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -34,6 +35,7 @@ export default function AdminCalendarPage() {
   const [loading, setLoading] = useState(true)
   const [bookings, setBookings] = useState<AdminBooking[]>([])
   const [cityFilter, setCityFilter] = useState('all')
+  const [orderIdQuery, setOrderIdQuery] = useState('')
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date()
     return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -94,6 +96,19 @@ export default function AdminCalendarPage() {
     if (cityFilter === 'all') return bookings
     return bookings.filter((b) => b.city === cityFilter)
   }, [bookings, cityFilter])
+
+  // Jump straight to whichever month/day contains the matching order, instead of making
+  // the admin hunt through the calendar by hand.
+  const handleOrderIdQueryChange = (value: string) => {
+    setOrderIdQuery(value)
+    const q = value.trim().toLowerCase()
+    if (!q) return
+    const match = bookings.find((b) => b.id.toLowerCase().includes(q))
+    if (!match) return
+    const [year, month] = match.scheduled_date.split('-').map(Number)
+    setMonthCursor(new Date(year, month - 1, 1))
+    setSelectedDate(match.scheduled_date)
+  }
 
   const bookingsByDate = useMemo(() => {
     const map = new Map<string, AdminBooking[]>()
@@ -159,20 +174,32 @@ export default function AdminCalendarPage() {
           </button>
         </div>
 
-        <div className="relative w-full sm:w-56">
-          <MapPin className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <select
-            value={cityFilter}
-            onChange={(e) => setCityFilter(e.target.value)}
-            className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-3 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52] appearance-none"
-          >
-            <option value="all">All cities</option>
-            {cities.map((city) => (
-              <option key={city} value={city}>
-                {city}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative w-full sm:w-56">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={orderIdQuery}
+              onChange={(e) => handleOrderIdQueryChange(e.target.value)}
+              placeholder="Jump to order ID…"
+              className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-3 py-2.5 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#EE6C52]"
+            />
+          </div>
+          <div className="relative w-full sm:w-56">
+            <MapPin className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <select
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-3 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52] appearance-none"
+            >
+              <option value="all">All cities</option>
+              {cities.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -255,6 +282,11 @@ export default function AdminCalendarPage() {
                       <ResponseCountdown deadline={booking.vendor_response_deadline} />
                     </span>
                   )}
+                  {booking.paused_for_customer_decision && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                      Paused
+                    </span>
+                  )}
                   <StatusBadge label={booking.status.replace('_', ' ')} tone={bookingStatusTone(booking.status)} />
                   <IconActionButton icon={Eye} label="View details" onClick={() => setSelectedBooking(booking)} />
                   {booking.status === 'unassigned' && (
@@ -303,18 +335,24 @@ export default function AdminCalendarPage() {
               : []),
           ]}
           footer={
-            selectedBooking.status === 'unassigned' ? (
-              <button
-                onClick={() => {
-                  const booking = selectedBooking
-                  setSelectedBooking(null)
-                  setResolveBooking(booking)
-                }}
-                className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
-              >
-                No vendor accepted — resolve
-              </button>
-            ) : undefined
+            <div className="space-y-4">
+              {selectedBooking.status === 'unassigned' && (
+                <button
+                  onClick={() => {
+                    const booking = selectedBooking
+                    setSelectedBooking(null)
+                    setResolveBooking(booking)
+                  }}
+                  className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
+                >
+                  No vendor accepted — resolve
+                </button>
+              )}
+              <div>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Status history</p>
+                <BookingTimeline bookingId={selectedBooking.id} role="admin" />
+              </div>
+            </div>
           }
         />
       )}

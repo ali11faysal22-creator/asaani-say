@@ -19,13 +19,12 @@ import {
   Truck,
   Wrench,
 } from 'lucide-react'
-import { API_BASE, cancelCustomerBooking, fetchCustomerBookings, formatSlotLabel, getCurrentUser, type BookingResult } from '@/app/lib/booking-api'
+import { API_BASE, cancelCustomerBooking, fetchCustomerBookings, formatSlotLabel, getCurrentUser, resumeCustomerBookingSearch, type BookingResult } from '@/app/lib/booking-api'
 import { InitialsAvatar } from '@/app/components/initials-avatar'
 import { ResponseCountdown } from '@/app/components/response-countdown'
 import { VendorRatingForm } from '@/app/customer/components/vendor-rating-form'
 import { BookingRescheduleForm } from '@/app/customer/components/booking-reschedule-form'
-
-const DECISION_MISS_THRESHOLD = 4
+import { BookingTimeline } from '@/app/components/booking-timeline'
 
 const statusSteps = [
   { key: 'accepted', label: 'Confirmed', shortLabel: 'Confirmed', detail: 'Vendor confirmed your service request.', icon: CheckCircle2 },
@@ -66,8 +65,9 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
   const [booking, setBooking] = useState<BookingResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(new Date())
-  const [decisionMode, setDecisionMode] = useState(false)
+  const [decisionMode, setDecisionMode] = useState<'view' | 'reschedule' | 'confirm-cancel'>('view')
   const [cancelling, setCancelling] = useState(false)
+  const [resuming, setResuming] = useState(false)
   const [cancelError, setCancelError] = useState('')
 
   useEffect(() => { void params.then(({ id }) => setBookingId(id)) }, [params])
@@ -119,10 +119,9 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
     )
   }
 
-  const needsDecision = (booking.vendor_miss_count || 0) >= DECISION_MISS_THRESHOLD && ['unassigned', 'pending'].includes(booking.status)
+  const needsDecision = Boolean(booking.paused_for_customer_decision)
 
   const runCancelOrder = async () => {
-    if (!window.confirm('Cancel this order? This cannot be undone.')) return
     setCancelling(true)
     setCancelError('')
     try {
@@ -134,17 +133,53 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
     }
   }
 
+  const runResumeSearch = async () => {
+    setResuming(true)
+    setCancelError('')
+    try {
+      setBooking(await resumeCustomerBookingSearch(booking.id))
+    } catch (requestError) {
+      setCancelError(requestError instanceof Error ? requestError.message : 'Could not resume the search.')
+    } finally {
+      setResuming(false)
+    }
+  }
+
   const decisionBanner = needsDecision && (
     <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
-      {decisionMode ? (
+      {decisionMode === 'reschedule' ? (
         <>
           <p className="text-xs font-bold text-orange-800">Pick a different date/time</p>
           <div className="mt-3">
-            <BookingRescheduleForm booking={booking} onRescheduled={(updated) => { setBooking(updated); setDecisionMode(false) }} />
+            <BookingRescheduleForm booking={booking} onRescheduled={(updated) => { setBooking(updated); setDecisionMode('view') }} />
           </div>
-          <button type="button" onClick={() => setDecisionMode(false)} className="mt-2 text-[11px] font-bold text-slate-400 hover:text-slate-600">
+          <button type="button" onClick={() => setDecisionMode('view')} className="mt-2 text-[11px] font-bold text-slate-400 hover:text-slate-600">
             Back
           </button>
+        </>
+      ) : decisionMode === 'confirm-cancel' ? (
+        <>
+          <p className="text-xs font-bold text-red-700">Cancel this order?</p>
+          <p className="mt-1 text-[11px] text-slate-600">This cannot be undone — you&apos;ll need to place a new order if you change your mind.</p>
+          {cancelError && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-600">{cancelError}</p>}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={cancelling}
+              onClick={() => void runCancelOrder()}
+              className="rounded-lg bg-red-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {cancelling ? 'Cancelling…' : 'Yes, cancel this order'}
+            </button>
+            <button
+              type="button"
+              disabled={cancelling}
+              onClick={() => setDecisionMode('view')}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              No, go back
+            </button>
+          </div>
         </>
       ) : (
         <>
@@ -152,23 +187,30 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
             <AlertTriangle className="h-5 w-5 shrink-0 text-orange-500" />
             <div className="text-xs text-orange-800">
               <p className="font-semibold">
-                {booking.vendor_miss_count} nearby vendors haven&apos;t responded to your {booking.service_name} order yet.
+                {booking.vendor_miss_count} nearby vendors haven&apos;t responded, so we&apos;ve paused the search for your {booking.service_name} order.
               </p>
-              <p className="mt-0.5">You can keep waiting, pick a different date/time, or cancel.</p>
+              <p className="mt-0.5">You can resume searching, pick a different date/time, or cancel.</p>
             </div>
           </div>
           {cancelError && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-600">{cancelError}</p>}
           <div className="mt-3 flex flex-wrap gap-2">
-            <button type="button" onClick={() => setDecisionMode(true)} className="rounded-lg bg-[#EE6C52] px-3 py-2 text-[11px] font-bold text-white hover:bg-orange-600">
+            <button type="button" onClick={() => setDecisionMode('reschedule')} className="rounded-lg bg-[#EE6C52] px-3 py-2 text-[11px] font-bold text-white hover:bg-orange-600">
               Pick a different time
             </button>
             <button
               type="button"
-              disabled={cancelling}
-              onClick={() => void runCancelOrder()}
-              className="rounded-lg border border-red-200 bg-white px-3 py-2 text-[11px] font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
+              disabled={resuming}
+              onClick={() => void runResumeSearch()}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
-              {cancelling ? 'Cancelling…' : 'Cancel order'}
+              {resuming ? 'Resuming…' : 'Keep searching'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDecisionMode('confirm-cancel')}
+              className="rounded-lg border border-red-200 bg-white px-3 py-2 text-[11px] font-bold text-red-600 hover:bg-red-50"
+            >
+              Cancel order
             </button>
           </div>
         </>
@@ -186,6 +228,10 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
           <Link href="/customer/orders" className="text-xs font-bold text-orange-600">Back to orders</Link>
         </div>
         {decisionBanner}
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="mb-3 text-xs font-bold text-slate-700">Order history</p>
+          <BookingTimeline bookingId={booking.id} role="customer" />
+        </div>
       </div>
     )
   }
@@ -392,6 +438,12 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
               <Navigation className="h-3.5 w-3.5" /> Directions
             </a>
           </div>
+        </div>
+
+        {/* Order history */}
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="mb-3 text-xs font-bold text-slate-700">Order history</p>
+          <BookingTimeline bookingId={booking.id} role="customer" />
         </div>
 
         <p className="flex items-center gap-2 text-[11px] text-slate-400">

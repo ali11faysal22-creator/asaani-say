@@ -1,16 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Clock3, Eye, MapPin, Navigation, Phone, X } from 'lucide-react'
+import { Clock3, Eye, MapPin, Navigation, Phone, Search, X } from 'lucide-react'
 import { API_BASE, fetchCustomerBookings, formatSlotLabel, getCurrentUser, type BookingResult } from '@/app/lib/booking-api'
+import { DateFilter } from '@/app/components/date-filter'
 
 export default function CustomerOrdersPage() {
   const router = useRouter()
   const [orders, setOrders] = useState<BookingResult[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedOrder, setSelectedOrder] = useState<BookingResult | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [dateFilter, setDateFilter] = useState('')
 
   useEffect(() => {
     let active = true
@@ -56,6 +59,15 @@ export default function CustomerOrdersPage() {
       : status === 'rejected' || status === 'cancelled' ? 'bg-red-50 text-red-600'
       : 'bg-orange-50 text-orange-600'
 
+  const filteredOrders = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    return orders.filter((order) => {
+      if (dateFilter && order.date !== dateFilter) return false
+      if (!q) return true
+      return order.id.toLowerCase().includes(q) || order.service_name.toLowerCase().includes(q)
+    })
+  }, [orders, searchQuery, dateFilter])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -67,6 +79,23 @@ export default function CustomerOrdersPage() {
   return (
     <>
       {orders.length ? (
+        <div className="space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search order ID or service…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3.5 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition"
+              />
+            </div>
+            <DateFilter value={dateFilter} onChange={setDateFilter} label="Filter by scheduled date" />
+            <p className="text-[11px] font-semibold text-slate-400">
+              {filteredOrders.length === orders.length ? <>{orders.length} total</> : <>{filteredOrders.length} of {orders.length}</>}
+            </p>
+          </div>
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 uppercase tracking-wide">
@@ -80,7 +109,13 @@ export default function CustomerOrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {orders.map((order) => (
+              {filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
+                    No orders match your filters.
+                  </td>
+                </tr>
+              ) : filteredOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-slate-50/80 transition">
                   <td className="px-4 py-3">
                     <p className="font-bold text-slate-900">{order.service_name}</p>
@@ -116,6 +151,7 @@ export default function CustomerOrdersPage() {
               ))}
             </tbody>
           </table>
+        </div>
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">

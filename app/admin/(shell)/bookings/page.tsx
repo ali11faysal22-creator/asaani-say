@@ -11,11 +11,13 @@ import {
 } from '@/app/lib/booking-api'
 import { StatusBadge, bookingStatusTone } from '../../components/status-badge'
 import { TableToolbar } from '../../components/table-toolbar'
+import { DateFilter } from '@/app/components/date-filter'
 import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
 import { UnassignedBookingActionsModal } from '../../components/unassigned-booking-actions-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
 import { ResponseCountdown } from '@/app/components/response-countdown'
+import { BookingTimeline } from '@/app/components/booking-timeline'
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -49,6 +51,7 @@ export default function AdminBookingsPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [bookings, setBookings] = useState<AdminBooking[]>([])
   const [search, setSearch] = useState('')
+  const [dateFilter, setDateFilter] = useState('')
   const [filter, setFilter] = useState<FilterKey>('all')
   const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null)
   const [resolveBooking, setResolveBooking] = useState<AdminBooking | null>(null)
@@ -103,15 +106,17 @@ export default function AdminBookingsPage() {
     const q = search.trim().toLowerCase()
     return bookings.filter((b) => {
       if (filter !== 'all' && bucketForStatus(b.status) !== filter) return false
+      if (dateFilter && b.scheduled_date !== dateFilter) return false
       if (!q) return true
       return (
+        b.id.toLowerCase().includes(q) ||
         b.customer_name.toLowerCase().includes(q) ||
         (b.vendor_name || '').toLowerCase().includes(q) ||
         b.service_name.toLowerCase().includes(q) ||
         (b.city || '').toLowerCase().includes(q)
       )
     })
-  }, [bookings, search, filter])
+  }, [bookings, search, filter, dateFilter])
 
   if (loading) {
     return (
@@ -126,11 +131,12 @@ export default function AdminBookingsPage() {
       <TableToolbar
         search={search}
         onSearchChange={setSearch}
-        placeholder="Search bookings…"
+        placeholder="Search by order ID, customer, vendor, service…"
         resultCount={filtered.length}
         totalCount={bookings.length}
         onRefresh={handleRefresh}
         refreshing={refreshing}
+        extraFilters={<DateFilter value={dateFilter} onChange={setDateFilter} label="Filter by scheduled date" />}
       />
 
       <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-fit overflow-x-auto">
@@ -192,6 +198,11 @@ export default function AdminBookingsPage() {
                   <StatusBadge label={booking.status.replace('_', ' ')} tone={bookingStatusTone(booking.status)} />
                   {booking.admin_hold && (
                     <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">On hold</span>
+                  )}
+                  {booking.paused_for_customer_decision && (
+                    <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                      Paused — waiting for customer
+                    </span>
                   )}
                   {booking.status === 'pending' && booking.vendor_response_deadline && (
                     <p className="mt-1 text-[10px] font-bold text-orange-600">
@@ -266,18 +277,24 @@ export default function AdminBookingsPage() {
               : []),
           ]}
           footer={
-            selectedBooking.status === 'unassigned' ? (
-              <button
-                onClick={() => {
-                  const booking = selectedBooking
-                  setSelectedBooking(null)
-                  setResolveBooking(booking)
-                }}
-                className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
-              >
-                No vendor accepted — resolve
-              </button>
-            ) : undefined
+            <div className="space-y-4">
+              {selectedBooking.status === 'unassigned' && (
+                <button
+                  onClick={() => {
+                    const booking = selectedBooking
+                    setSelectedBooking(null)
+                    setResolveBooking(booking)
+                  }}
+                  className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
+                >
+                  No vendor accepted — resolve
+                </button>
+              )}
+              <div>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Status history</p>
+                <BookingTimeline bookingId={selectedBooking.id} role="admin" />
+              </div>
+            </div>
           }
         />
       )}

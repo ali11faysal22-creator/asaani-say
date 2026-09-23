@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Search, Eye, MapPin, Phone, ShoppingCart, X } from 'lucide-react'
 import { fetchVendorBookings, getStoredAuth, type BookingResult } from '@/app/lib/booking-api'
 import { ResponseCountdown } from '@/app/components/response-countdown'
+import { BookingTimeline } from '@/app/components/booking-timeline'
+import { DateFilter } from '@/app/components/date-filter'
 import { VendorBookingActionPanel } from '../../components/booking-action-panel'
 
 const STATUS_TABS = ['All', 'Needs action', 'Active', 'Completed'] as const
@@ -45,6 +47,7 @@ export default function OrderHistoryPage() {
   const [orders, setOrders] = useState<BookingResult[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [dateFilter, setDateFilter] = useState('')
   const [selectedTab, setSelectedTab] = useState<StatusTab>('All')
   const [selectedOrder, setSelectedOrder] = useState<BookingResult | null>(null)
 
@@ -81,10 +84,11 @@ export default function OrderHistoryPage() {
           : selectedTab === 'Completed' ? order.status === 'completed'
           : ACTIVE_STATUSES.includes(order.status)
       if (!matchesTab) return false
+      if (dateFilter && order.date !== dateFilter) return false
       if (!q) return true
       return order.id.toLowerCase().includes(q) || order.service_name.toLowerCase().includes(q) || order.customer_name.toLowerCase().includes(q)
     })
-  }, [orders, searchQuery, selectedTab])
+  }, [orders, searchQuery, dateFilter, selectedTab])
 
   const totalEarned = orders
     .filter((o) => o.status === 'completed')
@@ -125,15 +129,18 @@ export default function OrderHistoryPage() {
         </div>
 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search order ID, service, customer…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3.5 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition"
-            />
+          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search order ID, service, customer…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3.5 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition"
+              />
+            </div>
+            <DateFilter value={dateFilter} onChange={setDateFilter} label="Filter by scheduled date" />
           </div>
 
           <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 text-xs font-bold gap-1">
@@ -308,6 +315,11 @@ export default function OrderHistoryPage() {
                   </div>
                 )
               })()}
+            </div>
+
+            <div className="rounded-xl border border-slate-100 bg-white p-4 text-xs">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Job history</p>
+              <BookingTimeline bookingId={selectedOrder.id} role="vendor" />
             </div>
 
             <VendorBookingActionPanel

@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
-import { cancelCustomerBooking, fetchCustomerBookings, getStoredAuth, type BookingResult } from '@/app/lib/booking-api'
+import { cancelCustomerBooking, fetchCustomerBookings, getStoredAuth, resumeCustomerBookingSearch, type BookingResult } from '@/app/lib/booking-api'
 import { BookingRescheduleForm } from './booking-reschedule-form'
 
 const DISMISSED_KEY = 'asaani_dismissed_decision_prompts'
-const MISS_THRESHOLD = 4
 
 function getDismissed(): string[] {
   try {
@@ -26,8 +25,9 @@ function dismiss(bookingId: string) {
 
 export default function CustomerDecisionPrompt() {
   const [booking, setBooking] = useState<BookingResult | null>(null)
-  const [mode, setMode] = useState<'prompt' | 'reschedule'>('prompt')
+  const [mode, setMode] = useState<'prompt' | 'reschedule' | 'confirm-cancel'>('prompt')
   const [cancelling, setCancelling] = useState(false)
+  const [resuming, setResuming] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -39,12 +39,7 @@ export default function CustomerDecisionPrompt() {
       try {
         const bookings = await fetchCustomerBookings(auth.profile_id)
         const dismissed = getDismissed()
-        const next = bookings.find(
-          (item) =>
-            (item.status === 'unassigned' || item.status === 'pending') &&
-            (item.vendor_miss_count || 0) >= MISS_THRESHOLD &&
-            !dismissed.includes(item.id)
-        )
+        const next = bookings.find((item) => item.paused_for_customer_decision && !dismissed.includes(item.id))
         if (active) setBooking((current) => (current?.id === next?.id ? current : next || null))
       } catch {
       }
@@ -66,8 +61,20 @@ export default function CustomerDecisionPrompt() {
     setError('')
   }
 
+  const runResume = async () => {
+    setResuming(true)
+    setError('')
+    try {
+      await resumeCustomerBookingSearch(booking.id)
+      setBooking(null)
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Could not resume the search.')
+    } finally {
+      setResuming(false)
+    }
+  }
+
   const runCancel = async () => {
-    if (!window.confirm('Cancel this order? This cannot be undone.')) return
     setCancelling(true)
     setError('')
     try {
@@ -97,8 +104,8 @@ export default function CustomerDecisionPrompt() {
             <p className="text-[11px] font-bold uppercase tracking-wide text-orange-500">Need your input</p>
             <p className="mt-1 text-sm font-extrabold text-slate-900">{booking.service_name}</p>
             <p className="mt-2 text-xs leading-relaxed text-slate-500">
-              {booking.vendor_miss_count} nearby vendors haven&apos;t responded to your order yet. You can keep waiting
-              while we keep searching, pick a different date/time, or cancel the order.
+              {booking.vendor_miss_count} nearby vendors haven&apos;t responded, so we&apos;ve paused the search. You can
+              resume searching, pick a different date/time, or cancel the order.
             </p>
 
             {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{error}</p>}
@@ -113,22 +120,22 @@ export default function CustomerDecisionPrompt() {
               </button>
               <button
                 type="button"
-                disabled={cancelling}
-                onClick={() => void runCancel()}
-                className="w-full rounded-xl border border-red-200 bg-white py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                disabled={resuming}
+                onClick={() => void runResume()}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
               >
-                {cancelling ? 'Cancelling…' : 'Cancel order'}
+                {resuming ? 'Resuming…' : 'Keep searching'}
               </button>
               <button
                 type="button"
-                onClick={close}
-                className="w-full rounded-xl py-2 text-xs font-bold text-slate-400 transition hover:text-slate-600"
+                onClick={() => setMode('confirm-cancel')}
+                className="w-full rounded-xl border border-red-200 bg-white py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-50"
               >
-                Keep waiting
+                Cancel order
               </button>
             </div>
           </>
-        ) : (
+        ) : mode === 'reschedule' ? (
           <>
             <p className="text-[11px] font-bold uppercase tracking-wide text-orange-500">Pick a different time</p>
             <p className="mt-1 text-sm font-extrabold text-slate-900">{booking.service_name}</p>
@@ -144,6 +151,33 @@ export default function CustomerDecisionPrompt() {
             >
               Back
             </button>
+          </>
+        ) : (
+          <>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-red-500">Cancel this order?</p>
+            <p className="mt-1 text-sm font-extrabold text-slate-900">{booking.service_name}</p>
+            <p className="mt-2 text-xs leading-relaxed text-slate-500">This cannot be undone — you&apos;ll need to place a new order if you change your mind.</p>
+
+            {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{error}</p>}
+
+            <div className="mt-4 space-y-2">
+              <button
+                type="button"
+                disabled={cancelling}
+                onClick={() => void runCancel()}
+                className="w-full rounded-xl bg-red-600 py-2.5 text-xs font-bold text-white transition hover:bg-red-700 disabled:opacity-50"
+              >
+                {cancelling ? 'Cancelling…' : 'Yes, cancel this order'}
+              </button>
+              <button
+                type="button"
+                disabled={cancelling}
+                onClick={() => setMode('prompt')}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                No, go back
+              </button>
+            </div>
           </>
         )}
       </div>

@@ -93,6 +93,7 @@ export type BookingResult = {
   vendor_assigned_at?: string | null
   vendor_response_deadline?: string | null
   vendor_miss_count?: number
+  paused_for_customer_decision?: boolean
   accepted_at?: string | null
   reached_at?: string | null
   started_at?: string | null
@@ -500,6 +501,12 @@ export async function rescheduleCustomerBooking(
   })
 }
 
+// Auto-dispatch pauses itself once too many vendors in a row haven't responded — this is
+// the "keep searching" choice, only usable while a booking is actually paused.
+export async function resumeCustomerBookingSearch(bookingId: string): Promise<BookingResult> {
+  return api(`/api/v1/customer/bookings/${encodeURIComponent(bookingId)}/resume-search`, { method: 'PATCH' })
+}
+
 export async function cancelCustomerBooking(bookingId: string): Promise<BookingResult> {
   return api(`/api/v1/customer/bookings/${encodeURIComponent(bookingId)}/cancel`, { method: 'PATCH' })
 }
@@ -673,6 +680,28 @@ export type AdminCustomer = {
   created_at: string
 }
 
+export type BookingEvent = {
+  id: string
+  from_status: string | null
+  to_status: string
+  actor: 'customer' | 'vendor' | 'admin' | 'system'
+  actor_name: string | null
+  note: string | null
+  created_at: string
+}
+
+export async function fetchAdminBookingHistory(bookingId: string): Promise<BookingEvent[]> {
+  return api(`/api/admin/bookings/${encodeURIComponent(bookingId)}/history`)
+}
+
+export async function fetchVendorBookingHistory(bookingId: string): Promise<BookingEvent[]> {
+  return api(`/api/v1/vendor/bookings/${encodeURIComponent(bookingId)}/history`)
+}
+
+export async function fetchCustomerBookingHistory(bookingId: string): Promise<BookingEvent[]> {
+  return api(`/api/v1/customer/bookings/${encodeURIComponent(bookingId)}/history`)
+}
+
 export type AdminBooking = {
   id: string
   customer_id: string
@@ -695,6 +724,8 @@ export type AdminBooking = {
   photos: string[]
   cannot_start_reason: string | null
   rating: number | null
+  vendor_miss_count: number
+  paused_for_customer_decision: boolean
   admin_hold: boolean
   payment_requested_at: string | null
   payment_received_at: string | null

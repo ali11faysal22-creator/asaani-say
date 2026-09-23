@@ -30,6 +30,7 @@ import {
   type VendorBookingAction,
 } from '@/app/lib/booking-api'
 import { ResponseCountdown } from '@/app/components/response-countdown'
+import { BookingTimeline } from '@/app/components/booking-timeline'
 
 export interface NotificationItem {
   id: string
@@ -502,6 +503,13 @@ export default function NotificationsPage() {
                           </div>
                         )}
                       </div>
+                    </div>
+                  )}
+
+                  {selectedNotif.booking && (
+                    <div className="rounded-xl border border-slate-100 bg-white p-4 text-xs">
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Job history</p>
+                      <BookingTimeline bookingId={selectedNotif.booking.id} role="vendor" />
                     </div>
                   )}
 
