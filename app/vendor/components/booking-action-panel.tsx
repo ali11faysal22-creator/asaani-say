@@ -10,6 +10,7 @@ import {
   type BookingResult,
   type VendorBookingAction,
 } from '@/app/lib/booking-api'
+import { ResponseCountdown } from '@/app/components/response-countdown'
 
 const TRACKED_STATUSES = ['accepted', 'on_the_way', 'reached', 'in_progress', 'paused', 'work_completed', 'payment_requested']
 const CANNOT_START_STATUSES = ['accepted', 'on_the_way', 'reached']
@@ -103,7 +104,13 @@ export function VendorBookingActionPanel({
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{error}</p>}
 
       {booking.status === 'pending' && (
-        <div className="flex items-center gap-3">
+        <div className="space-y-2">
+          {booking.vendor_response_deadline && (
+            <p className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-50 py-2 text-[11px] font-bold text-orange-700">
+              <ResponseCountdown deadline={booking.vendor_response_deadline} />
+            </p>
+          )}
+          <div className="flex items-center gap-3">
           <button
             type="button"
             disabled={actionInProgress}
@@ -120,6 +127,7 @@ export function VendorBookingActionPanel({
           >
             Decline
           </button>
+          </div>
         </div>
       )}
 

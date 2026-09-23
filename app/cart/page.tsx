@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createCustomerAddress, fetchAddresses, getCurrentUser, placeBooking, serviceFromCart, updateCustomerAddress } from '@/app/lib/booking-api'
+import { LocationPicker } from '@/app/components/location-picker'
 import { 
   Camera, 
   LayoutGrid, 
@@ -350,6 +351,8 @@ export default function CartAndCheckoutPage() {
   const [savedAddressIds, setSavedAddressIds] = useState<string[]>([])
   const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(0)
   const [billingDetails, setBillingDetails] = useState({ fullName: '', phone: '', email: '', address: '' })
+  const [addressLat, setAddressLat] = useState(31.5204)
+  const [addressLng, setAddressLng] = useState(74.3587)
 
   const [showModal, setShowModal] = useState(false)
   const [confirmedOrderInfo, setConfirmedOrderInfo] = useState<{
@@ -461,6 +464,8 @@ export default function CartAndCheckoutPage() {
           line: addressLine,
           city: 'Lahore',
           area: 'Lahore',
+          latitude: addressLat,
+          longitude: addressLng,
         })
       } else {
         const addresses = await fetchAddresses(auth.profile_id)
@@ -471,8 +476,8 @@ export default function CartAndCheckoutPage() {
           line: addressLine,
           city: 'Lahore',
           area: 'Lahore',
-          latitude: 31.5204,
-          longitude: 74.3587,
+          latitude: addressLat,
+          longitude: addressLng,
           is_default: addresses.length === 0,
         })
       }
@@ -636,8 +641,8 @@ export default function CartAndCheckoutPage() {
             line: billingDetails.address.trim(),
             city: 'Lahore',
             area: 'Lahore',
-            latitude: 31.5204,
-            longitude: 74.3587,
+            latitude: addressLat,
+            longitude: addressLng,
             is_default: addresses.length === 0,
           })
         } else {
@@ -1036,14 +1041,24 @@ export default function CartAndCheckoutPage() {
                         ))}
                       </select>
                     )}
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="address"
                       placeholder="Flat 44B, Sector Y Block, DHA Phase 3, Lahore, Pakistan"
                       value={billingDetails.address}
                       onChange={handleInputChange}
                       onBlur={() => void handleAddressBlur()}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium"
+                    />
+                    <LocationPicker
+                      label="Confirm this address on the map"
+                      hint="This pin is what we match you to the nearest, best-rated vendor with — drag it onto your exact spot."
+                      latitude={addressLat}
+                      longitude={addressLng}
+                      onLocationChange={(lat, lng) => {
+                        setAddressLat(lat)
+                        setAddressLng(lng)
+                      }}
                     />
                   </div>
                 </div>

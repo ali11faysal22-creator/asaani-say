@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { API_BASE, createCustomerAddress, fetchAddresses, fetchCategory, fetchDemoCustomer, formatSlotLabel, getAccessToken, getCurrentUser, getStoredAuth, type CatalogCategory, type CatalogService, type DateRow } from '../lib/booking-api'
 import { categoryIcon } from '../lib/category-icons'
+import { LocationPicker } from './location-picker'
 import CustomerNavbar from './customer-navbar'
 
 interface AddressItem {
@@ -71,6 +72,8 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
   const [newAddressLine, setNewAddressLine] = useState('')
   const [newAddressArea, setNewAddressArea] = useState('')
+  const [newAddressLat, setNewAddressLat] = useState(31.5204)
+  const [newAddressLng, setNewAddressLng] = useState(74.3587)
   const [savingAddress, setSavingAddress] = useState(false)
   const [availableDates, setAvailableDates] = useState<{ date: string; available: boolean; vendor_count: number }[]>([])
   const [selectedDate, setSelectedDate] = useState<string>('')
@@ -172,34 +175,16 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
     if (!customerId || !newAddressLine.trim()) return
     setSavingAddress(true)
 
-    const createAddress = (latitude: number, longitude: number) =>
-      createCustomerAddress({
+    try {
+      const address = await createCustomerAddress({
         customer_id: customerId,
         label: newAddressArea.trim() || 'Service address',
         line: newAddressLine.trim(),
         city: 'Lahore',
         area: newAddressArea.trim() || 'Lahore',
-        latitude,
-        longitude,
+        latitude: newAddressLat,
+        longitude: newAddressLng,
         is_default: addresses.length === 0,
-      })
-
-    try {
-      const address = await new Promise<AddressItem>((resolve, reject) => {
-        if (!navigator.geolocation) {
-          createAddress(31.5204, 74.3587).then(resolve).catch(reject)
-          return
-        }
-
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            createAddress(position.coords.latitude, position.coords.longitude).then(resolve).catch(reject)
-          },
-          () => {
-            createAddress(31.5204, 74.3587).then(resolve).catch(reject)
-          },
-          { enableHighAccuracy: true, timeout: 8000 }
-        )
       })
 
       setAddresses((previous) => [...previous, address])
@@ -238,6 +223,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
         slot_start: selectedSlot.start,
         slot_end: selectedSlot.end,
         notes: 'Please assign a vendor',
+        total_amount: totalPrice || undefined,
       }
       const token = getAccessToken('customer')
       const res = await fetch(`${API_BASE}/api/bookings`, {
@@ -450,6 +436,16 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                         onChange={(event) => setNewAddressArea(event.target.value)}
                         placeholder="Area name, e.g. Gulberg"
                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-500"
+                      />
+                      <LocationPicker
+                        label="Confirm this address on the map"
+                        hint="This pin is what we match you to the nearest, best-rated vendor with — drag it onto your exact spot."
+                        latitude={newAddressLat}
+                        longitude={newAddressLng}
+                        onLocationChange={(lat, lng) => {
+                          setNewAddressLat(lat)
+                          setNewAddressLng(lng)
+                        }}
                       />
                       <button
                         type="button"

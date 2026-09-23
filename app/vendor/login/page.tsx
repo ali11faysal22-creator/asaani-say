@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { loginUser, registerVendor, setStoredAuth } from '@/app/lib/booking-api'
+import { fetchPublicConfig, loginUser, registerVendor, setStoredAuth } from '@/app/lib/booking-api'
 import { PhoneInput, combinePhoneNumber } from '@/app/components/phone-input'
 import { DEFAULT_COUNTRY_ISO, COUNTRY_CODES } from '@/app/lib/country-codes'
 import { LocationPicker } from '@/app/components/location-picker'
@@ -212,7 +212,21 @@ export default function VendorLoginPage() {
   const [whatsappCountryCode, setWhatsappCountryCode] = useState(DEFAULT_DIAL_CODE)
   const [vendorLatitude, setVendorLatitude] = useState(31.5204)
   const [vendorLongitude, setVendorLongitude] = useState(74.3587)
+  // Falls back to this only if /api/config/defaults is unreachable — the real default
+  // radius lives in the backend's Settings.default_radius_km, not as a literal here.
   const [serviceRadiusKm, setServiceRadiusKm] = useState(10)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchPublicConfig()
+      .then((config) => {
+        if (!cancelled) setServiceRadiusKm(config.default_radius_km)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const saveVendorSelections = (
     categories: string[],
     subServices: string[],

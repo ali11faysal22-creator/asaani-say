@@ -29,6 +29,7 @@ import {
   type BookingResult,
   type VendorBookingAction,
 } from '@/app/lib/booking-api'
+import { ResponseCountdown } from '@/app/components/response-countdown'
 
 export interface NotificationItem {
   id: string
@@ -397,6 +398,11 @@ export default function NotificationsPage() {
                               {item.service}
                             </span>
                           )}
+                          {item.bookingStatus === 'pending' && item.booking?.vendor_response_deadline && (
+                            <span className="text-[10px] font-bold text-orange-600">
+                              <ResponseCountdown deadline={item.booking.vendor_response_deadline} />
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -503,7 +509,13 @@ export default function NotificationsPage() {
                   {selectedNotif.type === 'booking_request' && (
                     <div className="pt-2">
                       {selectedNotif.bookingStatus === 'pending' ? (
-                        <div className="flex items-center gap-3">
+                        <div className="space-y-2">
+                          {selectedNotif.booking?.vendor_response_deadline && (
+                            <p className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-50 py-2 text-[11px] font-bold text-orange-700">
+                              <ResponseCountdown deadline={selectedNotif.booking.vendor_response_deadline} />
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3">
                           <button
                             disabled={actionInProgress}
                             onClick={() => handleBookingAction(selectedNotif.id, 'accepted')}
@@ -518,6 +530,7 @@ export default function NotificationsPage() {
                           >
                             Decline
                           </button>
+                          </div>
                         </div>
                       ) : (
                         <div className="p-3 bg-slate-100 rounded-xl text-center text-xs font-bold text-slate-700">

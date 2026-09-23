@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { API_BASE, fetchCustomerBookings, formatSlotLabel, getCurrentUser, type BookingResult } from '@/app/lib/booking-api'
 import { InitialsAvatar } from '@/app/components/initials-avatar'
+import { ResponseCountdown } from '@/app/components/response-countdown'
 import { VendorRatingForm } from '@/app/customer/components/vendor-rating-form'
 
 const statusSteps = [
@@ -45,6 +46,7 @@ const statusRank: Record<string, number> = {
 const formatTrackingTime = (value: string | Date) => new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', hour12: true })
 
 const HERO_COPY: Record<string, { title: string; icon: typeof Truck }> = {
+  pending: { title: 'Waiting for vendor to accept', icon: Clock3 },
   accepted: { title: 'Vendor confirmed your order', icon: CheckCircle2 },
   on_the_way: { title: 'Vendor is on the way', icon: Truck },
   reached: { title: 'Vendor has arrived', icon: MapPin },
@@ -160,6 +162,19 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
           </div>
         </div>
 
+        {booking.status === 'pending' && (
+          <div className="flex items-center gap-3 rounded-2xl border border-orange-200 bg-orange-50 p-4">
+            <Clock3 className="h-5 w-5 shrink-0 text-orange-500" />
+            <div className="text-xs text-orange-800">
+              <p className="font-semibold">{booking.vendor.business_name} has been offered this job and hasn&apos;t responded yet.</p>
+              {booking.vendor_response_deadline && (
+                <p className="mt-0.5 font-bold">
+                  <ResponseCountdown deadline={booking.vendor_response_deadline} /> — if they don&apos;t respond in time, we&apos;ll automatically offer it to the next best vendor.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
         {booking.status === 'paused' && (
           <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
             <Pause className="h-5 w-5 shrink-0 text-amber-600" />

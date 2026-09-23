@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Bell, Check, Clock } from 'lucide-react'
 import { fetchCustomerNotifications, getStoredAuth, markCustomerNotificationRead } from '@/app/lib/booking-api'
+import { playNotificationSound } from '@/app/lib/notification-sound'
 
 interface NotificationItem {
   id: string
@@ -15,6 +16,7 @@ interface NotificationItem {
 export default function CustomerNotificationPopover() {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const previousUnreadIds = useRef<Set<string> | null>(null)
 
   useEffect(() => {
     let active = true
@@ -26,6 +28,13 @@ export default function CustomerNotificationPopover() {
         if (!active) return
         const uniqueRows = rows.filter((row, index, items) => index === items.findIndex((candidate) => candidate.title === row.title && candidate.body === row.body && candidate.type === row.type))
         const sorted = [...uniqueRows].sort((a, b) => new Date(b.created_at || b.createdAt || 0).getTime() - new Date(a.created_at || a.createdAt || 0).getTime())
+
+        const unreadIds = sorted.filter((row) => !row.is_read).map((row) => row.id)
+        if (previousUnreadIds.current !== null && unreadIds.some((id) => !previousUnreadIds.current!.has(id))) {
+          playNotificationSound()
+        }
+        previousUnreadIds.current = new Set(unreadIds)
+
         setNotifications(sorted.slice(0, 8).map((row) => ({
           id: row.id,
           title: row.body,

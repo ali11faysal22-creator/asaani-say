@@ -1,37 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { assignAdminBookingVendor, cancelAdminBooking, holdAdminBooking, type AdminBooking, type AdminVendor } from '@/app/lib/booking-api'
+import { cancelAdminBooking, holdAdminBooking, type AdminBooking } from '@/app/lib/booking-api'
 import { DetailModal } from './detail-modal'
 
 export function UnassignedBookingActionsModal({
   booking,
-  vendors,
   onClose,
   onUpdated,
 }: {
   booking: AdminBooking
-  vendors: AdminVendor[]
   onClose: () => void
   onUpdated: (updated: AdminBooking) => void
 }) {
-  const [vendorId, setVendorId] = useState('')
-  const [busy, setBusy] = useState<'assign' | 'cancel' | 'hold' | null>(null)
+  const [busy, setBusy] = useState<'cancel' | 'hold' | null>(null)
   const [error, setError] = useState('')
-
-  const runAssign = async () => {
-    if (!vendorId) return
-    setBusy('assign')
-    setError('')
-    try {
-      onUpdated(await assignAdminBookingVendor(booking.id, vendorId))
-      onClose()
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not assign vendor.')
-    } finally {
-      setBusy(null)
-    }
-  }
 
   const runCancel = async () => {
     if (!window.confirm('Cancel this booking? The customer will be notified.')) return
@@ -61,7 +44,7 @@ export function UnassignedBookingActionsModal({
 
   return (
     <DetailModal
-      title="No vendor accepted this booking"
+      title="No vendor accepted this booking yet"
       subtitle={`${booking.service_name} · ${booking.customer_name}`}
       onClose={onClose}
       fields={[
@@ -72,30 +55,11 @@ export function UnassignedBookingActionsModal({
         <div className="space-y-3">
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{error}</p>}
 
-          <div>
-            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Manually assign a vendor</p>
-            <div className="flex gap-2">
-              <select
-                value={vendorId}
-                onChange={(e) => setVendorId(e.target.value)}
-                className="flex-1 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52]"
-              >
-                <option value="">Select a vendor…</option>
-                {vendors.map((vendor) => (
-                  <option key={vendor.id} value={vendor.id}>
-                    {vendor.first_name} {vendor.last_name} — {vendor.business_name} {vendor.city ? `(${vendor.city})` : ''}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => void runAssign()}
-                disabled={!vendorId || busy !== null}
-                className="rounded-xl bg-[#EE6C52] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 disabled:opacity-50 cursor-pointer"
-              >
-                {busy === 'assign' ? 'Assigning…' : 'Assign'}
-              </button>
-            </div>
-          </div>
+          <p className="rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs leading-relaxed text-slate-500">
+            Auto-dispatch is still offering this job to the best-rated, nearest vendor within range and keeps
+            widening the search radius over time. Vendors are never assigned by hand — you can only cancel this
+            order or pause/resume the automatic retrying below.
+          </p>
 
           <div className="flex gap-2 border-t border-slate-100 pt-3">
             <button

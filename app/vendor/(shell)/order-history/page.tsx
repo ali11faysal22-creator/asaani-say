@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Eye, MapPin, Phone, ShoppingCart, X } from 'lucide-react'
 import { fetchVendorBookings, getStoredAuth, type BookingResult } from '@/app/lib/booking-api'
+import { ResponseCountdown } from '@/app/components/response-countdown'
 import { VendorBookingActionPanel } from '../../components/booking-action-panel'
 
 const STATUS_TABS = ['All', 'Needs action', 'Active', 'Completed'] as const
@@ -190,6 +191,11 @@ export default function OrderHistoryPage() {
                       <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black capitalize ${statusBadgeClass(order.status)}`}>
                         {statusLabel(order.status)}
                       </span>
+                      {order.status === 'pending' && order.vendor_response_deadline && (
+                        <p className="mt-1 text-[10px] font-bold text-orange-600">
+                          <ResponseCountdown deadline={order.vendor_response_deadline} />
+                        </p>
+                      )}
                     </td>
                     <td className="py-4 px-4 text-right font-black text-slate-900">
                       {order.total_amount != null ? `Rs: ${order.total_amount.toLocaleString()}` : '—'}

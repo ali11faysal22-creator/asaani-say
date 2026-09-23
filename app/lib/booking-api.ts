@@ -90,6 +90,8 @@ export type BookingResult = {
   customer_phone?: string | null
   total_amount?: number | null
   created_at: string
+  vendor_assigned_at?: string | null
+  vendor_response_deadline?: string | null
   accepted_at?: string | null
   reached_at?: string | null
   started_at?: string | null
@@ -282,6 +284,10 @@ async function api<T>(path: string, initWithRole?: RequestInit & { authRole?: Au
   }
   if (res.status === 204) return undefined as T
   return res.json()
+}
+
+export async function fetchPublicConfig(): Promise<{ default_radius_km: number }> {
+  return api('/api/config/defaults')
 }
 
 export async function fetchCategories(): Promise<CatalogCategory[]> {
@@ -664,6 +670,8 @@ export type AdminBooking = {
   slot_end: string
   total_amount: number | null
   created_at: string
+  vendor_assigned_at: string | null
+  vendor_response_deadline: string | null
   photos: string[]
   cannot_start_reason: string | null
   rating: number | null
@@ -710,15 +718,8 @@ export async function fetchAdminBookings(): Promise<AdminBooking[]> {
   return api('/api/admin/bookings')
 }
 
-// These only work while a booking is still UNASSIGNED — they're a manual fallback for
-// when auto-dispatch can't find or keep a vendor, not a general override.
-export async function assignAdminBookingVendor(bookingId: string, vendorId: string): Promise<AdminBooking> {
-  return api(`/api/admin/bookings/${encodeURIComponent(bookingId)}/assign`, {
-    method: 'PATCH',
-    body: JSON.stringify({ vendor_id: vendorId }),
-  })
-}
-
+// Auto-dispatch (rating, then distance, within each vendor's own signup radius) is the
+// only way a booking gets a vendor — admins can only cancel or pause/resume retrying.
 export async function cancelAdminBooking(bookingId: string): Promise<AdminBooking> {
   return api(`/api/admin/bookings/${encodeURIComponent(bookingId)}/cancel`, { method: 'PATCH' })
 }

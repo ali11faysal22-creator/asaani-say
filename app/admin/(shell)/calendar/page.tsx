@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Eye, MapPin, Wrench } from 'lucide-react'
-import { API_BASE, fetchAdminBookings, fetchAdminVendors, getCurrentUser, type AdminBooking, type AdminVendor } from '@/app/lib/booking-api'
+import { API_BASE, fetchAdminBookings, getCurrentUser, type AdminBooking } from '@/app/lib/booking-api'
 import { CHART_BLUE, STATUS_CRITICAL, STATUS_GOOD, STATUS_WARNING } from '@/app/components/charts/palette'
 import { StatusBadge, bookingStatusTone } from '../../components/status-badge'
 import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
 import { UnassignedBookingActionsModal } from '../../components/unassigned-booking-actions-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
+import { ResponseCountdown } from '@/app/components/response-countdown'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -32,7 +33,6 @@ export default function AdminCalendarPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [bookings, setBookings] = useState<AdminBooking[]>([])
-  const [vendors, setVendors] = useState<AdminVendor[]>([])
   const [cityFilter, setCityFilter] = useState('all')
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date()
@@ -43,11 +43,11 @@ export default function AdminCalendarPage() {
   const [resolveBooking, setResolveBooking] = useState<AdminBooking | null>(null)
 
   const loadData = async () => {
-    const [bookingsResult, vendorsResult] = await Promise.allSettled([fetchAdminBookings(), fetchAdminVendors()])
-    if (bookingsResult.status === 'fulfilled') setBookings(bookingsResult.value)
-    else console.error('Unable to load bookings', bookingsResult.reason)
-    if (vendorsResult.status === 'fulfilled') setVendors(vendorsResult.value)
-    else console.error('Unable to load vendors', vendorsResult.reason)
+    try {
+      setBookings(await fetchAdminBookings())
+    } catch (error) {
+      console.error('Unable to load bookings', error)
+    }
   }
 
   const applyUpdate = (updated: AdminBooking) => {
@@ -250,6 +250,11 @@ export default function AdminCalendarPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {booking.status === 'pending' && booking.vendor_response_deadline && (
+                    <span className="text-[10px] font-bold text-orange-600">
+                      <ResponseCountdown deadline={booking.vendor_response_deadline} />
+                    </span>
+                  )}
                   <StatusBadge label={booking.status.replace('_', ' ')} tone={bookingStatusTone(booking.status)} />
                   <IconActionButton icon={Eye} label="View details" onClick={() => setSelectedBooking(booking)} />
                   {booking.status === 'unassigned' && (
@@ -279,6 +284,9 @@ export default function AdminCalendarPage() {
             { label: 'Scheduled', value: `${selectedBooking.scheduled_date} · ${selectedBooking.slot_start}–${selectedBooking.slot_end}` },
             { label: 'Amount', value: selectedBooking.total_amount != null ? `Rs. ${selectedBooking.total_amount.toLocaleString()}` : '—' },
             { label: 'Status', value: <StatusBadge label={selectedBooking.status.replace('_', ' ')} tone={bookingStatusTone(selectedBooking.status)} /> },
+            ...(selectedBooking.status === 'pending' && selectedBooking.vendor_response_deadline
+              ? [{ label: 'Vendor response', value: <ResponseCountdown deadline={selectedBooking.vendor_response_deadline} className="text-orange-600" /> }]
+              : []),
             ...(selectedBooking.photos.length > 0
               ? [{
                   label: 'Photos',
@@ -314,7 +322,6 @@ export default function AdminCalendarPage() {
       {resolveBooking && (
         <UnassignedBookingActionsModal
           booking={resolveBooking}
-          vendors={vendors}
           onClose={() => setResolveBooking(null)}
           onUpdated={applyUpdate}
         />

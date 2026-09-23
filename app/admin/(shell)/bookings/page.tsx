@@ -6,10 +6,8 @@ import { Eye, Wrench } from 'lucide-react'
 import {
   API_BASE,
   fetchAdminBookings,
-  fetchAdminVendors,
   getCurrentUser,
   type AdminBooking,
-  type AdminVendor,
 } from '@/app/lib/booking-api'
 import { StatusBadge, bookingStatusTone } from '../../components/status-badge'
 import { TableToolbar } from '../../components/table-toolbar'
@@ -17,6 +15,7 @@ import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
 import { UnassignedBookingActionsModal } from '../../components/unassigned-booking-actions-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
+import { ResponseCountdown } from '@/app/components/response-countdown'
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -49,18 +48,17 @@ export default function AdminBookingsPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [bookings, setBookings] = useState<AdminBooking[]>([])
-  const [vendors, setVendors] = useState<AdminVendor[]>([])
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterKey>('all')
   const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null)
   const [resolveBooking, setResolveBooking] = useState<AdminBooking | null>(null)
 
   const loadData = async () => {
-    const [bookingsResult, vendorsResult] = await Promise.allSettled([fetchAdminBookings(), fetchAdminVendors()])
-    if (bookingsResult.status === 'fulfilled') setBookings(bookingsResult.value)
-    else console.error('Unable to load bookings', bookingsResult.reason)
-    if (vendorsResult.status === 'fulfilled') setVendors(vendorsResult.value)
-    else console.error('Unable to load vendors', vendorsResult.reason)
+    try {
+      setBookings(await fetchAdminBookings())
+    } catch (error) {
+      console.error('Unable to load bookings', error)
+    }
   }
 
   const applyUpdate = (updated: AdminBooking) => {
@@ -195,6 +193,11 @@ export default function AdminBookingsPage() {
                   {booking.admin_hold && (
                     <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">On hold</span>
                   )}
+                  {booking.status === 'pending' && booking.vendor_response_deadline && (
+                    <p className="mt-1 text-[10px] font-bold text-orange-600">
+                      <ResponseCountdown deadline={booking.vendor_response_deadline} />
+                    </p>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1.5">
@@ -243,6 +246,9 @@ export default function AdminBookingsPage() {
               ),
             },
             { label: 'Status', value: <StatusBadge label={selectedBooking.status.replace('_', ' ')} tone={bookingStatusTone(selectedBooking.status)} /> },
+            ...(selectedBooking.status === 'pending' && selectedBooking.vendor_response_deadline
+              ? [{ label: 'Vendor response', value: <ResponseCountdown deadline={selectedBooking.vendor_response_deadline} className="text-orange-600" /> }]
+              : []),
             { label: 'Created', value: new Date(selectedBooking.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) },
             ...(selectedBooking.photos.length > 0
               ? [{
@@ -279,7 +285,6 @@ export default function AdminBookingsPage() {
       {resolveBooking && (
         <UnassignedBookingActionsModal
           booking={resolveBooking}
-          vendors={vendors}
           onClose={() => setResolveBooking(null)}
           onUpdated={applyUpdate}
         />
