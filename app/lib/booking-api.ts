@@ -282,6 +282,13 @@ async function api<T>(path: string, initWithRole?: RequestInit & { authRole?: Au
   if (!res.ok) {
     const error = new Error(await readError(res)) as Error & { status?: number }
     error.status = res.status
+    if (res.status === 401 && token) {
+      // The token we sent is expired or invalid — drop every cached session holding it
+      // so polling components stop retrying with it and the app falls back to login.
+      for (const candidate of ['customer', 'vendor', 'admin'] as AuthRole[]) {
+        if (getAccessToken(candidate) === token) clearStoredAuth(candidate)
+      }
+    }
     throw error
   }
   if (res.status === 204) return undefined as T
