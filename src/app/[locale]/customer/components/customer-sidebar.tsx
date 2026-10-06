@@ -1,0 +1,105 @@
+'use client'
+
+import { Link } from '@/i18n/navigation'
+import { usePathname } from '@/i18n/navigation'
+import { Hand, LayoutDashboard, ListChecks, ShieldCheck, Sparkles, X } from 'lucide-react'
+import { useLanguage } from '@/app/lib/i18n'
+
+const NAV_ITEMS = [
+  { href: '/customer/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/customer/orders', label: 'My Orders', icon: ListChecks },
+] as const
+
+function Brand() {
+  const { t } = useLanguage()
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-9 h-9 rounded-xl bg-[#EE6C52] flex items-center justify-center shadow-xs shrink-0 relative">
+        <Hand className="w-4.5 h-4.5 text-white" />
+        <Sparkles className="w-3 h-3 text-white absolute -top-1 -end-1" />
+      </div>
+      <div className="leading-tight min-w-0">
+        <span className="font-extrabold text-base tracking-tight text-white block truncate">{t("Asaani Say")}</span>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('Customer Portal')}</span>
+      </div>
+    </div>
+  )
+}
+
+function isActive(pathname: string | null, href: string): boolean {
+  if (!pathname) return false
+  if (pathname === href) return true
+  if (href === '/customer/orders' && pathname.startsWith('/customer/tracking/')) return true
+  return false
+}
+
+function NavList({ pathname, onNavigate }: { pathname: string | null; onNavigate?: () => void }) {
+  const { t } = useLanguage()
+  return (
+    <nav className="space-y-1">
+      {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        const active = isActive(pathname, href)
+        return (
+          <Link
+            key={href}
+            href={href}
+            onClick={onNavigate}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${
+              active ? 'bg-[#EE6C52] text-white shadow-sm' : 'text-slate-300 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Icon className="w-4.5 h-4.5 shrink-0" />
+            <span>{t(label)}</span>
+          </Link>
+        )
+      })}
+    </nav>
+  )
+}
+
+function TrustNote() {
+  const { t } = useLanguage()
+  return (
+    <div className="pt-6 mt-6 border-t border-white/10 flex items-start gap-2.5 text-[11px] text-slate-400 leading-relaxed">
+      <ShieldCheck className="w-4 h-4 text-[#EE6C52] shrink-0 mt-0.5" />
+      <span>{t('Your account and booking history are kept private and secure.')}</span>
+    </div>
+  )
+}
+
+export default function CustomerSidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => void }) {
+  const pathname = usePathname()
+
+  return (
+    <>
+      <aside className="hidden md:flex md:flex-col md:w-64 lg:w-72 shrink-0 bg-[#2C2F45] text-white p-6 min-h-screen sticky top-0">
+        <Brand />
+        <div className="flex-1 mt-10">
+          <NavList pathname={pathname} />
+        </div>
+        <TrustNote />
+      </aside>
+
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+          <aside className="absolute inset-y-0 start-0 w-72 max-w-[85vw] bg-[#2C2F45] text-white p-6 flex flex-col shadow-2xl rtl:start-auto rtl:end-0">
+            <div className="flex items-center justify-between mb-10">
+              <Brand />
+              <button
+                onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1">
+              <NavList pathname={pathname} onNavigate={onClose} />
+            </div>
+            <TrustNote />
+          </aside>
+        </div>
+      )}
+    </>
+  )
+}
