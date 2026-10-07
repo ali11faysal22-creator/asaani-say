@@ -282,7 +282,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
       console.error(error)
       setBookingError(
         error instanceof TypeError && error.message === 'Failed to fetch'
-          ? 'Booking service is unavailable. Please make sure the backend is running at http://localhost:8000 and try again.'
+          ? 'Booking service is unavailable. Please make sure the backend is running at http://localhost:8010 and try again.'
           : 'Unable to connect to the booking service. Please try again.'
       )
     } finally {
