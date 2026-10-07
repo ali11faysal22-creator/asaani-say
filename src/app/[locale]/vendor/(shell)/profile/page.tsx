@@ -51,10 +51,10 @@ export default function VendorProfilePage() {
 
   const getInitialAvatar = (): string => {
     if (typeof window === 'undefined') {
-      return '/Worker.png'
+      return '/assets/shared/home-service-worker.png'
     }
 
-    return '/Worker.png'
+    return '/assets/shared/home-service-worker.png'
   }
 
   const getInitialProfile = (): VendorProfileData => ({
@@ -160,7 +160,7 @@ export default function VendorProfilePage() {
       const updatedVendor = await uploadVendorProfileImage(auth.profile_id, file)
       const imageUrl = updatedVendor.profile_image_url
         ? updatedVendor.profile_image_url.startsWith('/') ? `${API_BASE}${updatedVendor.profile_image_url}` : updatedVendor.profile_image_url
-        : '/Worker.png'
+        : '/assets/shared/home-service-worker.png'
       setAvatar(imageUrl)
       setToast({ show: true, message: 'Profile picture saved successfully!', type: 'success' })
     } catch (error) {

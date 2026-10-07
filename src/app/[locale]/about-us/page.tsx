@@ -55,7 +55,7 @@ export default function AboutUsPage() {
             <div className="md:col-span-6">
               <div className="relative rounded-3xl overflow-hidden shadow-xl border-4 border-white">
                 <img
-                  src="/Hero%20Image.png"
+                  src="/assets/about-us/about-us-hero.png"
                   alt="Technician helping customer"
                   className="w-full h-85 object-cover"
                 />
@@ -198,7 +198,7 @@ export default function AboutUsPage() {
                 role: 'Solar Panel Chief Specialist',
                 projects: '310 Completed Projects',
                 desc: 'Committed to clean energy efficiency installation and solar grid safety optimizations.',
-                img: 'Rectangle.png'
+                img: '/assets/about-us/technician-charlie-sinclair.png'
               }
             ].map((tech) => (
               <div key={tech.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-xs space-y-4 pb-6">

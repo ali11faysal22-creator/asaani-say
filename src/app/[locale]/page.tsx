@@ -21,21 +21,21 @@ const expertsData: ExpertItem[] = [
     name: 'Thomas Schroeder',
     jobsCompleted: '199 Job Completed',
     bio: 'Hello there, i am one of Asaani say plumbing service expert. I am ready to help you solve whatever plumbing problem in your house.',
-    image: '/plumber-repair-experienced-attentive-middleaged-man-examining-bottom-kitchen-sink.jpg',
+    image: '/assets/home/plumber-repairing-kitchen-sink.jpg',
   },
   {
     number: '02',
     name: 'Timothy Brake',
     jobsCompleted: '199 Job Completed',
     bio: 'Hello there, i am one of Asaani say plumbing service expert. I am ready to help you solve whatever plumbing problem in your house.',
-    image: '/plumber-with-his-arms-crossed.jpg',
+    image: '/assets/home/plumber-expert-arms-crossed.jpg',
   },
   {
     number: '03',
     name: 'Charlie Sinclair',
     jobsCompleted: '199 Job Completed',
     bio: 'Hello there, i am one of Asaani say plumbing service expert. I am ready to help you solve whatever plumbing problem in your house.',
-    image: '/plumbing-professional-doing-his-job.jpg',
+    image: '/assets/shared/plumbing-professional-at-work.jpg',
   },
 ]
 function renderStars(rating: number): React.ReactNode {
@@ -80,7 +80,7 @@ function renderStars(rating: number): React.ReactNode {
     problem: 'Problem : Dripping Faucets',
     rating: 4.5,
     text: 'Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.',
-    image: '/image.png',
+    image: '/assets/home/customer-testimonial-andrea-elliott.png',
   },
   small: [
     {
@@ -88,14 +88,14 @@ function renderStars(rating: number): React.ReactNode {
       problem: 'Problem : Running Toilets',
       rating: 4.5,
       text: 'Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.',
-      image: '/handsome-bearded-businessman-rubbing-hands-having-deal.jpg',
+      image: '/assets/home/customer-testimonial-jerry-johnson.jpg',
     },
     {
       name: 'Lisa C. Packer',
       problem: 'Problem : Water Heater Problems',
       rating: 4.5,
       text: 'Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.',
-      image: '/happy-authentic-girl-smiling-pointing-fingers-sideways-showing-left-right-banner-demonstrating-p.jpg',
+      image: '/assets/home/customer-testimonial-lisa-packer.jpg',
     },
   ],
 }
@@ -553,7 +553,7 @@ export default function HeroSection() {
           <div className="lg:col-span-6 space-y-6">
            <div className="relative w-full h-95 rounded-2xl overflow-hidden shadow-sm border border-slate-100">
           <Image
-            src="/carpenter-talking-mobile-phone.jpg"
+            src="/assets/home/carpenter-booking-service-by-phone.jpg"
              alt="How To Get Our Service"
               fill
                 className="object-cover"/>
@@ -586,7 +586,7 @@ export default function HeroSection() {
             </div>
             <div className="relative w-full h-95 rounded-2xl overflow-hidden shadow-sm border border-slate-100">
               <Image
-                src="/close-up-carpenter-working-with-drill.jpg" 
+                src="/assets/home/carpenter-drilling-wood.jpg" 
                 alt="Trusted Service With Affordable Price"
                 fill
                 className="object-cover"/>
@@ -719,7 +719,7 @@ export default function HeroSection() {
             <div className="lg:col-span-6 flex flex-col items-end gap-4">
                 <div className="relative w-full max-w-lg aspect-4/3 rounded-tl-140px rounded-tr-2xl rounded-b-2xl overflow-hidden bg-[#3D425A]">
                     <Image
-                        src="/group 90.png"
+                        src="/assets/home/handyman-talking-on-mobile-phone.png"
                         alt="Handyman talking on mobile phone"
                         fill
                         className="object-cover object-center"/>
@@ -820,7 +820,7 @@ export default function HeroSection() {
        <div className="lg:col-span-5 flex justify-center lg:justify-end">
         <div className="relative w-full max-w-md aspect-4/3 sm:aspect-square">
          <Image
-                src="/worker.png"
+                src="/assets/shared/home-service-worker.png"
                 alt="Hire The Best Home Services In Town"
                 fill
                 className="object-cover object-center"/>

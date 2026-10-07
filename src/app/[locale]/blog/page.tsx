@@ -24,7 +24,7 @@ export default function BlogPage() {
     author: "Theresa Schroeder",
     date: "March 18, 2026",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
-    image: "Featured Image.png"
+    image: "/assets/blog/home-shifting-relocation-checklist.png"
   };
 
   const latestArticles = [
@@ -37,7 +37,7 @@ export default function BlogPage() {
       author: "Theresa Schroeder",
       date: "March 15, 2026",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
-      image: "Thumbnail.png"
+      image: "/assets/blog/plumbing-system-urgent-repair-signs.png"
     },
     {
       id: 2,
@@ -48,7 +48,7 @@ export default function BlogPage() {
       author: "Timothy Banks",
       date: "March 11, 2026",
       avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
-      image: "Thumbnail (1).png"
+      image: "/assets/blog/ac-maintenance-guide-summer.png"
     },
     {
       id: 3,
@@ -59,7 +59,7 @@ export default function BlogPage() {
       author: "Timothy Banks",
       date: "March 08, 2026",
       avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
-      image: "Thumbnail (2).png"
+      image: "/assets/blog/electrical-safety-tips-homeowners.png"
     },
     {
       id: 4,
@@ -70,7 +70,7 @@ export default function BlogPage() {
       author: "Charles Brouwer",
       date: "March 04, 2026",
       avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop",
-      image: "Thumbnail (3).png"
+      image: "/assets/blog/clean-solar-energy-transition.png"
     },
     {
       id: 5,
@@ -81,7 +81,7 @@ export default function BlogPage() {
       author: "Mirraj Al-Hasan",
       date: "March 01, 2026",
       avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=150&auto=format&fit=crop",
-      image: "Thumbnail (4).png"
+      image: "/assets/blog/kitchen-deep-cleaning-tips.png"
     },
     {
       id: 6,
@@ -92,7 +92,7 @@ export default function BlogPage() {
       author: "Theresa Schroeder",
       date: "Feb 25, 2026",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
-      image: "Thumbnail (5).png"
+      image: "/assets/blog/pest-control-garden-safeguards.png"
     }
   ];
 

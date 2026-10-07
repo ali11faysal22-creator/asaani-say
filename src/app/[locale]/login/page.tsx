@@ -29,7 +29,7 @@ export default function GetStartedPage(){
           <div className="space-y-3">
             <div className="relative w-full h-40 rounded-xl overflow-hidden bg-slate-800">
               <Image
-                src="/vendor.jpg"
+                src="/assets/login/vendor-login.jpg"
                 alt="Vendor"
                 fill
                 className="object-cover"/>
@@ -53,7 +53,7 @@ export default function GetStartedPage(){
           <div className="space-y-3">
             <div className="relative w-full h-40 rounded-xl overflow-hidden bg-slate-800">
               <Image
-                src="/customer2.jpg"
+                src="/assets/login/customer-login.jpg"
                 alt="Look For a Service"
                 fill
                 className="object-cover"/>

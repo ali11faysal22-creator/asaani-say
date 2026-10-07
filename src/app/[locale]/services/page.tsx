@@ -52,7 +52,7 @@ const trendingServices = [
      rating:'4.5',
      originalPrice:'Rs: 4500',
     discountPrice:'Rs: 3000',
-     image:'/checking-conditioner.jpg',
+     image:'/assets/services/ac-technician-checking-conditioner.jpg',
      href:'/services/ac-services',
   },
 
@@ -62,7 +62,7 @@ const trendingServices = [
      rating:'4.5',
     originalPrice:'Rs:2000',
     discountPrice:'Rs:1500',
-    image:'/young-engineer-adjusting-autonomous-heating.jpg',
+    image:'/assets/services/plumbing-engineer-adjusting-heating.jpg',
     href:'/services/plumbing',
   },
 ]
@@ -73,7 +73,7 @@ const expertsList = [
     rating:'4.5',
     jobsCompleted:'199 Job Completed',
      bio:'Hello there, I am one of Asaani say plumbing service expert. I am ready to help you solve whatever plumbing problem in your house.',
-     image:'/high-angle-man-working-as-plumber.jpg',
+     image:'/assets/services/plumber-expert-thomas-schroeder.jpg',
   },
 
   {
@@ -82,7 +82,7 @@ const expertsList = [
     rating:'4.5',
     jobsCompleted:'199 Job Completed',
      bio:'Hello there, I am one of Asaani say plumbing service expert. I am ready to help you solve whatever plumbing problem in your house.',
-    image:'/man-servant-cleaning-kitchen.jpg',
+    image:'/assets/services/home-cleaning-kitchen.jpg',
   },
   {
     id: '03',
@@ -90,7 +90,7 @@ const expertsList = [
     rating: '4.5',
     jobsCompleted: '199 Job Completed',
     bio: 'Hello there, I am one of Asaani say plumbing service expert. I am ready to help you solve whatever plumbing problem in your house.',
-    image: '/plumbing-professional-doing-his-job.jpg',
+    image: '/assets/shared/plumbing-professional-at-work.jpg',
   },
 ]
 
@@ -102,7 +102,7 @@ const subTestimonials = [
     rating: 4.5,
     review:
       'Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.',
-    image: '/side-view-man-working-as-plumber.jpg',
+    image: '/assets/services/plumber-testimonial-jerry-johnson.jpg',
   },
 
   {
@@ -112,7 +112,7 @@ const subTestimonials = [
     rating: 4.5,
     review:
       'Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.',
-    image: '/need-help-unhappy-woman-crouching-near-leaking-water-tap-home.jpg',
+    image: '/assets/services/leaking-tap-customer-lisa-packer.jpg',
   },
 ]
 
@@ -259,7 +259,7 @@ export default function ServicesPage(){
       <section className="relative w-full h-95 sm:h-112.5 bg-slate-100 flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-black/60 z-10" />
         <Image
-          src="/screws-wooden-wall.jpg"
+          src="/assets/services/carpentry-screws-wooden-wall.jpg"
           alt="Home Maintenance Hero Background"
           fill
           className="object-cover object-center opacity-40"
@@ -500,7 +500,7 @@ export default function ServicesPage(){
         <div className="bg-white rounded-2xl overflow-hidden grid grid-cols-1 md:grid-cols-12 relative shadow-sm">
           <div className="md:col-span-5 relative bg-[#3B4058] min-h-65 sm:min-h-80">
             <Image
-              src="/handsome-successful-senior-businessman-showing-thumbs-up-approval.jpg"
+              src="/assets/services/happy-customer-thumbs-up.jpg"
               alt="Andrea D. Elliott"
               fill
               className="object-cover"/>
