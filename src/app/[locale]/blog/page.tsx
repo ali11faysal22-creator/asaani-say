@@ -6,6 +6,7 @@ import Image from 'next/image';
 import CustomerNavbar from '../components/customer-navbar';
 import PublicContactBar from '../components/public-contact-bar';
 import { useLanguage } from '../lib/i18n';
+import PublicFooter from '../components/public-footer'
 
 export default function BlogPage() {
   const { language, t } = useLanguage();
@@ -20,8 +21,8 @@ export default function BlogPage() {
     category: "HOME SHIFTING",
     readTime: "10 min read",
     title: "The Complete Relocation Checklist: How to Move Homes Without the Stress",
-    excerpt: "Relocating to a new house is notoriously overwhelming. Asaani Say's ultimate shifting framework breaks the massive shifting task into daily effortless steps, guaranteeing a seamless handoff of your belongings.",
-    author: "Theresa Schroeder",
+    excerpt: "Relocating to a new house is historically overwhelming. Asaani Say's ultimate shifting framework breaks the massive shifting task into daily effortless steps, guaranteeing a seamless handoff of your belongings.",
+    author: "Thomas Schroeder",
     date: "March 18, 2026",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
     image: "/assets/blog/home-shifting-relocation-checklist.png"
@@ -33,8 +34,8 @@ export default function BlogPage() {
       category: "PLUMBING TIPS",
       readTime: "5 min read",
       title: "5 Signs Your Home's Plumbing System Needs Urgent Repair",
-      excerpt: "Hidden water leaks and low pressure can cost you thousands. Learn how to spot plumbing failures early and order repair quickly.",
-      author: "Theresa Schroeder",
+      excerpt: "Hidden water leaks and low pressure can cost you thousands. Learn how to spot plumbing failures early and solve them quickly.",
+      author: "Thomas Schroeder",
       date: "March 15, 2026",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
       image: "/assets/blog/plumbing-system-urgent-repair-signs.png"
@@ -45,8 +46,8 @@ export default function BlogPage() {
       readTime: "7 min read",
       title: "The Ultimate AC Maintenance Guide for Pakistan's Hot Summers",
       excerpt: "Ensure your cooling system runs at peak efficiency. Simple DIY filter cleaning tricks and when to call a professional technician.",
-      author: "Timothy Banks",
-      date: "March 11, 2026",
+      author: "Timothy Brake",
+      date: "March 12, 2026",
       avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
       image: "/assets/blog/ac-maintenance-guide-summer.png"
     },
@@ -55,8 +56,8 @@ export default function BlogPage() {
       category: "ELECTRICAL",
       readTime: "6 min read",
       title: "Electrical Safety Hacks Every Homeowner Must Know",
-      excerpt: "Flickering lights? Overheated power outlets? Here is how to keep your family safe from common electrical hazards at home.",
-      author: "Timothy Banks",
+      excerpt: "Flickering lights? Overloaded power outlets? Here is how to keep your family safe from common electrical hazards at home.",
+      author: "Timothy Brake",
       date: "March 08, 2026",
       avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
       image: "/assets/blog/electrical-safety-tips-homeowners.png"
@@ -67,7 +68,7 @@ export default function BlogPage() {
       readTime: "8 min read",
       title: "How to Transition Your Home to Clean Solar Energy Efficiently",
       excerpt: "Solar panels are changing energy in Pakistan. Discover the setup costs, net metering benefits, and peak efficiency seasons.",
-      author: "Charles Brouwer",
+      author: "Charlie Sinclair",
       date: "March 04, 2026",
       avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop",
       image: "/assets/blog/clean-solar-energy-transition.png"
@@ -78,8 +79,8 @@ export default function BlogPage() {
       readTime: "4 min read",
       title: "Deep Cleaning Hacks to Keep Kitchens Grease-Free",
       excerpt: "Grease and grime gather fast in active kitchens. Use these eco-friendly remedies and expert professional routines to sparkle.",
-      author: "Mirraj Al-Hasan",
-      date: "March 01, 2026",
+      author: "Nimra Raheel",
+      date: "Feb 28, 2026",
       avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=150&auto=format&fit=crop",
       image: "/assets/blog/kitchen-deep-cleaning-tips.png"
     },
@@ -88,9 +89,9 @@ export default function BlogPage() {
       category: "PEST CONTROL",
       readTime: "9 min read",
       title: "Pest Control: Safe and Natural Safeguards for Your Garden",
-      excerpt: "Keep beneficial insects, and insects away from your precious living space using secure, eco-safe professional treatments.",
-      author: "Theresa Schroeder",
-      date: "Feb 25, 2026",
+      excerpt: "Keep termites, pests, and insects far away from your precious living space using secure, child-safe professional treatments.",
+      author: "Thomas Schroeder",
+      date: "Feb 22, 2026",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
       image: "/assets/blog/pest-control-garden-safeguards.png"
     }
@@ -108,9 +109,9 @@ export default function BlogPage() {
       
       <section className="bg-[#3B3E5B] text-white pt-16 pb-20 px-6 text-center">
         <div className="max-w-3xl mx-auto space-y-3">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight">
+          <h1 className="font-extrabold tracking-tight fs-h2">
             {t("Our Blog")}</h1>
-          <p className="text-xs sm:text-sm text-slate-200 leading-relaxed max-w-2xl mx-auto font-light">
+          <p className="text-slate-200 leading-relaxed max-w-2xl mx-auto font-light fs-p">
             {t("Tips, Guides & Expert Advice for Your Home Shifting, Repairs and Maintenance in Pakistan.")}</p>
         </div>
       </section>
@@ -144,11 +145,11 @@ export default function BlogPage() {
                   <span className="text-xs text-slate-400 font-medium">{t(featuredPost.readTime)}</span>
                 </div>
 
-                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 leading-snug">
+                <h3 className="font-bold text-slate-900 leading-snug fs-h3">
                   {t(featuredPost.title)}
                 </h3>
 
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                <p className="text-slate-600 leading-relaxed font-normal fs-p">
                   {t(featuredPost.excerpt)}
                 </p>
               </div>
@@ -161,8 +162,8 @@ export default function BlogPage() {
                     className="w-9 h-9 rounded-full object-cover border border-slate-200"
                   />
                   <div>
-                    <p className="text-xs font-bold text-slate-900">{featuredPost.author}</p>
-                    <p className="text-[11px] text-slate-400" dir="ltr">{formatBlogDate(featuredPost.date)}</p>
+                    <p className="font-bold text-slate-900 fs-p">{featuredPost.author}</p>
+                    <p className="text-slate-400 fs-p" dir="ltr">{formatBlogDate(featuredPost.date)}</p>
                   </div>
                 </div>
 
@@ -209,7 +210,7 @@ export default function BlogPage() {
                       {t(article.title)}
                     </h3>
 
-                    <p className="text-xs text-slate-500 leading-relaxed line-clamp-3">
+                    <p className="text-slate-500 leading-relaxed line-clamp-3 fs-p">
                       {t(article.excerpt)}
                     </p>
                   </div>
@@ -222,8 +223,8 @@ export default function BlogPage() {
                     className="w-7 h-7 rounded-full object-cover"
                   />
                   <div>
-                    <p className="text-[11px] font-bold text-slate-800">{article.author}</p>
-                    <p className="text-[10px] text-slate-400" dir="ltr">{formatBlogDate(article.date)}</p>
+                    <p className="font-bold text-slate-800 fs-p">{article.author}</p>
+                    <p className="text-slate-400 fs-p" dir="ltr">{formatBlogDate(article.date)}</p>
                   </div>
                 </div>
               </div>
@@ -239,9 +240,9 @@ export default function BlogPage() {
       <section className="bg-[#616683] text-white py-14 px-6 text-center">
         <div className="max-w-2xl mx-auto space-y-6">
           <div className="space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h2 className="font-extrabold tracking-tight fs-h2">
               {t("Subscribe to Our Newsletter")}</h2>
-            <p className="text-xs sm:text-sm text-slate-200 font-light">
+            <p className="text-slate-200 font-light fs-p">
               {t("Get the latest home care hacks, solar incentives, and shifting tips directly in your inbox.")}</p>
           </div>
 
@@ -261,81 +262,7 @@ export default function BlogPage() {
       </section>
 
       
-    <footer className="w-full bg-[#393E58] text-slate-200 pt-16 pb-8 font-sans">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-12">
-            <div className="md:col-span-5 space-y-3">
-              <p className=" text-xs text-slate-300 tracking-wide font-normal"> {t("All You Need")}</p>
-              <h2 className=" text-3xl font-black text-orange-500 tracking-tight">{t("Asaani Say")}</h2>
-
-
-            </div>
-
-              <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-3 text-xs gap-8">
-                
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-white text-sm">{t("Navigation")}</h3>
-                  <ul className="space-y-2 text-slate-300">
-                     <li>
-                    <Link href="/" className="hover:text-orange-500 transition">{t("Home")}</Link>
-                  </li>
-                          
-                        <li>
-                  <Link href="/about-us" className="hover:text-orange-500 transition">{t("About Us")}</Link>
-
-                </li>
-
-                   <li>
-                  <Link href="/services" className="hover:text-orange-500 transition">{t("Services")}</Link>
-                </li>
-                        
-                     <li>
-                  <Link href="/contact-us" className="hover:text-orange-500 transition">{t("Contact Us")}</Link>
-                </li>
-
-                  </ul>
-                </div>
-         
-         <div className="space-y-3">
-          <h3 className="font-semibold text-sm text-white">{t("Quick Links")}</h3>
-          <ul className="space-y-2 text-slate-300 ">
-            <li>
-              <a href="#" className="hover:text-orange-500 transition">{t("Privacy Policy")}</a>
-
-            </li>
-            <li>
-              <a href="#" className="hover:text-orange-500 transition">{t("Terms Of Services")}</a>
-            </li>
-                <li>
-                  <a href="#" className=" hover:text-orange-500 transition">{t("Disclaimer")}</a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-orange-500 transition">{t("FAQ")}</a>
-                </li>
-          </ul>
-
-         </div>
-                  
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-sm text-white">{t("Contact Us")}</h3>
-                     <div className="space-y-2 text-slate-300 leading-relaxed">
-                  <p>
-                    {t("Our Support and Sales team is available 24 /7 to answer your queries")}</p>
-                  <p className="pt-1 font-medium">+1 (333) 000-0000</p>
-                  <p className="font-medium">{t("Asaanisay@gmail.com")}</p>
-                </div>
-
-                  </div>
-                
-              </div>
-
-          </div>
-           <div className="border-t border-slate-200/40 pt-6 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-300 gap-2">
-            <p>{t("Copyright © 2026AsaaniSay")}</p>
-          </div>
-        </div>
-
-      </footer>
+    <PublicFooter />
 
     </div>
   );

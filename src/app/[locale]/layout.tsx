@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Nastaliq_Urdu } from "next/font/google";
+import { Poppins, Noto_Nastaliq_Urdu } from "next/font/google";
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import "./globals.css";
 import CustomerRequestMonitor from './components/customer-request-monitor';
-const inter = Inter({
-  variable: "--font-inter",
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
 })
 
 const notoNastaliqUrdu = Noto_Nastaliq_Urdu({
@@ -42,9 +43,9 @@ export default async function RootLayout({
     <html
       lang={locale}
       dir={locale === 'ur' ? 'rtl' : 'ltr'}
-      className={`${inter.variable} ${notoNastaliqUrdu.variable} h-full antialiased`}
+      className={`${poppins.variable} ${notoNastaliqUrdu.variable} h-full antialiased`}
     >
-      <body className={`min-h-full flex flex-col ${locale === 'ur' ? notoNastaliqUrdu.className : inter.className}`}>
+      <body className={`min-h-full flex flex-col ${locale === 'ur' ? notoNastaliqUrdu.className : poppins.className}`}>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <CustomerRequestMonitor />
           <main className="flex-1">{children}</main>

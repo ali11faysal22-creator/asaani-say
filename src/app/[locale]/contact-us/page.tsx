@@ -12,6 +12,7 @@ import CustomerNavbar from '../components/customer-navbar';
 import PublicContactBar from '../components/public-contact-bar';
 import { useLanguage } from '../lib/i18n';
 import { submitContactMessage } from '../lib/booking-api';
+import PublicFooter from '../components/public-footer'
 
 export default function ContactPage() {
   const { t } = useLanguage();
@@ -94,9 +95,9 @@ export default function ContactPage() {
       
       <section className="bg-[#3B3E5B] text-white pt-16 pb-24 px-6 text-center">
         <div className="max-w-3xl mx-auto space-y-4">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight">
+          <h1 className="font-extrabold tracking-tight fs-h2">
             {t("Contact Our Team")}</h1>
-          <p className="text-xs sm:text-sm text-slate-200 leading-relaxed max-w-2xl mx-auto font-light">
+          <p className="text-slate-200 leading-relaxed max-w-2xl mx-auto font-light fs-p">
             {t("Have questions about bookings, service coverage, or custom requirements? Reach out to Asaani Say. We are ready to help you maintain your home swiftly and stress-free.")}</p>
         </div>
       </section>
@@ -112,8 +113,8 @@ export default function ContactPage() {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("CALL US")}</p>
-              <p className="text-sm font-bold text-slate-900 mt-1">+1 (333) 000-00000</p>
-              <p className="text-[11px] text-slate-600 leading-snug mt-2">{t("Available Mon–Sat 9AM–6PM for quick assistance.")}</p>
+              <p className="font-bold text-slate-900 mt-1 fs-p">+1 (333) 000-00000</p>
+              <p className="text-slate-600 leading-snug mt-2 fs-p">{t("Available Mon–Sat 9AM–6PM for quick assistance.")}</p>
             </div>
           </div>
 
@@ -124,8 +125,8 @@ export default function ContactPage() {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("EMAIL US")}</p>
-              <p className="text-sm font-bold text-slate-900 mt-1 break-all">{t("AsaaniSay@gmail.com")}</p>
-              <p className="text-[11px] text-slate-600 leading-snug mt-2">{t("Drop us an email anytime and we will respond within 24 hours.")}</p>
+              <p className="font-bold text-slate-900 mt-1 break-all fs-p">{t("AsaaniSay@gmail.com")}</p>
+              <p className="text-slate-600 leading-snug mt-2 fs-p">{t("Drop us an email anytime and we will respond within 24 hours.")}</p>
             </div>
           </div>
 
@@ -136,8 +137,8 @@ export default function ContactPage() {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("OFFICE ADDRESS")}</p>
-              <p className="text-sm font-bold text-slate-900 mt-1">{t("Lahore, Pakistan")}</p>
-              <p className="text-[11px] text-slate-600 leading-snug mt-2">{t("Centrally located head office serving all major cities.")}</p>
+              <p className="font-bold text-slate-900 mt-1 fs-p">{t("Lahore, Pakistan")}</p>
+              <p className="text-slate-600 leading-snug mt-2 fs-p">{t("Centrally located head office serving all major cities.")}</p>
             </div>
           </div>
 
@@ -148,8 +149,8 @@ export default function ContactPage() {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t("WORKING HOURS")}</p>
-              <p className="text-sm font-bold text-slate-900 mt-1">{t("Mon – Sat: 9AM – 6PM")}</p>
-              <p className="text-[11px] text-slate-600 leading-snug mt-2">{t("Sundays closed for routine maintenance upgrades.")}</p>
+              <p className="font-bold text-slate-900 mt-1 fs-p">{t("Mon – Sat: 9AM – 6PM")}</p>
+              <p className="text-slate-600 leading-snug mt-2 fs-p">{t("Sundays closed for routine maintenance upgrades.")}</p>
             </div>
           </div>
 
@@ -163,8 +164,8 @@ export default function ContactPage() {
           
           <div className="lg:col-span-6 bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">{t("Send a Message")}</h2>
-              <p className="text-xs text-slate-500 mt-1">{t("Fill out the form below, and our team will get in touch with you shortly.")}</p>
+              <h2 className="font-bold text-slate-900 fs-h4">{t("Send a Message")}</h2>
+              <p className="text-slate-500 mt-1 fs-p">{t("Fill out the form below, and our team will get in touch with you shortly.")}</p>
             </div>
 
             <form onSubmit={handleContactSubmit} className="space-y-4 text-xs">
@@ -252,8 +253,8 @@ export default function ContactPage() {
           
           <div className="lg:col-span-6 space-y-4">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">{t("Our Location")}</h2>
-              <p className="text-xs text-slate-500 mt-1">{t("Drop by our office in Lahore or find certified neighborhood professionals near you.")}</p>
+              <h2 className="font-bold text-slate-900 fs-h4">{t("Our Location")}</h2>
+              <p className="text-slate-500 mt-1 fs-p">{t("Drop by our office in Lahore or find certified neighborhood professionals near you.")}</p>
             </div>
 
             <div className="w-full h-95 rounded-3xl overflow-hidden shadow-sm border border-slate-200 relative bg-slate-100">
@@ -284,7 +285,7 @@ export default function ContactPage() {
                 {t("COMMON QUESTIONS")}</span>
               <span className="w-6 h-0.5 bg-orange-500"></span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900">
+            <h2 className="font-black text-slate-900 fs-h2">
               {t("Frequently Asked Questions")}</h2>
           </div>
 
@@ -322,54 +323,7 @@ export default function ContactPage() {
       </section>
 
       
-      <footer className="w-full bg-[#393E58] text-slate-200 pt-16 pb-8 font-sans">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-12">
-            <div className="md:col-span-5 space-y-3">
-              <p className="text-xs text-slate-300 tracking-wide font-normal">
-                {t("All your home maintenance and repair needs solved with trust, speed, and affordability.")}</p>
-              <h2 className="text-3xl font-black text-orange-500 tracking-tight">
-                {t("Asaani Say")}</h2>
-            </div>
-
-            <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-3 text-xs gap-8">
-              <div className="space-y-3">
-                <h3 className="font-semibold text-white text-sm">{t("Navigation")}</h3>
-                <ul className="space-y-2 text-slate-300">
-                  <li><Link href="/" className="hover:text-orange-500 transition">{t("Home")}</Link></li>
-                  <li><Link href="/about-us" className="hover:text-orange-500 transition">{t("About Us")}</Link></li>
-                  <li><Link href="/services" className="hover:text-orange-500 transition">{t("Services")}</Link></li>
-                  <li><Link href="/contact-us" className="hover:text-orange-500 transition">{t("Contact Us")}</Link></li>
-                </ul>
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm text-white">{t("Quick Links")}</h3>
-                <ul className="space-y-2 text-slate-300">
-                  <li><Link href="#" className="hover:text-orange-500 transition">{t("Privacy Policy")}</Link></li>
-                  <li><Link href="#" className="hover:text-orange-500 transition">{t("Terms Of Service")}</Link></li>
-                  <li><Link href="#" className="hover:text-orange-500 transition">{t("Disclaimer")}</Link></li>
-                  <li><Link href="#" className="hover:text-orange-500 transition">{t("FAQ")}</Link></li>
-                </ul>
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm text-white">{t("Contact Us")}</h3>
-                <div className="space-y-2 text-slate-300 leading-relaxed">
-                  <p>{t("Our Support and Sales team is available 24/7 to answer your queries.")}</p>
-                  <p className="pt-1 font-medium">+1 (333) 000-00000</p>
-                 
-                  <p className="font-medium">{t("AsaaniSay@gmail.com")}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-200/40 pt-6 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-300 gap-2">
-            <p>{t("Copyright © 2026 AsaaniSay. All rights reserved.")}</p>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
 
     </div>
   );

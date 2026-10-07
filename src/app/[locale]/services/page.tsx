@@ -265,25 +265,25 @@ export default function ServicesPage(){
           className="object-cover object-center opacity-40"
           priority/>
         <div className="relative z-20 max-w-5xl mx-auto px-4 text-center text-white space-y-4">
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black leading-tight tracking-tight">
+          <h1 className="font-black leading-tight tracking-tight fs-h2">
             {t('Easier Home')} <br />
             <span className="text-orange-500">{t('Maintenance,')}</span> <br />
             {t('Every Day!!')}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-200 max-w-2xl mx-auto font-medium">
+          <p className="text-slate-200 max-w-2xl mx-auto font-medium fs-p">
             {t('Bringing Customers And Professionals Together For Quick, Secure, And Affordable Bookings.')}
           </p>
         </div>
       </section>
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center mb-12 space-y-2">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1E2342] tracking-tight">
+          <h2 className="font-extrabold text-[#1E2342] tracking-tight fs-h2">
             {t('Services')}
           </h2>
-          <p className="text-xs sm:text-sm font-medium text-slate-500">
+          <p className="font-medium text-slate-500 fs-p">
             {t('Choose From Our Wide Range Of Services')}
           </p>
-          {catalogError && <p className="text-sm text-red-500">{catalogError}</p>}
+          {catalogError && <p className="text-red-500 fs-p">{catalogError}</p>}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {categories.map((service) => {
@@ -294,7 +294,7 @@ export default function ServicesPage(){
                 <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-slate-50">
                   <Icon className={`w-8 h-8 ${service.icon_class || 'text-[#23263B]'}`}/>
                 </div>
-                <h3 className="text-base sm:text-lg font-bold text-[#1E2342]">
+                <h3 className="font-bold text-[#1E2342] fs-h4">
                   {t(service.display_name)}
                 </h3>
               </div>
@@ -307,13 +307,13 @@ export default function ServicesPage(){
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             <div className="lg:col-span-7">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight leading-snug">
+              <h2 className="font-extrabold tracking-tight leading-snug fs-h2">
                 {t('Fast, Friendly, and Satisfaction')} <br className="hidden sm:inline" />
                 {t('Guarantee')}
               </h2>
             </div>
             <div className="lg:col-span-5">
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              <p className="text-slate-300 leading-relaxed fs-p">
                 {t('No matter how big or small your work is, whether it’s for the interior or exterior of your home, we are ready to serve and help you solve your home problems.')}
               </p>
             </div>
@@ -326,10 +326,10 @@ export default function ServicesPage(){
                   {feature.icon}
                 </div>
                 <div className="space-y-1.5">
-                  <h3 className="text-base sm:text-lg font-bold text-white">
+                  <h3 className="font-bold text-white fs-h4">
                     {t(feature.title)}
                   </h3>
-                  <p className="text-xs text-slate-300 leading-relaxed max-w-md">
+                  <p className="text-slate-300 leading-relaxed max-w-md fs-p">
                     {t(feature.desc)}
                   </p>
                 </div>
@@ -342,7 +342,7 @@ export default function ServicesPage(){
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-5 space-y-4">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#1E2342] leading-tight">
+            <h2 className="font-extrabold text-[#1E2342] leading-tight fs-h2">
               {t('Everyone’s')} <br />
               <span className="relative inline-block">
                 {t('Booking This!')}
@@ -350,7 +350,7 @@ export default function ServicesPage(){
                 <span className="absolute bottom-1 start-0 w-full h-1 bg-sky-500 rounded-full"/>
               </span>
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-md">
+            <p className="text-slate-500 leading-relaxed max-w-md fs-p">
               {t('High repeat bookings and excellent reviews show the trust our customers place in Asaani Say services.')}
             </p>
           </div>
@@ -358,7 +358,7 @@ export default function ServicesPage(){
             {trendingServices.map((service) => (
               <Link key={service.id} href={service.href} onClick={rememberScrollPosition} className="block">
                 <div className="bg-orange-500 text-white rounded-xl overflow-hidden flex items-center shadow-md border border-red-300/20 hover:opacity-95 transition">
-                  <div className="relative w-36 sm:w-48 h-32 sm:h-36 shrink-0 bg-slate-200">
+                  <div className="relative w-28 sm:w-48 h-32 sm:h-36 shrink-0 bg-slate-200">
                     <Image
                       src={service.image}
                       alt={service.title}
@@ -366,18 +366,18 @@ export default function ServicesPage(){
                       className="object-cover"/>
                   </div>
                   <div className="p-4 sm:p-6 flex-1 space-y-2">
-                    <h3 className="text-lg sm:text-2xl font-bold tracking-tight">
+                    <h3 className="font-bold tracking-tight fs-h3">
                       {t(service.title)}
                     </h3>
-                    <div className="inline-flex items-center gap-1 bg-white text-slate-900 px-2 py-0.5 rounded text-xs font-bold shadow-sm">
+                    <div className="inline-flex items-center gap-1 bg-white text-slate-900 px-2 py-0.5 rounded text-sm font-bold shadow-sm">
                       <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                       <span>{service.rating}</span>
                     </div>
                     <div className="pt-1">
-                      <p className="text-xs text-white/80 line-through font-medium">
+                      <p className="text-white/80 line-through font-medium fs-p">
                         {service.originalPrice}
                       </p>
-                      <p className="text-xl sm:text-2xl font-extrabold">
+                      <p className="font-extrabold fs-h4">
                         {service.discountPrice}
                       </p>
                     </div>
@@ -394,19 +394,19 @@ export default function ServicesPage(){
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <span className="w-6 h-0.5 bg-orange-500"/>
-                <span className="text-xs font-bold text-[#EE6C52] uppercase tracking-wider">
+                <span className="text-sm font-bold text-[#EE6C52] uppercase tracking-wider">
                   {t('Plumber Expert')}
                 </span>
               </div>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#1E2342] tracking-tight">
+              <h2 className="font-extrabold text-[#1E2342] tracking-tight fs-h2">
                 {t("Meet Some Of Our")}{' '}<br />
                 {t("Plumbing Expert")}</h2>
             </div>
 
             <div className="border-s-2 border-[#EE6C52] ps-4 py-1 space-y-0.5 max-w-sm">
-              <h4 className="text-xs font-bold text-[#1E2342]">
+              <h4 className="text-sm font-bold text-[#1E2342]">
                 {t("Meet Some Of Our Expert Plumbers.")}</h4>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-slate-500 leading-relaxed fs-p">
                 {t("Skilled, Reliable, And Ready To Handle Any Job With Precision.")}</p>
             </div>
           </div>
@@ -427,7 +427,7 @@ export default function ServicesPage(){
                 </div>
 
                 <div className="space-y-1.5 px-1">
-                  <h3 className="text-base sm:text-lg font-bold text-[#1E2342]">
+                  <h3 className="font-bold text-[#1E2342] fs-h4">
                     {expert.name}
                   </h3>
                   <div className="flex items-center gap-1">
@@ -436,14 +436,14 @@ export default function ServicesPage(){
                         <Star key={i} className="w-3.5 h-3.5 fill-current" />
                       ))}
                     </div>
-                    <span className="text-xs text-slate-400 font-medium ms-1">
+                    <span className="text-sm text-slate-400 font-medium ms-1">
                       {expert.rating}
                     </span>
                   </div>
-                  <p className="text-xs font-bold text-[#1E2342]">
+                  <p className="font-bold text-[#1E2342] fs-p">
                     {expert.jobsCompleted}
                   </p>
-                  <p className="text-xs text-slate-500 leading-relaxed pt-1">
+                  <p className="text-slate-500 leading-relaxed pt-1 fs-p">
                     {expert.bio}
                   </p>
                 </div>
@@ -458,10 +458,10 @@ export default function ServicesPage(){
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="w-6 h-0.5 bg-orange-500" />
-              <span className="text-xs font-bold text-orange-500 uppercase tracking-wider">
+              <span className="text-sm font-bold text-orange-500 uppercase tracking-wider">
                 {t("Testimonial")}</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#1E2342] tracking-tight">
+            <h2 className="font-extrabold text-[#1E2342] tracking-tight fs-h2">
               {t("What They Say About Our")}{' '}<br />
               {t("Service")}</h2>
           </div>
@@ -484,13 +484,13 @@ export default function ServicesPage(){
               </svg>
             </div>
             <div className="space-y-1">
-              <p className="text-[11px] text-slate-500 font-medium leading-tight">
+              <p className="text-slate-500 font-medium leading-tight fs-p">
                 {t("Based On 236,488 Review")}{' '}<br />
                 <span className="font-semibold text-slate-700">{t("In Google Business")}</span>
               </p>
               <Link
                 href="#"
-                className="inline-flex items-center gap-1 text-xs font-bold text-[#1E2342] hover:text-orange-500 transition border-b border-slate-300 pb-0.5">
+                className="inline-flex items-center gap-1 text-sm font-bold text-[#1E2342] hover:text-orange-500 transition border-b border-slate-300 pb-0.5">
                 {t("More Testimonial")}{' '}<ArrowUpRight className="w-3.5 h-3.5"/>
               </Link>
             </div>
@@ -510,10 +510,10 @@ export default function ServicesPage(){
           </div>
 
           <div className="md:col-span-7 p-6 sm:p-10 flex flex-col justify-center space-y-3">
-            <h3 className="text-xl sm:text-2xl font-extrabold text-[#1E2342]">
+            <h3 className="font-extrabold text-[#1E2342] fs-h3">
               {t("Andrea D. Elliott")}</h3>
 
-            <div className="inline-flex items-center gap-1.5 bg-red-50 text-red-500 px-2.5 py-1 rounded-full text-xs font-semibold w-fit">
+            <div className="inline-flex items-center gap-1.5 bg-red-50 text-red-500 px-2.5 py-1 rounded-full text-sm font-semibold w-fit">
               <AlertCircle className="w-3.5 h-3.5" />
               <span>{t("Problem : Dripping Faucets")}</span>
             </div>
@@ -525,10 +525,10 @@ export default function ServicesPage(){
                 ))}
                 <Star className="w-4 h-4 text-amber-400"/>
               </div>
-              <span className="text-xs text-slate-400 font-bold ms-1">4.5</span>
+              <span className="text-sm text-slate-400 font-bold ms-1">4.5 (90%)</span>
             </div>
 
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-lg">
+            <p className="text-slate-600 leading-relaxed max-w-lg fs-p">
               {t("Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.")}</p>
           </div>
         </div>
@@ -548,7 +548,7 @@ export default function ServicesPage(){
                   {item.name}
                 </h4>
 
-                <div className="inline-flex items-center gap-1 text-red-500 text-[11px] font-medium">
+                <div className="inline-flex items-center gap-1 text-red-500 text-sm font-medium">
                   <AlertCircle className="w-3 h-3" />
                   <span>{t("Problem :")}{' '}{item.problem}</span>
                 </div>
@@ -560,12 +560,12 @@ export default function ServicesPage(){
                     ))}
                     <Star className="w-3 h-3 text-amber-400"/>
                   </div>
-                  <span className="text-[10px] text-slate-400 font-bold ms-1">
-                    {item.rating}
+                  <span className="text-sm text-slate-400 font-bold ms-1">
+                    {item.rating} (90%)
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-500 leading-relaxed pt-1">
+                <p className="text-slate-500 leading-relaxed pt-1 fs-p">
                   {item.review}
                 </p>
               </div>

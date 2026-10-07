@@ -6,7 +6,7 @@ import { Crosshair, MapPin } from 'lucide-react'
 
 const LocationMap = dynamic(
   () => import('./location-map').then((mod) => mod.LocationMap),
-  { ssr: false, loading: () => <div className="h-[280px] w-full animate-pulse rounded-xl bg-slate-100" /> }
+  { ssr: false, loading: () => <div className="h-60 sm:h-72 w-full animate-pulse rounded-xl bg-slate-100" /> }
 )
 
 export function LocationPicker({
@@ -30,6 +30,7 @@ export function LocationPicker({
   onRadiusChange?: (km: number) => void
 }) {
   const [locating, setLocating] = useState(false)
+  const [recenterKey, setRecenterKey] = useState(0)
   const [locateError, setLocateError] = useState('')
   const [addressError, setAddressError] = useState('')
   const geocodeRequest = useRef<AbortController | null>(null)
@@ -93,6 +94,10 @@ export function LocationPicker({
   }
 
   const useCurrentLocation = () => {
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setLocateError('Location needs a secure (HTTPS) connection. Please open the site over HTTPS.')
+      return
+    }
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setLocateError('Location is not supported on this device/browser.')
       return
@@ -102,6 +107,7 @@ export function LocationPicker({
     navigator.geolocation.getCurrentPosition(
       (position) => {
         updateLocation(position.coords.latitude, position.coords.longitude)
+        setRecenterKey((key) => key + 1)
         setLocating(false)
       },
       (error) => {
@@ -113,7 +119,7 @@ export function LocationPicker({
         setLocateError(messages[error.code] || 'Could not get your location. Please drag the pin instead.')
         setLocating(false)
       },
-      { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     )
   }
 
@@ -137,7 +143,7 @@ export function LocationPicker({
       {addressError && <p className="text-[11px] font-semibold text-red-600">{addressError}</p>}
 
       <div className="overflow-hidden rounded-xl border border-slate-200">
-        <LocationMap latitude={latitude} longitude={longitude} radiusKm={radiusKm} onLocationChange={updateLocation} />
+        <LocationMap latitude={latitude} longitude={longitude} radiusKm={radiusKm} recenterKey={recenterKey} onLocationChange={updateLocation} />
       </div>
 
       {radiusKm != null && onRadiusChange && (
