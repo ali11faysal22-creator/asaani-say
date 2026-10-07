@@ -128,11 +128,14 @@ export default function NotificationPopover() {
 
                     <div className="divide-y divide-slate-50">
                       {group.items.map((item) => (
-                        <div
+                        <Link
                           key={item.id}
-                          onClick={() => void handleMarkSingleAsRead(item.id)}
-                          className="px-5 py-3.5 flex items-start gap-3.5 transition hover:bg-slate-50 cursor-pointer group"
-                          title={t('Click to mark as read')}
+                          href="/vendor/notifications"
+                          onClick={() => {
+                            setIsOpen(false)
+                            if (item.unread) void handleMarkSingleAsRead(item.id)
+                          }}
+                          className="px-5 py-3.5 flex items-start gap-3.5 transition hover:bg-slate-50 group"
                         >
                           {item.visual.kind === 'avatar' ? (
                             <img src={item.visual.src} alt="" className="w-9 h-9 rounded-full object-cover shrink-0 mt-0.5 bg-slate-100" />
@@ -156,7 +159,7 @@ export default function NotificationPopover() {
                           {item.unread && (
                             <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1.5 group-hover:bg-slate-400" />
                           )}
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   </div>

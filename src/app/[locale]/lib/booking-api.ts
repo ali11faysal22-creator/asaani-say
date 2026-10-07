@@ -121,6 +121,7 @@ export type AuthResponse = {
   profile_id: string
   role: AuthRole
   email: string
+  full_name?: string | null
   message: string
   access_token?: string | null
   token_type?: string

@@ -7,9 +7,9 @@ import {
   MapPin,
   Clock,
   ChevronDown,
-  Globe,
 } from 'lucide-react';
 import CustomerNavbar from '../components/customer-navbar';
+import PublicContactBar from '../components/public-contact-bar';
 import { useLanguage } from '../lib/i18n';
 import { submitContactMessage } from '../lib/booking-api';
 
@@ -86,21 +86,10 @@ export default function ContactPage() {
     <div className="w-full bg-slate-50 font-sans text-slate-800">
       
       
-      <div className="bg-[#EEF2FB] text-xs text-slate-600 py-2.5 px-4 md:px-12 flex justify-between items-center border-b border-slate-100">
-        <div className="flex items-center gap-6">
-          <span>{t("AsaaniSay@gmail.com")}</span>
-          <span className="border-s border-slate-300 ps-6">+1 (333) 000-00000</span>
-        </div>
-        <div className="flex items-center gap-3 text-slate-700">
-          
-          <a href="#" className="hover:text-orange-500 transition">
-            <Globe className="w-4 h-4"/>
-          </a>
-        </div>
-      </div>
+      <PublicContactBar />
 
       
-      <CustomerNavbar active="contact" />
+      <CustomerNavbar active="contact" showLanguageSwitcher={false} />
 
       
       <section className="bg-[#3B3E5B] text-white pt-16 pb-24 px-6 text-center">

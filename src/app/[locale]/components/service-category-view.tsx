@@ -1,12 +1,10 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from '@/i18n/navigation'
 import {
-  Camera,
   CheckCircle2,
-  LayoutGrid,
   Plus,
   Star,
   X,
@@ -20,12 +18,16 @@ import {
   Navigation,
   Loader2
 } from 'lucide-react'
-import { API_BASE, createCustomerAddress, fetchAddresses, fetchCategory, fetchDemoCustomer, formatSlotLabel, getAccessToken, getCurrentUser, getStoredAuth, type CatalogCategory, type CatalogService, type DateRow } from '../lib/booking-api'
+import { API_BASE, createCustomerAddress, fetchAddresses, fetchCategory, fetchDemoCustomer, formatSlotLabel, getAccessToken, getCurrentUser, getStoredAuth, updateCustomerAddress, type ApiAddress, type CatalogCategory, type CatalogService, type DateRow } from '../lib/booking-api'
 import { categoryIcon } from '../lib/category-icons'
 import { LocationPicker } from './location-picker'
 import CustomerNavbar from './customer-navbar'
-import LanguageSwitcher from './language-switcher'
+import PublicContactBar from './public-contact-bar'
+import PublicFooter from './public-footer'
 import { useLanguage } from '../lib/i18n'
+import { PENDING_SERVICE_BOOKING_KEY, readPendingServiceBooking } from '../lib/service-booking-resume'
+
+const PENDING_SERVICE_ADDRESS_KEY = 'asaani_pending_service_address'
 
 interface AddressItem {
   id: string
@@ -89,10 +91,11 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   const [bookingData, setBookingData] = useState<BookingResponse | null>(null)
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
   const [bookingError, setBookingError] = useState('')
+  const resumedBookingRef = useRef<{ date?: string; slot?: { start: string; end: string } } | null>(null)
 
   const Icon = categoryIcon(category?.icon)
 
-  const handleDateSelect = useCallback((dateStr: string) => {
+  const handleDateSelect = useCallback((dateStr: string, preferredSlot?: { start: string; end: string }) => {
     setSelectedDate(dateStr)
     setSelectedSlot(null)
     setLoadingSlots(true)
@@ -103,7 +106,13 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
     fetch(`${API_BASE}/api/availability/slots?address_id=${selectedAddress}&date=${dateStr}&service_id=${serviceId}&service=${encodeURIComponent(serviceName)}`)
       .then((res) => res.json())
       .then((data) => {
-        setSlots(data.slots || [])
+        const availableSlots = data.slots || []
+        setSlots(availableSlots)
+        const restoredSlot = preferredSlot
+          ? availableSlots.find((slot: { start: string; end: string; available: boolean }) =>
+              slot.start === preferredSlot.start && slot.end === preferredSlot.end && slot.available)
+          : undefined
+        if (restoredSlot) setSelectedSlot({ start: restoredSlot.start, end: restoredSlot.end })
         setLoadingSlots(false)
       })
       .catch(() => {
@@ -113,6 +122,27 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   useEffect(() => {
     fetchCategory(slug).then(setCategory).catch(() => {})
   }, [slug])
+  useEffect(() => {
+    if (!category || getStoredAuth('customer')?.role !== 'customer') return
+
+    const pendingBooking = readPendingServiceBooking()
+    if (!pendingBooking) return
+    if (pendingBooking.slug !== slug) return
+
+    const restoredServices = (category.services || []).filter((service) => pendingBooking.serviceIds.includes(service.id))
+    if (restoredServices.length === 0) {
+      console.warn('Pending service booking no longer matches this service category')
+      sessionStorage.removeItem(PENDING_SERVICE_BOOKING_KEY)
+      return
+    }
+
+    resumedBookingRef.current = { date: pendingBooking.date, slot: pendingBooking.slot }
+    queueMicrotask(() => {
+      setSelectedServices(restoredServices)
+      setIsSlotModalOpen(true)
+    })
+    sessionStorage.removeItem(PENDING_SERVICE_BOOKING_KEY)
+  }, [category, slug])
   useEffect(() => {
     const loadCustomer = async () => {
       try {
@@ -135,8 +165,54 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
           customerAddresses = [defaultAddress]
         }
         setCustomerId(customer.id)
+        let restoredAddress: ApiAddress | null = null
+        if (auth?.role === 'customer' && getAccessToken('customer')) {
+          const pendingAddress = sessionStorage.getItem(PENDING_SERVICE_ADDRESS_KEY)
+          if (pendingAddress) {
+            try {
+              const draft: unknown = JSON.parse(pendingAddress)
+              if (
+                typeof draft === 'object' && draft !== null
+                && 'line' in draft && typeof draft.line === 'string'
+                && 'area' in draft && typeof draft.area === 'string'
+                && 'latitude' in draft && typeof draft.latitude === 'number'
+                && 'longitude' in draft && typeof draft.longitude === 'number'
+              ) {
+                try {
+                  const homeAddress = customerAddresses.find((item) => item.label.trim().toLowerCase() === 'home')
+                    || (customerAddresses.length >= 2
+                      ? customerAddresses.find((item) => item.is_default) || customerAddresses[0]
+                      : undefined)
+                  const addressPayload = {
+                    label: homeAddress?.label || 'Home',
+                    line: draft.line.trim(),
+                    city: 'Lahore',
+                    area: draft.area.trim() || 'Lahore',
+                    latitude: draft.latitude,
+                    longitude: draft.longitude,
+                    is_default: true,
+                  }
+                  restoredAddress = homeAddress
+                    ? await updateCustomerAddress(homeAddress.id, customer.id, addressPayload)
+                    : await createCustomerAddress({ customer_id: customer.id, ...addressPayload })
+                  customerAddresses = await fetchAddresses(customer.id)
+                  sessionStorage.removeItem(PENDING_SERVICE_ADDRESS_KEY)
+                } catch (error) {
+                  setNewAddressLine(draft.line)
+                  setNewAddressArea(draft.area)
+                  setNewAddressLat(draft.latitude)
+                  setNewAddressLng(draft.longitude)
+                  setShowNewAddressForm(true)
+                  setBookingError(error instanceof Error ? error.message : 'Unable to save address')
+                }
+              }
+            } catch {
+              sessionStorage.removeItem(PENDING_SERVICE_ADDRESS_KEY)
+            }
+          }
+        }
         setAddresses(customerAddresses)
-        const def = customerAddresses.find((a) => a.is_default) || customerAddresses[0]
+        const def = restoredAddress || customerAddresses.find((a) => a.is_default) || customerAddresses[0]
         if (def) setSelectedAddress(def.id)
       } catch {
         setAddresses([])
@@ -156,9 +232,19 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
           const fetchedDates = data.dates || []
           setAvailableDates(fetchedDates)
           setLoadingDates(false)
-          const validDate = fetchedDates.find((d: DateRow) => d.available) || fetchedDates[0]
+          const resumedBooking = resumedBookingRef.current
+          const resumedDate = resumedBooking?.date
+          const resumedSlot = resumedBooking?.slot
+          resumedBookingRef.current = null
+          const validDate = (resumedDate && fetchedDates.find((date: DateRow) =>
+            date.date === resumedDate && date.available))
+            || fetchedDates.find((date: DateRow) => date.available)
+            || fetchedDates[0]
           if (validDate) {
-            handleDateSelect(validDate.date)
+            handleDateSelect(
+              validDate.date,
+              resumedDate === validDate.date ? resumedSlot : undefined,
+            )
           }
         })
         .catch(() => {
@@ -174,28 +260,70 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
     }
   }
 
+  const saveBookingDraftForLogin = () => {
+    sessionStorage.setItem(PENDING_SERVICE_BOOKING_KEY, JSON.stringify({
+      slug,
+      serviceIds: selectedServices.map((service) => service.id),
+      ...(selectedDate ? { date: selectedDate } : {}),
+      ...(selectedSlot ? { slot: selectedSlot } : {}),
+    }))
+  }
+
+  const saveAddressDraftForLogin = () => {
+    sessionStorage.setItem(PENDING_SERVICE_ADDRESS_KEY, JSON.stringify({
+      line: newAddressLine,
+      area: newAddressArea,
+      latitude: newAddressLat,
+      longitude: newAddressLng,
+    }))
+    saveBookingDraftForLogin()
+  }
+
   const handleAddAddress = async () => {
-    if (!customerId || !newAddressLine.trim()) return
+    if (!newAddressLine.trim()) return
     setSavingAddress(true)
+    setBookingError('')
 
     try {
-      const address = await createCustomerAddress({
-        customer_id: customerId,
-        label: newAddressArea.trim() || 'Service address',
+      const auth = await getCurrentUser('customer')
+      const accessToken = getAccessToken('customer')
+      if (auth.role !== 'customer' || !auth.profile_id || !accessToken) {
+        saveAddressDraftForLogin()
+        setShowAuthPrompt(true)
+        return
+      }
+
+      setCustomerId(auth.profile_id)
+      const currentAddresses = await fetchAddresses(auth.profile_id)
+      const homeAddress = currentAddresses.find((item) => item.label.trim().toLowerCase() === 'home')
+        || (currentAddresses.length >= 2
+          ? currentAddresses.find((item) => item.is_default) || currentAddresses[0]
+          : undefined)
+      const addressPayload = {
+        label: homeAddress?.label || 'Home',
         line: newAddressLine.trim(),
         city: 'Lahore',
         area: newAddressArea.trim() || 'Lahore',
         latitude: newAddressLat,
         longitude: newAddressLng,
-        is_default: addresses.length === 0,
-      })
+        is_default: true,
+      }
+      const address = homeAddress
+        ? await updateCustomerAddress(homeAddress.id, auth.profile_id, addressPayload)
+        : await createCustomerAddress({ customer_id: auth.profile_id, ...addressPayload })
 
-      setAddresses((previous) => [...previous, address])
+      setAddresses(await fetchAddresses(auth.profile_id))
       setSelectedAddress(address.id)
       setNewAddressLine('')
       setNewAddressArea('')
       setShowNewAddressForm(false)
+      sessionStorage.removeItem(PENDING_SERVICE_ADDRESS_KEY)
     } catch (error) {
+      if ((error as { status?: number }).status === 401) {
+        saveAddressDraftForLogin()
+        setShowAuthPrompt(true)
+        return
+      }
       setBookingError(error instanceof Error ? error.message : 'Unable to save address')
     } finally {
       setSavingAddress(false)
@@ -293,19 +421,9 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   const totalPrice = selectedServices.reduce((acc, curr) => acc + (curr.price || 0), 0)
 
   return (
-    <div className="w-full bg-white font-sans text-slate-800 relative min-h-screen pb-24">
+    <div className="w-full bg-white font-sans text-slate-800 relative min-h-screen">
       
-      <div className="bg-[#EEF2FB] text-xs text-slate-600 py-2.5 px-4 md:px-12 flex justify-between items-center border-b border-slate-100">
-        <div className="flex items-center gap-6">
-          <span>{t("Asaani Say@gmail.com")}</span>
-          <span className="border-s border-slate-300 ps-6">+1 (333) 000-0000</span>
-        </div>
-        <div className="flex items-center gap-4 text-slate-700">
-          <a href="#" aria-label="Instagram" className="hover:text-orange-500 transition"><Camera className="w-4 h-4" /></a>
-          <LayoutGrid className="w-4 h-4" />
-          <LanguageSwitcher compact />
-        </div>
-      </div>
+      <PublicContactBar />
 
       <CustomerNavbar active="services" showLanguageSwitcher={false} />
 
@@ -350,7 +468,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                     <button
                       type="button"
                       onClick={() => toggleSelectService(item)}
-                      className={`text-[11px] font-bold px-3 py-1 rounded flex items-center gap-1 transition cursor-pointer ${
+                      className={`shrink-0 whitespace-nowrap text-[10px] sm:text-[11px] font-bold px-2 sm:px-3 py-1 rounded flex items-center gap-1 transition cursor-pointer ${
                         isSelected ? 'bg-emerald-600 text-white' : 'bg-[#EE6C52] text-white hover:bg-orange-600'
                       }`}
                     >
@@ -446,6 +564,10 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                         hint="This pin is what we match you to the nearest, best-rated vendor with — drag it onto your exact spot."
                         latitude={newAddressLat}
                         longitude={newAddressLng}
+                        onAddressResolved={({ address, area }) => {
+                          setNewAddressLine(address)
+                          if (area) setNewAddressArea(area)
+                        }}
                         onLocationChange={(lat, lng) => {
                           setNewAddressLat(lat)
                           setNewAddressLng(lng)
@@ -626,12 +748,22 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
             <h3 className="text-lg font-extrabold text-slate-900">{t("Login or create an account")}</h3>
             <p className="mt-2 text-xs leading-relaxed text-slate-500">{t("Please login or sign up before confirming your service request. Your account will be saved securely in our database.")}</p>
             <div className="mt-6 grid grid-cols-2 gap-3">
-              <button onClick={() => router.push('/customer/login')} className="rounded-xl bg-orange-500 px-3 py-3 text-xs font-extrabold text-white hover:bg-orange-600">{t('Login / Signup')}</button>
+              <button
+                onClick={() => {
+                  saveBookingDraftForLogin()
+                  setShowAuthPrompt(false)
+                  router.push('/customer/login')
+                }}
+                className="rounded-xl bg-orange-500 px-3 py-3 text-xs font-extrabold text-white hover:bg-orange-600"
+              >
+                {t('Login / Signup')}
+              </button>
               <button onClick={() => setShowAuthPrompt(false)} className="rounded-xl border border-slate-200 px-3 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50">{t('Go back')}</button>
             </div>
           </div>
         </div>
       )}
+      <PublicFooter />
     </div>
   )
 }

@@ -8,9 +8,8 @@ import { createCustomerAddress, fetchAddresses, getCurrentUser, placeBooking, se
 import { LocationPicker } from '@/app/components/location-picker'
 import LanguageSwitcher from '@/app/components/language-switcher'
 import { useLanguage } from '../lib/i18n'
+import SocialLinks from '../components/social-links'
 import { 
-  Camera, 
-  LayoutGrid, 
   Hand, 
   Sparkles, 
   Trash2, 
@@ -392,8 +391,8 @@ export default function CartAndCheckoutPage() {
       if (auth?.role === 'customer' && auth.profile_id) {
         const backendAddresses = await fetchAddresses(auth.profile_id).catch(() => [])
         if (backendAddresses.length > 0) {
-          setSavedAddresses(backendAddresses.slice(0, 2).map((address) => address.line))
-          setSavedAddressIds(backendAddresses.slice(0, 2).map((address) => address.id))
+          setSavedAddresses(backendAddresses.map((address) => address.line))
+          setSavedAddressIds(backendAddresses.map((address) => address.id))
           const savedAddress = getInitialBillingDetails().address
           const selectedIndex = backendAddresses.findIndex((address) => address.line === savedAddress)
           setSelectedAddressIndex(selectedIndex >= 0 ? selectedIndex : 0)
@@ -472,7 +471,6 @@ export default function CartAndCheckoutPage() {
         })
       } else {
         const addresses = await fetchAddresses(auth.profile_id)
-        if (addresses.length >= 2) return
         savedAddress = await createCustomerAddress({
           customer_id: auth.profile_id,
           label: `Address ${addresses.length + 1}`,
@@ -485,14 +483,13 @@ export default function CartAndCheckoutPage() {
         })
       }
 
-      const updatedAddresses = [...savedAddresses]
-      updatedAddresses[selectedAddressIndex] = savedAddress.line
-      setSavedAddresses(updatedAddresses.slice(0, 2))
-
-      const updatedAddressIds = [...savedAddressIds]
-      updatedAddressIds[selectedAddressIndex] = savedAddress.id
-      setSavedAddressIds(updatedAddressIds.slice(0, 2))
-      setStoredJson('asaani_user_addresses', updatedAddresses.slice(0, 2))
+      const updatedAddresses = await fetchAddresses(auth.profile_id)
+      const addressLines = updatedAddresses.map((address) => address.line)
+      const addressIds = updatedAddresses.map((address) => address.id)
+      setSavedAddresses(addressLines)
+      setSavedAddressIds(addressIds)
+      setSelectedAddressIndex(addressIds.indexOf(savedAddress.id))
+      setStoredJson('asaani_user_addresses', addressLines)
     } catch (error) {
       console.error('Unable to save customer address', error)
     }
@@ -637,7 +634,7 @@ export default function CartAndCheckoutPage() {
             city: 'Lahore',
             area: 'Lahore',
           })
-        } else if (addresses.length < 2) {
+        } else {
           selectedAddress = await createCustomerAddress({
             customer_id: auth.profile_id,
             label: `Address ${addresses.length + 1}`,
@@ -648,9 +645,6 @@ export default function CartAndCheckoutPage() {
             longitude: addressLng,
             is_default: addresses.length === 0,
           })
-        } else {
-          alert('Unable to save this address. Please select one of your two address slots and try again.')
-          return
         }
         addresses = await fetchAddresses(auth.profile_id)
       }
@@ -833,12 +827,7 @@ export default function CartAndCheckoutPage() {
           <span className="border-s border-slate-300 ps-6">+1 (333) 000-0000</span>
         </div>
         <div className="flex items-center gap-4 text-slate-700">
-          <a href="#" className="hover:text-orange-500 transition">
-            <Camera className="w-4 h-4"/>
-          </a>
-          <a href="#" className="hover:text-orange-500 transition">
-            <LayoutGrid className="w-4 h-4"/>
-          </a>
+          <SocialLinks />
           <LanguageSwitcher compact />
         </div>
       </div>
@@ -1049,6 +1038,9 @@ export default function CartAndCheckoutPage() {
                       hint="This pin is what we match you to the nearest, best-rated vendor with — drag it onto your exact spot."
                       latitude={addressLat}
                       longitude={addressLng}
+                      onAddressResolved={({ address }) => {
+                        setBillingDetails((current) => ({ ...current, address }))
+                      }}
                       onLocationChange={(lat, lng) => {
                         setAddressLat(lat)
                         setAddressLng(lng)

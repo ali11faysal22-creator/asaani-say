@@ -1,6 +1,6 @@
 
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { Link } from '@/i18n/navigation'
 import {Award,FileText,MapPin,Clock,CalendarDays,MessageSquare,Star,Quote,ArrowUpRight,AlertCircle} from 'lucide-react'
@@ -9,6 +9,7 @@ import CustomerNavbar from '../components/customer-navbar'
 import { categoryIcon } from '../lib/category-icons'
 import { useLanguage } from '../lib/i18n'
 import PublicContactBar from '../components/public-contact-bar'
+import PublicFooter from '../components/public-footer'
 
 const featuresList = [
   {
@@ -115,16 +116,139 @@ const subTestimonials = [
   },
 ]
 
+const SERVICES_CATEGORY_CACHE_KEY = 'asaani_services_category_cache'
+const SERVICES_RETURN_SCROLL_KEY = 'asaani_services_return_scroll'
+type ServiceCategoryCard = Pick<CatalogCategory, 'id' | 'display_name' | 'icon' | 'icon_class' | 'href'>
+
+function isServiceCategoryCard(value: unknown): value is ServiceCategoryCard {
+  return (
+    typeof value === 'object'
+    && value !== null
+    && 'id' in value
+    && typeof value.id === 'string'
+    && 'display_name' in value
+    && typeof value.display_name === 'string'
+    && 'icon' in value
+    && (typeof value.icon === 'string' || value.icon === null)
+    && 'icon_class' in value
+    && (typeof value.icon_class === 'string' || value.icon_class === null)
+    && 'href' in value
+    && typeof value.href === 'string'
+  )
+}
+
 export default function ServicesPage(){
   const { t } = useLanguage()
-  const [categories, setCategories] = useState<CatalogCategory[]>([])
+  const [categories, setCategories] = useState<ServiceCategoryCard[]>([])
   const [catalogError, setCatalogError] = useState('')
+  const returnScrollPositionRef = useRef<number | null>(null)
 
   useEffect(() => {
+    let active = true
+    let hasCachedCategories = false
+    try {
+      const cachedCategories = window.sessionStorage.getItem(SERVICES_CATEGORY_CACHE_KEY)
+      if (cachedCategories !== null) {
+        const parsedCategories: unknown = JSON.parse(cachedCategories)
+        if (Array.isArray(parsedCategories) && parsedCategories.every(isServiceCategoryCard)) {
+          hasCachedCategories = parsedCategories.length > 0
+          if (hasCachedCategories) queueMicrotask(() => setCategories(parsedCategories))
+        }
+      }
+    } catch (error) {
+      console.warn('Unable to restore services categories', error)
+    }
+
+    try {
+      const storedPosition = window.sessionStorage.getItem(SERVICES_RETURN_SCROLL_KEY)
+      if (storedPosition !== null) {
+        const parsedPosition = Number(storedPosition)
+        if (Number.isFinite(parsedPosition) && parsedPosition >= 0) {
+          returnScrollPositionRef.current = parsedPosition
+        }
+      }
+    } catch (error) {
+      console.warn('Unable to restore services page scroll position', error)
+    }
+
+    const restoreScrollPosition = () => {
+      const positionToRestore = returnScrollPositionRef.current
+      if (positionToRestore === null) return
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.setTimeout(() => {
+            if (!active) return
+            window.scrollTo(0, positionToRestore)
+            returnScrollPositionRef.current = null
+            try {
+              window.sessionStorage.removeItem(SERVICES_RETURN_SCROLL_KEY)
+            } catch (error) {
+              console.warn('Unable to clear restored services page state', error)
+            }
+          }, 150)
+        })
+      })
+    }
+
+    const restoreAfterHistoryNavigation = () => {
+      try {
+        const storedPosition = window.sessionStorage.getItem(SERVICES_RETURN_SCROLL_KEY)
+        if (storedPosition !== null) {
+          const parsedPosition = Number(storedPosition)
+          if (Number.isFinite(parsedPosition) && parsedPosition >= 0) {
+            returnScrollPositionRef.current = parsedPosition
+          }
+        }
+      } catch (error) {
+        console.warn('Unable to read services page state after history navigation', error)
+      }
+      restoreScrollPosition()
+    }
+    window.addEventListener('pageshow', restoreAfterHistoryNavigation)
+    window.addEventListener('popstate', restoreAfterHistoryNavigation)
+
     fetchCategories()
-      .then(setCategories)
-      .catch((err: Error) => setCatalogError(err.message || 'Could not load categories from API'))
+      .then((loadedCategories) => {
+        if (!active) return
+        setCategories(loadedCategories)
+        try {
+          window.sessionStorage.setItem(SERVICES_CATEGORY_CACHE_KEY, JSON.stringify(
+            loadedCategories.map(({ id, display_name, icon, icon_class, href }) => ({
+              id,
+              display_name,
+              icon,
+              icon_class,
+              href,
+            })),
+          ))
+        } catch (error) {
+          console.warn('Unable to cache services categories', error)
+        }
+        if (!hasCachedCategories) restoreScrollPosition()
+      })
+      .catch((err: Error) => {
+        if (!active) return
+        setCatalogError(err.message || 'Could not load categories from API')
+        if (!hasCachedCategories) restoreScrollPosition()
+      })
+
+    if (hasCachedCategories) restoreScrollPosition()
+
+    return () => {
+      active = false
+      window.removeEventListener('pageshow', restoreAfterHistoryNavigation)
+      window.removeEventListener('popstate', restoreAfterHistoryNavigation)
+    }
   }, [])
+
+  const rememberScrollPosition = () => {
+    try {
+      returnScrollPositionRef.current = window.scrollY
+      window.sessionStorage.setItem(SERVICES_RETURN_SCROLL_KEY, String(window.scrollY))
+    } catch (error) {
+      console.warn('Unable to save services page scroll position', error)
+    }
+  }
 
   return (
     <div className="w-full bg-white font-sans text-slate-800">
@@ -165,7 +289,7 @@ export default function ServicesPage(){
           {categories.map((service) => {
             const Icon = categoryIcon(service.icon)
             return (
-            <Link key={service.id} href={service.href} className="block">
+            <Link key={service.id} href={service.href} onClick={rememberScrollPosition} className="block">
               <div className="bg-white hover:bg-[#e4ebfa] transition-all duration-300 rounded-2xl p-6 flex items-center gap-5 cursor-pointer shadow-sm hover:shadow-md border border-slate-100 h-full">
                 <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-slate-50">
                   <Icon className={`w-8 h-8 ${service.icon_class || 'text-[#23263B]'}`}/>
@@ -232,7 +356,7 @@ export default function ServicesPage(){
           </div>
           <div className="lg:col-span-7 space-y-4">
             {trendingServices.map((service) => (
-              <Link key={service.id} href={service.href} className="block">
+              <Link key={service.id} href={service.href} onClick={rememberScrollPosition} className="block">
                 <div className="bg-orange-500 text-white rounded-xl overflow-hidden flex items-center shadow-md border border-red-300/20 hover:opacity-95 transition">
                   <div className="relative w-36 sm:w-48 h-32 sm:h-36 shrink-0 bg-slate-200">
                     <Image
@@ -450,77 +574,7 @@ export default function ServicesPage(){
         </div>
       </section>
 
-      <footer className="w-full bg-[#393E58] text-slate-200 pt-16 pb-8 font-sans">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-12">
-            <div className="md:col-span-5 space-y-3">
-              <p className="text-xs text-slate-300 tracking-wide font-normal">
-                {t("All You Need")}</p>
-              <h2 className="text-3xl font-black text-orange-500 tracking-tight">
-                {t("Asaani Say")}</h2>
-            </div>
-
-            <div className="md:col-span-7 grid grid-cols-1 sm:grid-cols-3 text-xs gap-8">
-            
-              <div className="space-y-3">
-                <h3 className="font-semibold text-white text-sm">{t("Navigation")}</h3>
-                <ul className="space-y-2 text-slate-300">
-                  <li>
-                    <Link href="/" className="hover:text-orange-500 transition">
-                      {t("Home")}</Link>
-                  </li>
-                  <li>
-                    <Link href="/about-us" className="hover:text-orange-500 transition">
-                      {t("About Us")}</Link>
-                  </li>
-                  <li>
-                    <Link href="/services" className="hover:text-orange-500 transition">
-                      {t("Services")}</Link>
-                  </li>
-                  <li>
-                    <Link href="/contact-us" className="hover:text-orange-500 transition">
-                      {t("Contact Us")}</Link>
-                  </li>
-                </ul>
-              </div>
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm text-white">{t("Quick Links")}</h3>
-                <ul className="space-y-2 text-slate-300">
-                  <li>
-                    <Link href="#" className="hover:text-orange-500 transition">
-                      {t("Privacy Policy")}</Link>
-                  </li>
-                  <li>
-                    <Link href="#" className="hover:text-orange-500 transition">
-                      {t("Terms Of Services")}</Link>
-                  </li>
-                  <li>
-                    <Link href="#" className="hover:text-orange-500 transition">
-                      {t("Disclaimer")}</Link>
-                  </li>
-                  <li>
-                    <Link href="#" className="hover:text-orange-500 transition">
-                      {t("FAQ")}</Link>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm text-white">{t("Contact Us")}</h3>
-                <div className="space-y-2 text-slate-300 leading-relaxed">
-                  <p>{t("Our Support and Sales team is available 24/7 to answer your queries")}</p>
-                  <p className="pt-1 font-medium">+1 (333) 000-0000</p>
-                  <p className="font-medium">{t("Asaanisay@gmail.com")}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-200/40 pt-6 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-300 gap-2">
-            <p>{t("Copyright © 2026 AsaaniSay")}{' '}</p>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   )
 }

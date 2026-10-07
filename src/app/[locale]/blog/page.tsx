@@ -4,10 +4,8 @@ import React, { useState } from 'react';
 import { Link } from '@/i18n/navigation'
 import Image from 'next/image';
 import CustomerNavbar from '../components/customer-navbar';
+import PublicContactBar from '../components/public-contact-bar';
 import { useLanguage } from '../lib/i18n';
-import { 
-  Globe
-} from 'lucide-react';
 
 export default function BlogPage() {
   const { language, t } = useLanguage();
@@ -102,21 +100,10 @@ export default function BlogPage() {
     <div className="w-full bg-slate-50 font-sans text-slate-800">
       
       
-      <div className="bg-[#EEF2FB] text-xs text-slate-600 py-2.5 px-4 md:px-12 flex justify-between items-center border-b border-slate-100">
-        <div className="flex items-center gap-6">
-          <span>{t("AsaaniSay@gmail.com")}</span>
-          <span className="border-s border-slate-300 ps-6">+1 (333) 000-00000</span>
-        </div>
-        <div className="flex items-center gap-3 text-slate-700">
-
-          <a href="#" className="hover:text-orange-500 transition">
-            <Globe className="w-4 h-4"/>
-          </a>
-        </div>
-      </div>
+      <PublicContactBar />
 
       
-      <CustomerNavbar active="blog" />
+      <CustomerNavbar active="blog" showLanguageSwitcher={false} />
 
       
       <section className="bg-[#3B3E5B] text-white pt-16 pb-20 px-6 text-center">
@@ -290,20 +277,20 @@ export default function BlogPage() {
                   <h3 className="font-semibold text-white text-sm">{t("Navigation")}</h3>
                   <ul className="space-y-2 text-slate-300">
                      <li>
-                    <a href="home" className="hover:text-orange-500 transition">{t("Home")}</a>
+                    <Link href="/" className="hover:text-orange-500 transition">{t("Home")}</Link>
                   </li>
                           
                         <li>
-                  <a href="about-us" className="hover:text-orange-500 transition">{t("About Us")}</a>
+                  <Link href="/about-us" className="hover:text-orange-500 transition">{t("About Us")}</Link>
 
                 </li>
 
                    <li>
-                  <a href="services" className="hover:text-orange-500 transition">{t("Services")}</a>
+                  <Link href="/services" className="hover:text-orange-500 transition">{t("Services")}</Link>
                 </li>
                         
                      <li>
-                  <a href="contact us" className="hover:text-orange-500 tansition">{t("Contact Us")}</a>
+                  <Link href="/contact-us" className="hover:text-orange-500 transition">{t("Contact Us")}</Link>
                 </li>
 
                   </ul>

@@ -3,18 +3,16 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from '@/i18n/navigation'
 import { fetchCustomerBookings, getCurrentUser } from '../lib/booking-api'
-import { 
-  Camera, 
-  LayoutGrid, 
-  Hand, 
-  Sparkles, 
-  CheckCircle2, 
+import {
+  CheckCircle2,
   ShieldCheck,
   Timer,
   ChevronDown,
   ChevronUp
 } from 'lucide-react'
+import CustomerNavbar from '../components/customer-navbar'
 import LanguageSwitcher from '../components/language-switcher'
+import SocialLinks from '../components/social-links'
 import { useLanguage } from '../lib/i18n'
 
 const CUSTOMER_REQUEST_TIMEOUT_SECONDS = 180
@@ -239,39 +237,12 @@ export default function OrderConfirmationPage() {
           <span className="border-s border-slate-300 ps-6">+1 (333) 000-0000</span>
         </div>
         <div className="flex items-center gap-4 text-slate-700">
-          <a href="#" aria-label="Instagram" className="hover:text-orange-500 transition"><Camera className="w-4 h-4"/></a>
-          <a href="#" className="hover:text-orange-500 transition"><LayoutGrid className="w-4 h-4"/></a>
+          <SocialLinks />
           <LanguageSwitcher compact />
         </div>
       </div>
 
-      
-      <header className="bg-white max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between border-b border-slate-100">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="relative">
-            <Hand size={28} strokeWidth={2} className="text-black"/>
-            <Sparkles size={14} strokeWidth={2} className="text-orange-500 absolute -top-1 -end-1"/>
-          </div>
-          <div className="flex flex-col leading-tight">
-            <span className="font-extrabold text-xl tracking-tight text-orange-500">{t("Asaani")}</span>
-            <span className="font-bold text-lg tracking-tight -mt-1.5 text-orange-500">{t("Say")}</span>
-          </div>
-        </Link>
-
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-          <Link href="/" className="hover:text-orange-500 transition">{t('Home')}</Link>
-          <Link href="/about-us" className="hover:text-orange-500 transition">{t('About Us')}</Link>
-          <Link href="/services" className="hover:text-orange-500 transition">{t('Services')}</Link>
-          <Link href="/blog" className="hover:text-orange-500 transition">{t('Blog')}</Link>
-          <Link href="/contact-us" className="hover:text-orange-500 transition">{t('Contact Us')}</Link>
-        </nav>
-
-        <Link href="/login">
-          <button className="hidden md:inline-flex items-center gap-2 bg-[#3A3E59] hover:bg-[#2C2F45] text-white px-5 py-2.5 rounded-lg text-sm font-medium transition shadow-xs">
-            <span>{t('Get Started')}</span>
-          </button>
-        </Link>
-      </header>
+      <CustomerNavbar showLanguageSwitcher={false} />
 
       
       <section className="relative w-full bg-[#393E58] py-14 px-6 text-center text-white overflow-hidden">

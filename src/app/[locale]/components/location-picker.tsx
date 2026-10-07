@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Crosshair, MapPin } from 'lucide-react'
 
 const LocationMap = dynamic(
@@ -16,6 +16,7 @@ export function LocationPicker({
   longitude,
   radiusKm,
   onLocationChange,
+  onAddressResolved,
   onRadiusChange,
 }: {
   label?: string
@@ -25,10 +26,71 @@ export function LocationPicker({
   /** Omit (together with onRadiusChange) to show just a location pin, with no radius slider. */
   radiusKm?: number
   onLocationChange: (lat: number, lng: number) => void
+  onAddressResolved?: (location: { address: string; area: string }) => void
   onRadiusChange?: (km: number) => void
 }) {
   const [locating, setLocating] = useState(false)
   const [locateError, setLocateError] = useState('')
+  const [addressError, setAddressError] = useState('')
+  const geocodeRequest = useRef<AbortController | null>(null)
+
+  const updateLocation = (lat: number, lng: number) => {
+    onLocationChange(lat, lng)
+    if (!onAddressResolved) return
+
+    geocodeRequest.current?.abort()
+    const controller = new AbortController()
+    geocodeRequest.current = controller
+    setAddressError('')
+    fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`,
+      { signal: controller.signal }
+    )
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Address lookup failed')
+        return response.json() as Promise<{
+          display_name?: string
+          address?: {
+            house_number?: string
+            road?: string
+            pedestrian?: string
+            neighbourhood?: string
+            suburb?: string
+            city_district?: string
+            city?: string
+            town?: string
+            village?: string
+            state?: string
+            postcode?: string
+            country?: string
+          }
+        }>
+      })
+      .then((result) => {
+        const address = result.address
+        const street = [address?.house_number, address?.road || address?.pedestrian]
+          .filter(Boolean)
+          .join(' ')
+        const area = address?.suburb || address?.neighbourhood || address?.city_district
+          || address?.city || address?.town || address?.village || ''
+        const fullAddress = [
+          street,
+          area,
+          address?.city || address?.town || address?.village,
+          address?.state,
+          address?.postcode,
+          address?.country,
+        ].filter((part, index, parts) => Boolean(part) && parts.indexOf(part) === index).join(', ')
+        const resolvedAddress = fullAddress || result.display_name || ''
+
+        if (!resolvedAddress) throw new Error('No address found for this location')
+        onAddressResolved({ address: resolvedAddress, area })
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        setAddressError('Could not find an address for this location. Please enter it manually.')
+      })
+  }
 
   const useCurrentLocation = () => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -39,14 +101,19 @@ export function LocationPicker({
     setLocateError('')
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        onLocationChange(position.coords.latitude, position.coords.longitude)
+        updateLocation(position.coords.latitude, position.coords.longitude)
         setLocating(false)
       },
-      () => {
-        setLocateError('Could not get your location — you can drag the pin instead.')
+      (error) => {
+        const messages: Record<number, string> = {
+          1: 'Location permission was denied. Allow location access in your browser or app settings.',
+          2: 'Your current location is unavailable. Please try again or drag the pin.',
+          3: 'Finding your location took too long. Please try again.',
+        }
+        setLocateError(messages[error.code] || 'Could not get your location. Please drag the pin instead.')
         setLocating(false)
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
     )
   }
 
@@ -67,9 +134,10 @@ export function LocationPicker({
       </div>
       <p className="text-[11px] text-slate-400">{hint}</p>
       {locateError && <p className="text-[11px] font-semibold text-red-600">{locateError}</p>}
+      {addressError && <p className="text-[11px] font-semibold text-red-600">{addressError}</p>}
 
       <div className="overflow-hidden rounded-xl border border-slate-200">
-        <LocationMap latitude={latitude} longitude={longitude} radiusKm={radiusKm} onLocationChange={onLocationChange} />
+        <LocationMap latitude={latitude} longitude={longitude} radiusKm={radiusKm} onLocationChange={updateLocation} />
       </div>
 
       {radiusKm != null && onRadiusChange && (

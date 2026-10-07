@@ -3,10 +3,11 @@
 import React, { useState } from 'react'
 import { useRouter } from '@/i18n/navigation'
 import { Eye, EyeOff, Hand, ShieldCheck, Sparkles } from 'lucide-react'
-import { loginUser, registerCustomer, setStoredAuth } from '../../lib/booking-api'
+import { createCustomerAddress, fetchAddresses, loginUser, registerCustomer, setStoredAuth } from '../../lib/booking-api'
 import { PhoneInput, combinePhoneNumber } from '../../components/phone-input'
 import { LocationPicker } from '../../components/location-picker'
 import { DEFAULT_COUNTRY_ISO, COUNTRY_CODES } from '../../lib/country-codes'
+import { readPendingServiceBooking } from '../../lib/service-booking-resume'
 
 const DEFAULT_DIAL_CODE = COUNTRY_CODES.find((c) => c.iso === DEFAULT_COUNTRY_ISO)?.dial || '+92'
 
@@ -35,9 +36,10 @@ export default function CustomerAuthPage() {
       return
     }
     setIsProcessing(true)
+    let accountCreated = false
     try {
-      const authResult = await (isRegister
-        ? registerCustomer({
+      const authResult = isRegister
+        ? await registerCustomer({
             full_name: name,
             email,
             password,
@@ -46,12 +48,44 @@ export default function CustomerAuthPage() {
             latitude: homeLatitude,
             longitude: homeLongitude,
           })
-        : loginUser({ identifier: emailOrPhone, password, role: 'customer' }))
+        : await loginUser({ identifier: emailOrPhone, password, role: 'customer' })
+      accountCreated = isRegister
       setStoredAuth('customer', authResult)
+      if (isRegister && address.trim() && authResult.profile_id) {
+        const savedAddresses = await fetchAddresses(authResult.profile_id)
+        const normalizedAddress = address.trim().replace(/\s+/g, ' ').toLowerCase()
+        const addressAlreadySaved = savedAddresses.some((savedAddress) => (
+          savedAddress.line.trim().replace(/\s+/g, ' ').toLowerCase() === normalizedAddress
+          || Math.abs(savedAddress.latitude - homeLatitude) < 0.0001
+            && Math.abs(savedAddress.longitude - homeLongitude) < 0.0001
+        ))
+
+        if (!addressAlreadySaved) {
+          await createCustomerAddress({
+            customer_id: authResult.profile_id,
+            label: 'Home',
+            line: address.trim(),
+            latitude: homeLatitude,
+            longitude: homeLongitude,
+            is_default: savedAddresses.length === 0,
+          })
+        }
+      }
       window.dispatchEvent(new Event('asaani-auth-changed'))
-      router.push('/customer/dashboard')
+      const pendingBooking = readPendingServiceBooking()
+      if (pendingBooking) {
+        router.push(`/services/${pendingBooking.slug}`)
+      } else {
+        router.push('/customer/dashboard')
+      }
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Authentication failed.')
+      if (accountCreated) {
+        setIsRegister(false)
+        setEmailOrPhone(email)
+        setError('Your account was created, but your Home address could not be saved. Please sign in and try again.')
+      } else {
+        setError(requestError instanceof Error ? requestError.message : 'Authentication failed.')
+      }
     } finally {
       setIsProcessing(false)
     }
@@ -186,6 +220,7 @@ export default function CustomerAuthPage() {
                     hint="Drag the pin, or tap anywhere on the map, to pin your address exactly — this helps us match you with nearby vendors."
                     latitude={homeLatitude}
                     longitude={homeLongitude}
+                    onAddressResolved={({ address }) => setAddress(address)}
                     onLocationChange={(lat, lng) => { setHomeLatitude(lat); setHomeLongitude(lng) }}
                   />
 

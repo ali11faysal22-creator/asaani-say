@@ -317,8 +317,8 @@ export default function HeroSection() {
               <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-3">
                 {t('BEST SERVICES')}
               </p>
-              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#23263B] leading-snug max-w-2xl">
-                {t('Some Jobs Should Only Ever Be Tackled By A Professional, And Home Services is one of them.')}
+              <p className="max-w-2xl text-2xl font-normal leading-snug tracking-normal text-[#3B3E5B] sm:text-3xl md:text-4xl">
+                {t('Some Jobs Should Only Ever Be Tackled By A Professional, And Home Services One Of Them.')}
               </p>
             </div>
             <div className="relative pt-6">
@@ -470,7 +470,7 @@ export default function HeroSection() {
         </div>
       </section>
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 font-sans">
-        <div className="flex justify-between items-start mb-8">
+        <div className="flex items-start justify-between gap-3 mb-8">
           <div>
             <p className="text-sm font-semibold text-[#3A3E59] mb-0.5">
               {t('Select Our')}
@@ -484,7 +484,7 @@ export default function HeroSection() {
           </div>
           <Link
             href="/services"
-            className="text-sm font-bold text-[#3A3E59] hover:text-orange-500 transition pt-1">
+            className="shrink-0 whitespace-nowrap text-sm font-bold text-[#3A3E59] hover:text-orange-500 transition pt-1">
             {t('See All')}
           </Link>
         </div>
@@ -640,28 +640,28 @@ export default function HeroSection() {
 
            <div className="bg-[#050B30] rounded-2xl overflow-hidden flex flex-col md:flex-row items-center justify-between shadow-lg">
 
-          <div className="bg-[#2C3352] px-8 py-6 w-full md:w-auto flex flex-col justify-center shrink-0 min-w-50">
+          <div className="bg-[#2C3352] px-5 py-4 w-full md:w-auto flex flex-row items-center justify-center gap-2 shrink-0 md:min-w-50 md:flex-col md:items-start md:gap-0 md:px-8 md:py-6">
             
-            <span className="text-2xl font-black text-orange-500 leading-none">{t("Asaani")}</span>
-            <span className="text-2xl font-black text-orange-500 leading-tight">{t("Say")}</span>
+            <span className="text-xl font-black text-orange-500 leading-none md:text-2xl">{t("Asaani")}</span>
+            <span className="text-xl font-black text-orange-500 leading-none md:text-2xl md:leading-tight">{t("Say")}</span>
        </div>
 
-          <div className="p-6 md:p-8 text-center md:text-start text-white flex-1">
+          <div className="px-5 pt-5 pb-2 md:p-8 text-center md:text-start text-white flex-1">
             <h3 className="text-lg font-bold mb-1">{t("Need Help At Home?")}</h3>
 
-            <p className="text-xs text-slate-300">
+            <p className="text-xs leading-relaxed text-slate-300">
               {t("Book Expert Services Anytime, Anywhere With Just One Tap.")}</p>
 
     </div>
 
-          <div className="p-6 md:pe-8 md:p-0 shrink-0gap-12 items-center">
-
-          <Link href="/login">
-  <button className="hidden md:inline-flex items-center gap-2 bg-[#3A3E59] hover:bg-[#2C2F45] text-white px-5 py-2.5 rounded-lg text-sm font-medium transition shadow-sm cursor-pointer">
-    <span>{t("Get Started")}</span>
-  </button>
-</Link>
-            </div>
+          <div className="flex w-full justify-center px-5 pt-4 pb-5 md:w-auto md:justify-start md:px-0 md:py-0 md:pe-8">
+            <Link
+              href="/login"
+              className="inline-flex w-full max-w-xs items-center justify-center gap-2 rounded-lg bg-[#3A3E59] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-[#2C2F45] md:w-auto md:py-2.5"
+            >
+              {t("Get Started")}
+            </Link>
+          </div>
         </div>
       </section>
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans border-t border-slate-200">
@@ -898,39 +898,39 @@ export default function HeroSection() {
         </div>
     
         <div className="bg-[#EEF2FB] rounded-3xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 mb-10 shadow-sm border border-slate-100">
-          <div className="lg:col-span-5 relative min-h-300px lg:min-h-380px">
+          <div className="lg:col-span-5 relative min-h-[240px] lg:min-h-[380px]">
             <Image
               src={testimonialsData.featured.image}
               alt={testimonialsData.featured.name}
               fill
               className="object-cover object-center"/>
-                <div className="absolute top-0 start-0 bg-orange-500 text-white p-5 rounded-br-2xl shadow-md">
-              <Quote className="w-7 h-7 fill-current rotate-180"/>
+                <div aria-hidden="true" className="absolute start-0 top-0 z-10 flex h-16 w-16 items-center justify-center rounded-br-2xl bg-orange-500 text-white shadow-md">
+              <Quote className="h-7 w-7 fill-current rotate-180"/>
             </div>
           </div>
 
-          <div className="lg:col-span-7 p-8 sm:p-12 flex flex-col justify-center space-y-4">
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-[#23263B]">
+          <div className="min-w-0 p-6 sm:p-12 flex flex-col justify-center space-y-4 lg:col-span-7">
+            <h3 className="break-words text-2xl sm:text-3xl font-extrabold text-[#23263B]">
               {testimonialsData.featured.name}
             </h3>
 
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-white/60 w-fit px-3 py-1.5 rounded-md">
-              <AlertCircle className="w-4 h-4 text-orange-500"/>
-              <span>{testimonialsData.featured.problem}</span>
+            <div className="flex w-fit max-w-full items-start gap-2 rounded-md bg-white/60 px-3 py-1.5 text-xs font-bold text-slate-600">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500"/>
+              <span className="min-w-0 break-words">{testimonialsData.featured.problem}</span>
             </div>
 
             <div className="py-1">
               {renderStars(testimonialsData.featured.rating)}
             </div>
 
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-xl">
+            <p className="max-w-xl break-words text-xs leading-relaxed text-slate-600 sm:text-sm">
               {testimonialsData.featured.text}
             </p>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {testimonialsData.small.map((item, index)=>(
-            <div key={index} className="flex gap-5 items-start">
+            <div key={index} className="flex min-w-0 items-start gap-4 sm:gap-5">
               <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-slate-200 shrink-0 shadow-sm">
                 <Image
                   src={item.image}
@@ -939,17 +939,17 @@ export default function HeroSection() {
                   className="object-cover"/>
               </div>
 
-              <div className="space-y-2 flex-1">
-                <h4 className="text-lg font-bold text-[#23263B]">{item.name}</h4>
+              <div className="min-w-0 flex-1 space-y-2">
+                <h4 className="break-words text-lg font-bold text-[#23263B]">{item.name}</h4>
 
                 <div className="flex items-center gap-1.5 text-xs text-slate-600">
                   <AlertCircle className="w-3.5 h-3.5 text-[#EF6A42] shrink-0" />
-                  <span className="font-medium">{item.problem}</span>
+                  <span className="min-w-0 break-words font-medium">{item.problem}</span>
                 </div>
 
                 <div>{renderStars(item.rating)}</div>
 
-                <p className="text-xs text-slate-500 leading-relaxed pt-1">
+                <p className="break-words pt-1 text-xs leading-relaxed text-slate-500">
                   {item.text}
                 </p>
               </div>
@@ -973,20 +973,20 @@ export default function HeroSection() {
                   <h3 className="font-semibold text-white text-sm">{t("Navigation")}</h3>
                   <ul className="space-y-2 text-slate-300">
                      <li>
-                    <a href="home" className="hover:text-orange-500 transition">{t("Home")}</a>
+                    <Link href="/" className="hover:text-orange-500 transition">{t("Home")}</Link>
                   </li>
                           
                         <li>
-                  <a href="about-us" className="hover:text-orange-500 transition">{t("About Us")}</a>
+                  <Link href="/about-us" className="hover:text-orange-500 transition">{t("About Us")}</Link>
 
                 </li>
 
                    <li>
-                  <a href="services" className="hover:text-orange-500 transition">{t("Services")}</a>
+                  <Link href="/services" className="hover:text-orange-500 transition">{t("Services")}</Link>
                 </li>
                         
                      <li>
-                  <a href="contact-us" className="hover:text-orange-500 tansition">{t("Contact Us")}</a>
+                  <Link href="/contact-us" className="hover:text-orange-500 transition">{t("Contact Us")}</Link>
                 </li>
 
                   </ul>

@@ -83,13 +83,6 @@ export function LocationMap({
         icon={pinIcon}
         draggable
         eventHandlers={{
-          // Update continuously while dragging (not just on release) so any radius
-          // circle visibly follows the pin in real time instead of jumping at the end.
-          drag: (event) => {
-            const marker = event.target as L.Marker
-            const { lat, lng } = marker.getLatLng()
-            onLocationChange(lat, lng)
-          },
           dragend: (event) => {
             const marker = event.target as L.Marker
             const { lat, lng } = marker.getLatLng()

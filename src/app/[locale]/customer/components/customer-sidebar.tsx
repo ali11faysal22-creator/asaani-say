@@ -2,7 +2,7 @@
 
 import { Link } from '@/i18n/navigation'
 import { usePathname } from '@/i18n/navigation'
-import { Hand, LayoutDashboard, ListChecks, ShieldCheck, Sparkles, X } from 'lucide-react'
+import { Hand, House, LayoutDashboard, ListChecks, ShieldCheck, ShoppingBag, Sparkles, X } from 'lucide-react'
 import { useLanguage } from '@/app/lib/i18n'
 
 const NAV_ITEMS = [
@@ -53,6 +53,22 @@ function NavList({ pathname, onNavigate }: { pathname: string | null; onNavigate
           </Link>
         )
       })}
+      <Link
+        href="/services"
+        onClick={onNavigate}
+        className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-slate-300 transition hover:bg-white/5 hover:text-white"
+      >
+        <ShoppingBag className="h-4 w-4 shrink-0" />
+        <span>{t('Order Service')}</span>
+      </Link>
+      <Link
+        href="/"
+        onClick={onNavigate}
+        className="mt-3 flex items-center gap-3 rounded-xl border-t border-white/10 px-4 py-3 pt-4 text-sm font-semibold text-slate-300 transition hover:bg-white/5 hover:text-white"
+      >
+        <House className="h-4 w-4 shrink-0" />
+        <span>{t('Back to Home')}</span>
+      </Link>
     </nav>
   )
 }
