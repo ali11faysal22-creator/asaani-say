@@ -7,6 +7,8 @@ import { useRouter } from '@/i18n/navigation'
 import { createCustomerAddress, fetchAddresses, getCurrentUser, placeBooking, serviceFromCart, updateCustomerAddress } from '@/app/lib/booking-api'
 import { LocationPicker } from '@/app/components/location-picker'
 import LanguageSwitcher from '@/app/components/language-switcher'
+import { BreadcrumbBar } from '@/components/Breadcrumbs'
+import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError'
 import { useLanguage } from '../lib/i18n'
 import SocialLinks from '../components/social-links'
 import { 
@@ -597,26 +599,28 @@ export default function CartAndCheckoutPage() {
 
   
 
+  const [checkoutErrors, setCheckoutErrors] = useState<Record<string, string>>({})
+
   const handlePlaceOrder = async (requestedVendorId?: string) => {
-    if (cartItems.length === 0) {
-      alert(t('Your cart is empty! Please add some services to your cart first..'))
-      return
-    }
-
-    if (!selectedDate || !selectedTimeSlot) {
-      alert(t('Please select a service date and an available time slot before proceeding..'))
-      return
-    }
-
-    if (!billingDetails.fullName || !billingDetails.phone || !billingDetails.address) {
-      alert(t('Please complete your billing and booking details (Name, Phone Number, and Address) before proceeding..'))
+    setCheckoutErrors({})
+    const problems: Record<string, string> = {}
+    if (cartItems.length === 0) problems.general = 'Your cart is empty! Please add some services to your cart first..'
+    if (!selectedDate) problems.date = 'Please choose a service date.'
+    if (!selectedTimeSlot) problems.time_slot = 'Please choose an available time slot.'
+    if (!billingDetails.fullName.trim()) problems.full_name = 'Name is required.'
+    if (!billingDetails.phone.trim()) problems.phone = 'Phone number is required.'
+    if (billingDetails.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingDetails.email.trim())) problems.email = 'Enter a valid email address.'
+    if (!billingDetails.address.trim()) problems.address = 'Address is required.'
+    if (Object.keys(problems).length) {
+      setCheckoutErrors(problems)
+      window.setTimeout(() => document.querySelector('main [role="alert"], [role="alert"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
       return
     }
 
     try {
       const auth = await getCurrentUser('customer')
       if (auth.role !== 'customer' || !auth.profile_id) {
-        alert(t('Please sign in as a customer before placing an order.'))
+        setCheckoutErrors({ general: 'Please sign in as a customer before placing an order.' })
         return
       }
 
@@ -624,7 +628,7 @@ export default function CartAndCheckoutPage() {
       let selectedAddress = addresses.find((address) => address.line === billingDetails.address)
 
       if (!billingDetails.address.trim()) {
-        alert(t('Please enter a service address before placing an order.'))
+        setCheckoutErrors({ address: 'Address is required.' })
         return
       }
 
@@ -692,7 +696,11 @@ export default function CartAndCheckoutPage() {
       setShowModal(true)
       window.setTimeout(() => router.push('/order-confirmation'), 800)
     } catch (error) {
-      alert(error instanceof Error ? t(error.message) : t('Unable to place booking'))
+      const apiFieldErrors = fieldErrorsOf(error)
+      setCheckoutErrors(Object.keys(apiFieldErrors).length
+        ? { ...apiFieldErrors, general: 'Please correct the highlighted fields.' }
+        : { general: messageOf(error, 'Unable to place booking') })
+      window.setTimeout(() => document.querySelector('main [role="alert"], [role="alert"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
     }
   }
 
@@ -861,6 +869,7 @@ export default function CartAndCheckoutPage() {
           </button>
         </Link>
       </header>
+      <BreadcrumbBar />
 
       
       <section className="relative w-full bg-[#393E58] py-12 px-6 text-center text-white overflow-hidden">
@@ -973,6 +982,10 @@ export default function CartAndCheckoutPage() {
               <h2 className="text-base font-extrabold text-slate-900 border-b border-slate-100 pb-3">
                 {t("Billing & Booking Details")}</h2>
 
+              {checkoutErrors.general && (
+                <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(checkoutErrors.general)}</p>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="space-y-1">
                   <label className="font-bold text-slate-700">{t("Full Name")}</label>
@@ -982,8 +995,9 @@ export default function CartAndCheckoutPage() {
                     placeholder={t('e.g. Muhammad Ali')}
                     value={billingDetails.fullName}
                     onChange={handleInputChange}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium"
+                    className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium ${errorBorder(checkoutErrors.full_name)}`}
                   />
+                  <FieldError message={checkoutErrors.full_name} />
                 </div>
 
                 <div className="space-y-1">
@@ -994,8 +1008,9 @@ export default function CartAndCheckoutPage() {
                     placeholder="+92 333 4567890"
                     value={billingDetails.phone}
                     onChange={handleInputChange}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium"
+                    className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium ${errorBorder(checkoutErrors.phone)}`}
                   />
+                  <FieldError message={checkoutErrors.phone} />
                 </div>
 
                 <div className="sm:col-span-2 space-y-1">
@@ -1006,8 +1021,9 @@ export default function CartAndCheckoutPage() {
                     placeholder={t('ali.service@gmail.com')}
                     value={billingDetails.email}
                     onChange={handleInputChange}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium"
+                    className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium ${errorBorder(checkoutErrors.email)}`}
                   />
+                  <FieldError message={checkoutErrors.email} />
                 </div>
 
                 <div className="sm:col-span-2 space-y-1">
@@ -1033,8 +1049,9 @@ export default function CartAndCheckoutPage() {
                       value={billingDetails.address}
                       onChange={handleInputChange}
                       onBlur={() => void handleAddressBlur()}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium"
+                      className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium ${errorBorder(checkoutErrors.address)}`}
                     />
+                  <FieldError message={checkoutErrors.address} />
                     <LocationPicker
                       label={t('Confirm this address on the map')}
                       hint={t('This pin is what we match you to the nearest, best-rated vendor with — drag it onto your exact spot.')}
@@ -1057,8 +1074,9 @@ export default function CartAndCheckoutPage() {
                     type="text" 
                     readOnly
                     value={selectedDate || t('Not selected yet')}
-                    className="w-full bg-slate-100 border border-slate-200 text-slate-600 rounded-xl px-3.5 py-2.5 font-semibold cursor-not-allowed"
+                    className={`w-full bg-slate-100 border border-slate-200 text-slate-600 rounded-xl px-3.5 py-2.5 font-semibold cursor-not-allowed ${errorBorder(checkoutErrors.date)}`}
                   />
+                  <FieldError message={checkoutErrors.date} />
                 </div>
 
                 <div className="space-y-1">
@@ -1067,8 +1085,9 @@ export default function CartAndCheckoutPage() {
                     type="text" 
                     readOnly
                     value={selectedTimeSlot ? displaySlot(selectedTimeSlot) : t('Not selected yet')}
-                    className="w-full bg-slate-100 border border-slate-200 text-slate-600 rounded-xl px-3.5 py-2.5 font-semibold cursor-not-allowed"
+                    className={`w-full bg-slate-100 border border-slate-200 text-slate-600 rounded-xl px-3.5 py-2.5 font-semibold cursor-not-allowed ${errorBorder(checkoutErrors.time_slot)}`}
                   />
+                  <FieldError message={checkoutErrors.time_slot} />
                 </div>
               </div>
             </div>

@@ -21,7 +21,7 @@ export default function VendorNotificationMonitor() {
       try {
         const notifications = await fetchVendorNotifications(auth.profile_id)
         const seen = JSON.parse(sessionStorage.getItem('asaani_seen_vendor_request_ids') || '[]') as string[]
-        const next = notifications.find((item) => item.title === 'New service request' && !item.is_read && !seen.includes(item.id))
+        const next = notifications.find((item) => item.title.startsWith('New service request') && !item.is_read && !seen.includes(item.id))
         if (next && active) {
           sessionStorage.setItem('asaani_seen_vendor_request_ids', JSON.stringify([...seen, next.id].slice(-100)))
           setRequest({ id: next.id, body: next.body })

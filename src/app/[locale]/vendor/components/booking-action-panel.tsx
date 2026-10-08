@@ -1,5 +1,6 @@
 'use client'
 
+import { FieldError, errorBorder, messageOf } from '@/components/FieldError'
 import { useState } from 'react'
 import {
   API_BASE,
@@ -40,25 +41,31 @@ export function VendorBookingActionPanel({
   const [completionPhotos, setCompletionPhotos] = useState<File[]>([])
   const [showCannotStartForm, setShowCannotStartForm] = useState(false)
   const [cannotStartReason, setCannotStartReason] = useState('')
+  const [reasonError, setReasonError] = useState('')
+  const [photoError, setPhotoError] = useState('')
 
   const vendorId = () => {
     const auth = getStoredAuth('vendor')
     return auth?.profile_id || auth?.user_id || ''
   }
 
-  const handleFailure = (requestError: unknown, fallback: string) => {
-    const message = requestError instanceof Error ? requestError.message : fallback
+  const handleFailure = (requestError: unknown, fallback: string, field?: 'reason' | 'photos') => {
+    const message = messageOf(requestError, fallback)
     if (requestError instanceof Error && isBookingUnavailableError(message) && onUnavailable) {
       onUnavailable()
       return
     }
-    setError(message)
+    if (field === 'reason') setReasonError(message)
+    else if (field === 'photos') setPhotoError(message)
+    else setError(message)
   }
 
   const handleDecision = async (action: 'accept' | 'reject') => {
     if (actionInProgress) return
     setActionInProgress(true)
     setError('')
+    setReasonError('')
+    setPhotoError('')
     try {
       const updated = await decideVendorBooking(vendorId(), booking.id, action)
       onUpdated(updated)
@@ -73,13 +80,15 @@ export function VendorBookingActionPanel({
     if (actionInProgress) return
     setActionInProgress(true)
     setError('')
+    setReasonError('')
+    setPhotoError('')
     try {
       const updated = await updateVendorBookingStatus(vendorId(), booking.id, action, reason)
       onUpdated(updated)
       setShowCannotStartForm(false)
       setCannotStartReason('')
     } catch (requestError) {
-      handleFailure(requestError, 'Unable to update tracking status')
+      handleFailure(requestError, 'Unable to update tracking status', reason !== undefined ? 'reason' : undefined)
     } finally {
       setActionInProgress(false)
     }
@@ -89,13 +98,15 @@ export function VendorBookingActionPanel({
     if (actionInProgress) return
     setActionInProgress(true)
     setError('')
+    setReasonError('')
+    setPhotoError('')
     try {
       const updated = await completeVendorBookingWithPhotos(booking.id, completionPhotos)
       onUpdated(updated)
       setShowCompletionUpload(false)
       setCompletionPhotos([])
     } catch (requestError) {
-      handleFailure(requestError, 'Unable to complete order')
+      handleFailure(requestError, 'Unable to complete order', 'photos')
     } finally {
       setActionInProgress(false)
     }
@@ -171,14 +182,15 @@ export function VendorBookingActionPanel({
               <p className="text-[11px] font-bold text-rose-700">{t("Why can't you start this job?")}</p>
               <textarea
                 value={cannotStartReason}
-                onChange={(event) => setCannotStartReason(event.target.value)}
+                onChange={(event) => { setCannotStartReason(event.target.value); setReasonError('') }}
                 placeholder={t('e.g. Customer not reachable, wrong address, out of scope…')}
                 rows={2}
                 maxLength={500}
-                className="w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] text-slate-700 focus:outline-none focus:border-rose-400"
+                className={`w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] text-slate-700 focus:outline-none focus:border-rose-400 ${errorBorder(reasonError)}`}
               />
+              <FieldError message={reasonError} />
               <div className="flex gap-2">
-                <button type="button" disabled={actionInProgress || !cannotStartReason.trim()} onClick={() => void handleTrackingStatus('cannot_start', cannotStartReason.trim())} className="rounded-lg bg-rose-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">
+                <button type="button" disabled={actionInProgress} onClick={() => { if (!cannotStartReason.trim()) { setReasonError('Please tell us why you cannot start this job.'); return } void handleTrackingStatus('cannot_start', cannotStartReason.trim()) }} className="rounded-lg bg-rose-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">
                   {actionInProgress ? t('Submitting…') : t('Confirm — find another vendor')}
                 </button>
                 <button type="button" disabled={actionInProgress} onClick={() => { setShowCannotStartForm(false); setCannotStartReason('') }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600">
@@ -195,9 +207,10 @@ export function VendorBookingActionPanel({
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 multiple
-                onChange={(event) => setCompletionPhotos(Array.from(event.target.files || []))}
+                onChange={(event) => { setCompletionPhotos(Array.from(event.target.files || [])); setPhotoError('') }}
                 className="block w-full text-[11px] text-slate-600 file:me-2 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-white"
               />
+              <FieldError message={photoError} />
               {completionPhotos.length > 0 && (
                 <p className="text-[10px] text-slate-500">{completionPhotos.length} {completionPhotos.length === 1 ? t('photo') : t('photos')} {t('selected')}</p>
               )}

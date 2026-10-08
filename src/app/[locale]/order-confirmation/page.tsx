@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { Link } from '@/i18n/navigation'
-import { fetchCustomerBookings, getCurrentUser } from '../lib/booking-api'
+import { cancelCustomerBooking, fetchCustomerBookings, getCurrentUser } from '../lib/booking-api'
 import {
   CheckCircle2,
   ShieldCheck,
@@ -11,6 +11,8 @@ import {
   ChevronUp
 } from 'lucide-react'
 import CustomerNavbar from '../components/customer-navbar'
+
+import { BreadcrumbBar } from '@/components/Breadcrumbs'
 import LanguageSwitcher from '../components/language-switcher'
 import SocialLinks from '../components/social-links'
 import { useLanguage } from '../lib/i18n'
@@ -70,6 +72,9 @@ export default function OrderConfirmationPage() {
   const [isDraggingRequestToast, setIsDraggingRequestToast] = useState(false)
   const [requestToastDragOffset, setRequestToastDragOffset] = useState({ x: 0, y: 0 })
   const [showVendorRequestToast, setShowVendorRequestToast] = useState(true)
+  const [isCancelling, setIsCancelling] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [cancelError, setCancelError] = useState('')
   const [showAcceptedToast, setShowAcceptedToast] = useState(false)
   const [showReassignmentToast, setShowReassignmentToast] = useState(false)
   const [lastReassignmentAt, setLastReassignmentAt] = useState('')
@@ -159,6 +164,26 @@ export default function OrderConfirmationPage() {
     return () => { active = false; window.clearInterval(statusTimer) }
   }, [order, bookingStatus, lastReassignmentAt])
 
+  const canCancelOrder = ['pending', 'unassigned', 'accepted'].includes(bookingStatus)
+  const handleCancelOrder = async () => {
+    if (!order || isCancelling) return
+    setIsCancelling(true)
+    setCancelError('')
+    try {
+      const cancelled = await cancelCustomerBooking(order.orderId)
+      const nextStatus = cancelled.status.toLowerCase()
+      setBookingStatus(nextStatus)
+      setShowVendorRequestToast(false)
+      setOrder((previous) => previous ? { ...previous, status: cancelled.status } : previous)
+      localStorage.setItem('asaani_latest_order', JSON.stringify({ ...order, status: cancelled.status }))
+    } catch (error) {
+      setCancelError(error instanceof Error ? error.message : t('Could not cancel the order. Please try again.'))
+    } finally {
+      setIsCancelling(false)
+      setShowCancelConfirm(false)
+    }
+  }
+
   const minutes = Math.floor(secondsRemaining / 60).toString().padStart(2, '0')
   const seconds = (secondsRemaining % 60).toString().padStart(2, '0')
   const isSearchingForVendor = bookingStatus !== 'accepted' && secondsRemaining === 0
@@ -244,6 +269,7 @@ export default function OrderConfirmationPage() {
       </div>
 
       <CustomerNavbar showLanguageSwitcher={false} />
+      <BreadcrumbBar />
 
       
       <section className="relative w-full bg-[#393E58] py-14 px-6 text-center text-white overflow-hidden">
@@ -414,6 +440,22 @@ export default function OrderConfirmationPage() {
                 </button>
               </Link>
 
+              {canCancelOrder && (
+                <button
+                  type="button"
+                  onClick={() => setShowCancelConfirm(true)}
+                  className="w-full bg-white hover:bg-red-50 text-red-600 font-bold text-xs py-3.5 rounded-xl border border-red-200 transition cursor-pointer"
+                >
+                  {t('Cancel My Order')}
+                </button>
+              )}
+              {bookingStatus === 'cancelled' && (
+                <p className="text-center text-xs font-semibold text-red-600 bg-red-50 border border-red-200/70 rounded-xl p-3">
+                  {t('You cancelled this order.')}
+                </p>
+              )}
+              {cancelError && <p className="text-center text-xs font-semibold text-red-600">{cancelError}</p>}
+
               <Link href="/" className="block w-full">
                 <button className="w-full bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs py-3.5 rounded-xl border border-slate-300 transition cursor-pointer">
                   {t('Back to Home')}
@@ -428,6 +470,33 @@ export default function OrderConfirmationPage() {
       </main>
 
       
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+            <h3 className="text-base font-extrabold text-[#1E2337]">{t('Cancel this order?')}</h3>
+            <p className="mt-2 text-xs leading-relaxed text-slate-500">{t('The vendor and our team will be notified.')}</p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCancelConfirm(false)}
+                disabled={isCancelling}
+                className="rounded-xl border border-slate-200 bg-white py-3 text-xs font-bold text-slate-700 transition hover:bg-slate-50 cursor-pointer disabled:opacity-60"
+              >
+                {t('Keep Order')}
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelOrder}
+                disabled={isCancelling}
+                className="rounded-xl bg-red-500 py-3 text-xs font-bold text-white transition hover:bg-red-600 cursor-pointer disabled:opacity-60"
+              >
+                {isCancelling ? t('Cancelling…') : t('Yes, Cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <PublicFooter />
 
     </div>

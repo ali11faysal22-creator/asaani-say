@@ -2,6 +2,7 @@
 import React, {useEffect,useRef,useState } from 'react'
 import {ChevronDown,User,Star,Quote,Truck,Clock,MousePointerClick,ArrowRight,ArrowUpRight,AlertCircle,ExternalLink as ExternalLinkIcon} from 'lucide-react'
 import { Link } from '@/i18n/navigation'
+import { FieldError, errorRing, fieldErrorsOf, messageOf } from '@/components/FieldError'
 import Image from 'next/image'
 import CustomerNavbar from './components/customer-navbar'
 import PublicContactBar from './components/public-contact-bar'
@@ -71,20 +72,20 @@ function renderStars(rating: number): React.ReactNode {
     title:'We Bring Only The Right Equipment',
     description:'The Right Tools, Every Time, For Perfect Results',
     linktext:'Learn More...',
-    linkMref:'#',
+    linkMref:'/blog',
 
   },
   {
     title:'The Important Of Home Expertise',
     description:'Your Home Deserves Expert Hands,Not Guesswork',
     linktext:'Learn More...',
-    linkMref:'#',
+    linkMref:'/blog',
   },
 
   {title:'Keep Your Home Secure',
     description:'Home Security Starts With Smart Services',
     linktext:'Learn More...',
-    linkMref:'#',
+    linkMref:'/blog',
 
   }
  ]
@@ -121,6 +122,10 @@ export default function HeroSection() {
     setOpenFaqIndex((current) => (current === index ? null : index))
   }
 
+  const ORDER_FIELD_KEYS = {
+    zipCode: 'zip_code', city: 'city', service: 'service_name', date: 'preferred_date',
+    time: 'preferred_time', email: 'email', phone: 'phone',
+  } as const
   const [orderForm, setOrderForm] = useState({
     zipCode: '',
     city: '',
@@ -132,19 +137,33 @@ export default function HeroSection() {
   })
   const [orderStatus, setOrderStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [orderMessage, setOrderMessage] = useState('')
+  const [orderErrors, setOrderErrors] = useState<Record<string, string>>({})
 
   const updateOrderField = (field: keyof typeof orderForm) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     setOrderForm((prev) => ({ ...prev, [field]: e.target.value }))
+    const apiField = ORDER_FIELD_KEYS[field]
+    setOrderErrors((prev) => (prev[apiField] ? { ...prev, [apiField]: '' } : prev))
   }
 
   const handleOrderSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setOrderMessage('')
-    if (!orderForm.zipCode || !orderForm.city || !orderForm.service || !orderForm.date || !orderForm.time || !orderForm.email || !orderForm.phone) {
+    const problems: Record<string, string> = {}
+    if (!orderForm.zipCode.trim()) problems.zip_code = 'Zip code is required.'
+    if (!orderForm.city) problems.city = 'Please choose your city.'
+    if (!orderForm.service) problems.service_name = 'Please choose a service.'
+    if (!orderForm.date) problems.preferred_date = 'Please choose a date.'
+    if (!orderForm.time) problems.preferred_time = 'Please choose a time.'
+    if (!orderForm.email.trim()) problems.email = 'Email is required.'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(orderForm.email.trim())) problems.email = 'Enter a valid email address.'
+    if (!orderForm.phone.trim()) problems.phone = 'Phone number is required.'
+    else if (orderForm.phone.trim().length < 5) problems.phone = 'Phone number must be at least 5 characters.'
+    setOrderErrors(problems)
+    if (Object.keys(problems).length) {
       setOrderStatus('error')
-      setOrderMessage(t('Please fill in every field.'))
+      setOrderMessage('Please correct the highlighted fields.')
       return
     }
     setOrderStatus('submitting')
@@ -162,8 +181,10 @@ export default function HeroSection() {
       setOrderMessage(t("Request sent! We'll match you with a professional shortly."))
       setOrderForm({ zipCode: '', city: '', service: '', date: '', time: '', email: '', phone: '' })
     } catch (error) {
+      const apiFieldErrors = fieldErrorsOf(error)
+      setOrderErrors(apiFieldErrors)
       setOrderStatus('error')
-      setOrderMessage(error instanceof Error ? error.message : t('Something went wrong. Please try again.'))
+      setOrderMessage(Object.keys(apiFieldErrors).length ? 'Please correct the highlighted fields.' : messageOf(error, 'Something went wrong. Please try again.'))
     }
   }
 
@@ -368,7 +389,7 @@ export default function HeroSection() {
               <h3 className="font-bold text-[#23263B] mb-6 fs-h4">
                 {t('Order Service')}
               </h3>
-              <form className="space-y-4" onSubmit={handleOrderSubmit}>
+              <form className="space-y-4" onSubmit={handleOrderSubmit} noValidate>
 
                 {orderMessage && (
                   <p
@@ -381,19 +402,17 @@ export default function HeroSection() {
                 )}
 
                 <div className="grid grid-cols-2 gap-3">
-                  <input
+                  <div><input
                     type="text"
-                    required
                     value={orderForm.zipCode}
                     onChange={updateOrderField('zipCode')}
                     placeholder={t('Zip Code*')}
-                    className="w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-[#EF6A42]/50 placeholder-slate-400"/>
+                    className={`w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-[#EF6A42]/50 placeholder-slate-400 ${errorRing(orderErrors.zip_code)}`}/><FieldError message={orderErrors.zip_code} /></div>
                   <div className="relative">
                     <select
-                      required
                       value={orderForm.city}
                       onChange={updateOrderField('city')}
-                      className="w-full bg-white text-slate-600 text-xs px-4 py-3 rounded-lg appearance-none border-none focus:outline-none focus:ring-2 focus:ring-[#EF6A42]/50 pe-8">
+                      className={`w-full bg-white text-slate-600 text-xs px-4 py-3 rounded-lg appearance-none border-none focus:outline-none focus:ring-2 focus:ring-[#EF6A42]/50 pe-8 ${errorRing(orderErrors.city)}`}>
                       <option value="">{t('Select City')}</option>
                       <option value="Karachi">{t("Karachi")}</option>
                       <option value="Lahore">{t("Lahore")}</option>
@@ -405,6 +424,7 @@ export default function HeroSection() {
                       <option value="Gujranwala">{t("Gujranwala")}</option>
                     </select>
                     <ChevronDown className="w-4 h-4 text-slate-600 absolute end-3 top-3.5 pointer-events-none" />
+                    <FieldError message={orderErrors.city} />
                   </div>
                 </div>
 
@@ -415,10 +435,9 @@ export default function HeroSection() {
                   </label>
                   <div className="relative">
                     <select
-                      required
                       value={orderForm.service}
                       onChange={updateOrderField('service')}
-                      className="w-full bg-white text-slate-600 text-xs px-4 py-3 rounded-lg appearance-none border-none focus:outline-none focus:ring-2 focus:ring-[#EF6A42]/50 pe-8">
+                      className={`w-full bg-white text-slate-600 text-xs px-4 py-3 rounded-lg appearance-none border-none focus:outline-none focus:ring-2 focus:ring-[#EF6A42]/50 pe-8 ${errorRing(orderErrors.service_name)}`}>
                       <option value="">{t('Select Service')}</option>
                       <option value="Plumbing">{t('Plumbing')}</option>
                       <option value="Electrician">{t('Electrician')}</option>
@@ -432,6 +451,7 @@ export default function HeroSection() {
                       <option value="Carpenter">{t('Carpenter')}</option>
                     </select>
                     <ChevronDown className="w-4 h-4 text-slate-600 absolute end-3 top-3.5 pointer-events-none" />
+                    <FieldError message={orderErrors.service_name} />
                   </div>
                 </div>
                 <div className="space-y-3 pt-1">
@@ -440,34 +460,34 @@ export default function HeroSection() {
                   </label>
                   <input
                     type="date"
-                    required
                     value={orderForm.date}
                     onChange={updateOrderField('date')}
                     min={new Date().toISOString().slice(0, 10)}
-                    className="w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400"/>
+                    className={`w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400 ${errorRing(orderErrors.preferred_date)}`}/>
+                  <FieldError message={orderErrors.preferred_date} />
 
                    <input
                     type="time"
-                    required
                     value={orderForm.time}
                     onChange={updateOrderField('time')}
-                     className="w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400"/>
+                     className={`w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400 ${errorRing(orderErrors.preferred_time)}`}/>
+                  <FieldError message={orderErrors.preferred_time} />
 
                     <input
                     type="email"
-                    required
                     value={orderForm.email}
                     onChange={updateOrderField('email')}
                     placeholder={t('Your Email')}
-                     className="w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400"/>
+                     className={`w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400 ${errorRing(orderErrors.email)}`}/>
+                  <FieldError message={orderErrors.email} />
 
                   <input
                     type="tel"
-                    required
                     value={orderForm.phone}
                     onChange={updateOrderField('phone')}
                     placeholder={t('Phone Number')}
-                    className="w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400"/>
+                    className={`w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400 ${errorRing(orderErrors.phone)}`}/>
+                  <FieldError message={orderErrors.phone} />
                 </div>
 
 
@@ -858,11 +878,11 @@ export default function HeroSection() {
                 {t(item.description)}
               </p>
               <div className="pt-2">
-                <a
+                <Link
                   href={item.linkMref}
                   className="text-sm font-bold text-[#23263B] hover:text-orange-500 transition-colors">
                   {t(item.linktext)}
-                </a>
+                </Link>
               </div>
             </div>
           ))}

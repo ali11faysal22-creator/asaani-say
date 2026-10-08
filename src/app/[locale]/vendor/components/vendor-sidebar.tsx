@@ -15,7 +15,7 @@ const NAV_ITEMS = [
 function Brand() {
   const { t } = useLanguage()
   return (
-    <div className="flex items-center gap-3">
+    <Link href="/" aria-label={t('Go to home page')} className="flex items-center gap-3">
       <div className="w-9 h-9 rounded-xl bg-[#EE6C52] flex items-center justify-center shadow-xs shrink-0">
         <Wrench className="w-4.5 h-4.5 text-white" />
       </div>
@@ -23,7 +23,7 @@ function Brand() {
         <span className="font-extrabold text-base tracking-tight text-white block truncate">{t("Asaani Say")}</span>
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('Vendor Portal')}</span>
       </div>
-    </div>
+    </Link>
   )
 }
 

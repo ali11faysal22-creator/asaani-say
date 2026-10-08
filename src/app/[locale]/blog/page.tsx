@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { Link } from '@/i18n/navigation'
 import Image from 'next/image';
-import CustomerNavbar from '../components/customer-navbar';
+import CustomerNavbar from '../components/customer-navbar'
+import { BreadcrumbBar } from '@/components/Breadcrumbs';
 import PublicContactBar from '../components/public-contact-bar';
 import { useLanguage } from '../lib/i18n';
 import PublicFooter from '../components/public-footer'
@@ -105,6 +106,7 @@ export default function BlogPage() {
 
       
       <CustomerNavbar active="blog" showLanguageSwitcher={false} />
+      <BreadcrumbBar />
 
       
       <section className="bg-[#3D4059] text-white py-14 md:py-[84px] px-6 text-center">

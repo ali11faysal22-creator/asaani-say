@@ -1,5 +1,6 @@
 'use client'
 
+import Breadcrumbs from '@/components/Breadcrumbs'
 import { useState, type ReactNode } from 'react'
 import { usePathname } from '@/i18n/navigation'
 import CustomerSidebar from './customer-sidebar'
@@ -23,7 +24,7 @@ export default function CustomerShell({ children }: { children: ReactNode }) {
         <CustomerTopbar onMenuClick={() => setMobileNavOpen(true)} />
 
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className={`${contentClassName || 'w-full'} space-y-6`}>{children}</div>
+          <div className={`${contentClassName || 'w-full'} space-y-6`}><Breadcrumbs />{children}</div>
         </main>
       </div>
     </div>

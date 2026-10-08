@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from '@/i18n/navigation'
 import { Link } from '@/i18n/navigation'
 import { Clock3, Eye, MapPin, Navigation, Phone, Search, X } from 'lucide-react'
-import { API_BASE, fetchCustomerBookings, formatSlotLabel, getCurrentUser, type BookingResult } from '@/app/lib/booking-api'
+import { API_BASE, fetchCustomerBookingHistory, fetchCustomerBookings, formatSlotLabel, getCurrentUser, type BookingResult } from '@/app/lib/booking-api'
 import { DateFilter } from '@/app/components/date-filter'
 import { useLanguage } from '@/app/lib/i18n'
 
@@ -16,6 +16,19 @@ export default function CustomerOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<BookingResult | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFilter, setDateFilter] = useState('')
+  const [cancelledByCustomer, setCancelledByCustomer] = useState(false)
+
+  useEffect(() => {
+    setCancelledByCustomer(false)
+    if (selectedOrder?.status !== 'cancelled') return
+    let active = true
+    fetchCustomerBookingHistory(selectedOrder.id)
+      .then((events) => {
+        if (active) setCancelledByCustomer(events.some((event) => event.to_status === 'cancelled' && event.actor === 'customer'))
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [selectedOrder])
 
   useEffect(() => {
     let active = true
@@ -126,7 +139,7 @@ export default function CustomerOrdersPage() {
                   <td className="px-4 py-3 text-slate-600">{formatSlotLabel(order.slot_start)} - {formatSlotLabel(order.slot_end)}</td>
                   <td className="px-4 py-3 text-slate-600">{canTrack(order) && order.vendor ? order.vendor.business_name : t('Pending acceptance')}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-3 py-1.5 text-[11px] font-bold ${statusTone(order.status)}`}>{t(statusLabel(order.status))}</span>
+                    <span className={`inline-block whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-bold ${statusTone(order.status)}`}>{t(statusLabel(order.status))}</span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1.5">
@@ -180,7 +193,12 @@ export default function CustomerOrdersPage() {
               <div><p className="text-slate-400">{t("Vendor name")}</p><p className="mt-1 font-bold text-slate-900">{selectedOrder.vendor?.business_name || t('Not assigned yet')}</p></div>
               <div><p className="text-slate-400">{t("Customer phone")}</p><p className="mt-1 font-bold text-slate-900">{selectedOrder.customer_phone || t('Not available')}</p></div>
             </div>
-            {selectedOrder.vendor && (
+            {selectedOrder.status === 'cancelled' && (
+              <p className="mt-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2.5 text-center text-xs font-bold text-red-600">
+                {cancelledByCustomer ? t('You cancelled this order.') : t('This order was cancelled.')}
+              </p>
+            )}
+            {selectedOrder.vendor && selectedOrder.status !== 'cancelled' && (
               <div className="border-b border-slate-100 py-4">
                 <p className="text-xs text-slate-400">{t("Vendor contact")}</p>
                 <p className="mt-1 font-bold text-slate-900">{selectedOrder.vendor.contact_number}</p>

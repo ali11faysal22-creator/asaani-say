@@ -45,10 +45,31 @@ function formatNotificationSlot(value: string): string {
 }
 
 function translateNotificationText(text: string, translate: (text: string) => string): string {
+  const tooShort = text.match(/^(.+?) must be at least (\d+) characters\.$/)
+  if (tooShort) return `${translate(tooShort[1])} کم از کم ${tooShort[2]} حروف پر مشتمل ہونا چاہیے۔`
+  const tooLong = text.match(/^(.+?) must be at most (\d+) characters\.$/)
+  if (tooLong) return `${translate(tooLong[1])} زیادہ سے زیادہ ${tooLong[2]} حروف کا ہو سکتا ہے۔`
+  const required = text.match(/^(.+?) is required\.$/)
+  if (required) return `${translate(required[1])} ضروری ہے۔`
+  const badFormat = text.match(/^(.+?) format is not valid\.$/)
+  if (badFormat) return `${translate(badFormat[1])} کا فارمیٹ درست نہیں ہے۔`
+  const notNumber = text.match(/^(.+?) must be a number\.$/)
+  if (notNumber) return `${translate(notNumber[1])} نمبر ہونا چاہیے۔`
+  const atLeast = text.match(/^(.+?) must be at least (\d+(?:\.\d+)?)\.$/)
+  if (atLeast) return `${translate(atLeast[1])} کم از کم ${atLeast[2]} ہونا چاہیے۔`
+  const atMost = text.match(/^(.+?) must be at most (\d+(?:\.\d+)?)\.$/)
+  if (atMost) return `${translate(atMost[1])} زیادہ سے زیادہ ${atMost[2]} ہو سکتا ہے۔`
+
   const vendorRequest = text.match(/^You have a new (.+?) request for (.+?)\. Booking ID: ([\w-]+)\. Please accept or reject within (\d+) minutes\.$/)
   if (vendorRequest) {
     const [, service, slot, bookingId, minutes] = vendorRequest
     return `${translate(service)} کے لیے نئی درخواست موصول ہوئی ہے۔ وقت: ${formatNotificationSlot(slot)}۔ بکنگ نمبر: ${bookingId}۔ براہِ کرم ${minutes} منٹ کے اندر اسے قبول یا مسترد کریں۔`
+  }
+
+  const cancelledByCustomer = text.match(/^(.+?) cancelled the (.+?) booking for (.+?) \(Booking ID: ([\w-]+)\)\.(?: No action is needed\.)?$/)
+  if (cancelledByCustomer) {
+    const [, customer, service, slot, bookingId] = cancelledByCustomer
+    return `${customer} نے ${translate(service)} کی بکنگ منسوخ کر دی ہے۔ وقت: ${formatNotificationSlot(slot)}۔ بکنگ نمبر: ${bookingId}۔`
   }
 
   const customerRequest = text.match(/^(.+?) requested (.+?) on (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})-(\d{2}:\d{2})\.$/)

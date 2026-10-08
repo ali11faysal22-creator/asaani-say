@@ -6,6 +6,8 @@ import { Link } from '@/i18n/navigation'
 import {Award,FileText,MapPin,Clock,CalendarDays,MessageSquare,Star,Quote,ArrowUpRight,AlertCircle} from 'lucide-react'
 import { fetchCategories, type CatalogCategory } from '../lib/booking-api'
 import CustomerNavbar from '../components/customer-navbar'
+
+import { BreadcrumbBar } from '@/components/Breadcrumbs'
 import { categoryIcon } from '../lib/category-icons'
 import { useLanguage } from '../lib/i18n'
 import PublicContactBar from '../components/public-contact-bar'
@@ -275,6 +277,7 @@ export default function ServicesPage(){
       <PublicContactBar />
 
       <CustomerNavbar active="services" showLanguageSwitcher={false} />
+      <BreadcrumbBar />
 
       <section className="relative w-full h-95 sm:h-[420px] lg:h-[560px] bg-slate-100 flex items-center overflow-hidden">
         <div className="absolute inset-0 bg-linear-to-r from-black/40 to-black/10 z-10" />

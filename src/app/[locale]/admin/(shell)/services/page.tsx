@@ -22,6 +22,7 @@ import { DetailModal } from '../../components/detail-modal'
 import { Pagination } from '../../components/pagination'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
 import { useLanguage } from '../../../lib/i18n'
+import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError'
 
 const PAGE_SIZE = 10
 
@@ -55,6 +56,7 @@ export default function AdminServicesPage() {
   const [categories, setCategories] = useState<CatalogCategory[]>([])
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [error, setError] = useState('')
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [viewMode, setViewMode] = useState<ViewMode>('categories')
   const [search, setSearch] = useState('')
   const [categoryPage, setCategoryPage] = useState(1)
@@ -144,12 +146,14 @@ export default function AdminServicesPage() {
 
   const openAddCategory = () => {
     setError('')
+    setFormErrors({})
     setCategoryForm(EMPTY_CATEGORY_FORM)
     setAddingCategory(true)
   }
 
   const openEditCategory = (category: CatalogCategory) => {
     setError('')
+    setFormErrors({})
     setCategoryForm({
       name: category.name,
       display_name: category.display_name,
@@ -162,9 +166,13 @@ export default function AdminServicesPage() {
   }
 
   const saveCategory = async () => {
-    if (!categoryForm.name.trim()) return
+    if (!categoryForm.name.trim()) {
+      setFormErrors({ name: 'Name is required.' })
+      return
+    }
     setSavingCategory(true)
     setError('')
+    setFormErrors({})
     try {
       const payload = {
         name: categoryForm.name.trim(),
@@ -184,7 +192,8 @@ export default function AdminServicesPage() {
         setAddingCategory(false)
       }
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not save category.')
+      const apiFieldErrors = fieldErrorsOf(requestError)
+      setFormErrors(Object.keys(apiFieldErrors).length ? apiFieldErrors : { _general: messageOf(requestError, 'Could not save category.') })
     } finally {
       setSavingCategory(false)
     }
@@ -193,6 +202,7 @@ export default function AdminServicesPage() {
   const removeCategory = async (category: CatalogCategory) => {
     if (!window.confirm(`${t('Delete')} "${category.display_name}"? ${t('This cannot be undone.')}`)) return
     setError('')
+    setFormErrors({})
     try {
       await deleteAdminCategory(category.id)
       setCategories((prev) => prev.filter((c) => c.id !== category.id))
@@ -203,12 +213,14 @@ export default function AdminServicesPage() {
 
   const openAddService = (category: CatalogCategory) => {
     setError('')
+    setFormErrors({})
     setServiceForm({ ...EMPTY_SERVICE_FORM, category_id: category.id })
     setEditingService({ category, service: null })
   }
 
   const openEditService = (category: CatalogCategory, service: CatalogService) => {
     setError('')
+    setFormErrors({})
     setServiceForm({
       category_id: category.id,
       name: service.name,
@@ -221,9 +233,17 @@ export default function AdminServicesPage() {
   }
 
   const saveService = async () => {
-    if (!serviceForm.name.trim() || !editingService) return
+    if (!editingService) return
+    const problems: Record<string, string> = {}
+    if (!serviceForm.name.trim()) problems.name = 'Name is required.'
+    if (serviceForm.price.trim() && Number(serviceForm.price) < 0) problems.price = 'Price must be at least 0.'
+    if (Object.keys(problems).length) {
+      setFormErrors(problems)
+      return
+    }
     setSavingService(true)
     setError('')
+    setFormErrors({})
     try {
       const priceValue = serviceForm.price.trim() ? Number(serviceForm.price) : undefined
       if (editingService.service) {
@@ -256,7 +276,8 @@ export default function AdminServicesPage() {
       }
       setEditingService(null)
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not save service.')
+      const apiFieldErrors = fieldErrorsOf(requestError)
+      setFormErrors(Object.keys(apiFieldErrors).length ? apiFieldErrors : { _general: messageOf(requestError, 'Could not save service.') })
     } finally {
       setSavingService(false)
     }
@@ -265,6 +286,7 @@ export default function AdminServicesPage() {
   const removeService = async (category: CatalogCategory, service: CatalogService) => {
     if (!window.confirm(`${t('Delete')} "${service.name}"? ${t('This cannot be undone.')}`)) return
     setError('')
+    setFormErrors({})
     try {
       await deleteAdminService(service.id)
       setCategories((prev) =>
@@ -459,14 +481,18 @@ export default function AdminServicesPage() {
           fields={[]}
           footer={
             <div className="space-y-3">
+              {formErrors._general && (
+                <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(formErrors._general)}</p>
+              )}
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-slate-500">{t('Name')}</label>
                 <input
                   value={categoryForm.name}
                   onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))}
                   placeholder={t('e.g. Solar Panel Installation')}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52]"
+                  className={`w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52] ${errorBorder(formErrors.name)}`}
                 />
+                <FieldError message={formErrors.name} />
               </div>
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-slate-500">{t('Display name (optional)')}</label>
@@ -474,8 +500,9 @@ export default function AdminServicesPage() {
                   value={categoryForm.display_name}
                   onChange={(e) => setCategoryForm((prev) => ({ ...prev, display_name: e.target.value }))}
                   placeholder={t('Shown to customers — defaults to Name')}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52]"
+                  className={`w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52] ${errorBorder(formErrors.display_name)}`}
                 />
+                <FieldError message={formErrors.display_name} />
               </div>
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-slate-500">{t('Tagline (optional)')}</label>
@@ -483,8 +510,9 @@ export default function AdminServicesPage() {
                   value={categoryForm.tagline}
                   onChange={(e) => setCategoryForm((prev) => ({ ...prev, tagline: e.target.value }))}
                   placeholder={t('Short description shown on the category page')}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52]"
+                  className={`w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52] ${errorBorder(formErrors.tagline)}`}
                 />
+                <FieldError message={formErrors.tagline} />
               </div>
               <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
                 <input
@@ -497,7 +525,7 @@ export default function AdminServicesPage() {
               </label>
               <button
                 onClick={saveCategory}
-                disabled={!categoryForm.name.trim() || savingCategory}
+                disabled={savingCategory}
                 className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 disabled:opacity-50 cursor-pointer"
               >
                 {savingCategory ? t('Saving…') : editingCategory ? t('Save changes') : t('Create category')}
@@ -514,22 +542,27 @@ export default function AdminServicesPage() {
           fields={[]}
           footer={
             <div className="space-y-3">
+              {formErrors._general && (
+                <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(formErrors._general)}</p>
+              )}
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-slate-500">{t('Name')}</label>
                 <input
                   value={serviceForm.name}
                   onChange={(e) => setServiceForm((prev) => ({ ...prev, name: e.target.value }))}
                   placeholder={t('e.g. Pipe Repair')}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52]"
+                  className={`w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52] ${errorBorder(formErrors.name)}`}
                 />
+                <FieldError message={formErrors.name} />
               </div>
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-slate-500">{t('Subtitle (optional)')}</label>
                 <input
                   value={serviceForm.subtitle}
                   onChange={(e) => setServiceForm((prev) => ({ ...prev, subtitle: e.target.value }))}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52]"
+                  className={`w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52] ${errorBorder(formErrors.subtitle)}`}
                 />
+                <FieldError message={formErrors.subtitle} />
               </div>
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-slate-500">{t('Fixed market price (Rs., optional)')}</label>
@@ -538,8 +571,9 @@ export default function AdminServicesPage() {
                   min={0}
                   value={serviceForm.price}
                   onChange={(e) => setServiceForm((prev) => ({ ...prev, price: e.target.value }))}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52]"
+                  className={`w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52] ${errorBorder(formErrors.price)}`}
                 />
+                <FieldError message={formErrors.price} />
               </div>
               <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
                 <input
@@ -552,7 +586,7 @@ export default function AdminServicesPage() {
               </label>
               <button
                 onClick={saveService}
-                disabled={!serviceForm.name.trim() || savingService}
+                disabled={savingService}
                 className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 disabled:opacity-50 cursor-pointer"
               >
                 {savingService ? t('Saving…') : editingService.service ? t('Save changes') : t('Add service')}

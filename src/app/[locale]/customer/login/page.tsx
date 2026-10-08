@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useRouter } from '@/i18n/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
 import { Eye, EyeOff, Hand, ShieldCheck, Sparkles } from 'lucide-react'
 import { createCustomerAddress, fetchAddresses, loginUser, registerCustomer, setStoredAuth } from '../../lib/booking-api'
 import { PhoneInput, combinePhoneNumber } from '../../components/phone-input'
@@ -9,6 +9,8 @@ import { LocationPicker } from '../../components/location-picker'
 import { DEFAULT_COUNTRY_ISO, COUNTRY_CODES } from '../../lib/country-codes'
 import { readPendingServiceBooking } from '../../lib/service-booking-resume'
 import { useLanguage } from '../../lib/i18n'
+import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 const DEFAULT_DIAL_CODE = COUNTRY_CODES.find((c) => c.iso === DEFAULT_COUNTRY_ISO)?.dial || '+92'
 
@@ -29,13 +31,20 @@ export default function CustomerAuthPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const handleAuthSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault()
     setError('')
-    if (isRegister && password !== confirmPassword) {
-      setError(t('Passwords do not match.'))
-      return
+    setFieldErrors({})
+    if (isRegister) {
+      const problems: Record<string, string> = {}
+      if (password.length < 8) problems.password = 'Password must be at least 8 characters.'
+      if (password !== confirmPassword) problems.confirm_password = 'Passwords do not match.'
+      if (Object.keys(problems).length) {
+        setFieldErrors(problems)
+        return
+      }
     }
     setIsProcessing(true)
     let accountCreated = false
@@ -86,7 +95,13 @@ export default function CustomerAuthPage() {
         setEmailOrPhone(email)
         setError(t('Your account was created, but your Home address could not be saved. Please sign in and try again.'))
       } else {
-        setError(requestError instanceof Error ? requestError.message : t('Authentication failed.'))
+        const apiFieldErrors = fieldErrorsOf(requestError)
+        if (Object.keys(apiFieldErrors).length) {
+          setFieldErrors(apiFieldErrors)
+          setError('Please correct the highlighted fields.')
+        } else {
+          setError(messageOf(requestError, 'Authentication failed.'))
+        }
       }
     } finally {
       setIsProcessing(false)
@@ -96,6 +111,7 @@ export default function CustomerAuthPage() {
   const handleTabSwitch = (registerMode: boolean) => {
     setIsRegister(registerMode)
     setError('')
+    setFieldErrors({})
   }
 
   return (
@@ -106,13 +122,13 @@ export default function CustomerAuthPage() {
           className="md:col-span-4 bg-[#3B3E56] text-white p-6 md:p-10 flex flex-col justify-between relative"
           style={{ minHeight: '35rem' }}
         >
-          <div className="flex items-center gap-2">
+          <Link href="/" aria-label={t('Go to home page')} className="flex items-center gap-2 w-fit">
             <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center relative">
               <Hand className="w-4 h-4 text-white" />
               <Sparkles className="w-2.5 h-2.5 text-white absolute -top-0.5 -end-0.5" />
             </div>
             <span className="font-bold text-base text-white">{t('Asaani Say')}</span>
-          </div>
+          </Link>
 
           <div className="my-auto -translate-y-24 space-y-4">
             <h1 className="text-3xl font-extrabold leading-tight">
@@ -135,16 +151,19 @@ export default function CustomerAuthPage() {
         </div>
 
         <div className="md:col-span-8 bg-white p-6 md:p-12 flex flex-col justify-between min-h-screen overflow-y-auto">
+          <div className="flex justify-end">
+            <LanguageSwitcher compact />
+          </div>
           <div className="w-full max-w-sm mx-auto my-auto py-4">
             <div className="flex items-center justify-center mb-6">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleTabSwitch(false)}
-                  className={`text-xs font-bold px-5 py-2.5 rounded-xl transition cursor-pointer ${
+                  className={`text-base font-medium px-6 py-3 rounded-xl transition cursor-pointer ${
                     !isRegister
-                      ? 'text-[#2C2F45] bg-orange-50/20'
-                      : 'text-slate-400 hover:text-orange-500'
+                      ? 'bg-[#FF6A00] text-white'
+                      : 'text-slate-400 hover:text-[#FF6A00]'
                   }`}
                 >
                   {t('Sign in')}
@@ -153,10 +172,10 @@ export default function CustomerAuthPage() {
                 <button
                   type="button"
                   onClick={() => handleTabSwitch(true)}
-                  className={`text-xs font-bold px-5 py-2.5 rounded-xl border border-orange-500 transition cursor-pointer ${
+                  className={`text-base font-medium px-6 py-3 rounded-xl transition cursor-pointer ${
                     isRegister
-                      ? 'bg-orange-500 text-white shadow-xs'
-                      : 'bg-white text-slate-500 hover:bg-slate-100'
+                      ? 'bg-[#FF6A00] text-white'
+                      : 'text-slate-400 hover:text-[#FF6A00]'
                   }`}
                 >
                   {t('Register')}
@@ -186,8 +205,9 @@ export default function CustomerAuthPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder={t('Full name')}
-                    className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
+                    className={`w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.full_name)}`}
                   />
+                  <FieldError message={fieldErrors.full_name} />
 
                   <input
                     type="email"
@@ -195,8 +215,9 @@ export default function CustomerAuthPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder={t('Email address')}
-                    className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
+                    className={`w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.email)}`}
                   />
+                  <FieldError message={fieldErrors.email} />
 
                   <PhoneInput
                     countryCode={phoneCountryCode}
@@ -207,6 +228,7 @@ export default function CustomerAuthPage() {
                     required
                     fieldId="customer-phone"
                   />
+                  <FieldError message={fieldErrors.phone} />
 
                   <textarea
                     required
@@ -215,6 +237,7 @@ export default function CustomerAuthPage() {
                     placeholder={t('Home address')}
                     className="min-h-20 w-full resize-none bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                   />
+                  <FieldError message={fieldErrors.address} />
 
                   <LocationPicker
                     label={t('Confirm your location on the map')}
@@ -232,7 +255,7 @@ export default function CustomerAuthPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder={t('Password')}
-                      className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 pe-10 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
+                      className={`w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 pe-10 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.password)}`}
                     />
                     <button
                       type="button"
@@ -242,6 +265,7 @@ export default function CustomerAuthPage() {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  <FieldError message={fieldErrors.password} />
 
                   <input
                     type="password"
@@ -249,8 +273,9 @@ export default function CustomerAuthPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder={t('Confirm password')}
-                    className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
+                    className={`w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.confirm_password)}`}
                   />
+                  <FieldError message={fieldErrors.confirm_password} />
 
                   <button
                     type="submit"
@@ -290,9 +315,9 @@ export default function CustomerAuthPage() {
                   </div>
 
                   <div className="text-end">
-                    <a href="#" className="text-[11px] text-orange-500 hover:underline font-medium">
+                    <Link href="/forgot-password?role=customer" className="text-xs text-[#FF6A00] hover:underline font-medium">
                       {t('Recover Password ?')}
-                    </a>
+                    </Link>
                   </div>
 
                   <button

@@ -4,10 +4,7 @@ export const routing = defineRouting({
   locales: ['en', 'ur'],
   defaultLocale: 'en',
   localePrefix: 'as-needed',
-  localeCookie: {
-    name: 'NEXT_LOCALE',
-    maxAge: 60 * 60 * 24 * 365,
-    sameSite: 'lax',
-    path: '/',
-  },
+  // English unless the URL says /ur — a saved preference never redirects.
+  localeDetection: false,
+  localeCookie: false,
 })

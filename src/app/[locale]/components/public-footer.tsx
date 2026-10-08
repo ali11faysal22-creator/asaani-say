@@ -12,7 +12,7 @@ export default function PublicFooter() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-12">
           <div className="md:col-span-4 space-y-4">
             <h2 className="text-[clamp(2rem,1.5rem+1.4vw,2.75rem)] font-bold text-[#EE6C52] tracking-tight leading-none">
-              {t('Asaani Say')}
+              <Link href="/" aria-label={t('Go to home page')}>{t('Asaani Say')}</Link>
             </h2>
             <p className="max-w-[260px] text-slate-300 tracking-wide font-normal text-sm leading-relaxed">
               {t('All your home maintenance and repair needs solved with trust, speed, and affordability.')}
@@ -53,7 +53,6 @@ export default function PublicFooter() {
 
         <div className="border-t border-slate-200/40 pt-6 flex flex-col sm:flex-row justify-between items-center text-sm text-slate-300 gap-2">
           <p>{t('Copyright © 2026 AsaaniSay. All rights reserved.')}</p>
-          <p>{t('Designed by Nimra Raheel')}</p>
         </div>
       </div>
     </footer>

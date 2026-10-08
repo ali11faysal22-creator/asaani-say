@@ -257,13 +257,114 @@ function roleForPath(path: string): AuthRole | null {
   return null
 }
 
-async function readError(res: Response): Promise<string> {
+export class ApiError extends Error {
+  status?: number
+  /** Human-readable message per field, keyed by the backend field name (e.g. "password"). */
+  fieldErrors: Record<string, string>
+
+  constructor(message: string, status?: number, fieldErrors: Record<string, string> = {}) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.fieldErrors = fieldErrors
+  }
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  full_name: 'Name',
+  first_name: 'First name',
+  last_name: 'Last name',
+  email: 'Email',
+  business_email: 'Business email',
+  phone: 'Phone number',
+  contact_number: 'Contact number',
+  business_phone: 'Business phone',
+  business_name: 'Business name',
+  postal_code: 'Postal code',
+  cnic: 'CNIC',
+  experience_years: 'Experience',
+  service_areas: 'Service areas',
+  house_address: 'Address',
+  address: 'Address',
+  identifier: 'Email or phone',
+  new_password: 'New password',
+  otp: 'Verification code',
+  subject: 'Subject',
+  message: 'Message',
+}
+
+function fieldLabel(field: string): string {
+  if (FIELD_LABELS[field]) return FIELD_LABELS[field]
+  const words = field.replace(/_/g, ' ').trim()
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
+type ValidationIssue = { type?: string; loc?: (string | number)[]; msg?: string; ctx?: Record<string, unknown> }
+
+function humanizeIssue(issue: ValidationIssue, label: string): string {
+  const ctx = issue.ctx ?? {}
+  const msg = issue.msg ?? ''
+  switch (issue.type) {
+    case 'string_too_short':
+      return `${label} must be at least ${ctx.min_length} characters.`
+    case 'string_too_long':
+      return `${label} must be at most ${ctx.max_length} characters.`
+    case 'too_short':
+      return `${label} needs at least ${ctx.min_length} item(s).`
+    case 'too_long':
+      return `${label} can have at most ${ctx.max_length} item(s).`
+    case 'missing':
+      return `${label} is required.`
+    case 'string_pattern_mismatch':
+      return `${label} format is not valid.`
+    case 'greater_than_equal':
+      return `${label} must be at least ${ctx.ge}.`
+    case 'less_than_equal':
+      return `${label} must be at most ${ctx.le}.`
+    case 'int_parsing':
+    case 'float_parsing':
+    case 'int_from_float':
+      return `${label} must be a number.`
+    case 'enum':
+    case 'literal_error':
+      return `Please choose a valid ${label.toLowerCase()}.`
+    case 'bool_parsing':
+      return `${label} must be yes or no.`
+    default:
+      if (/email/i.test(msg)) return 'Enter a valid email address.'
+      if (/date/i.test(issue.type ?? '')) return `${label} must be a valid date.`
+      return `${label}: ${msg.replace(/^Value error,\s*/i, '').replace(/\.$/, '')}.`
+  }
+}
+
+export async function readError(res: Response): Promise<{ message: string; fieldErrors: Record<string, string> }> {
+  const fallback = () => {
+    if (res.status >= 500) return 'Something went wrong on our side. Please try again in a moment.'
+    if (res.status === 401) return 'Your session has expired. Please sign in again.'
+    if (res.status === 403) return 'You do not have permission to do that.'
+    if (res.status === 404) return 'We could not find what you were looking for.'
+    if (res.status === 429) return 'Too many attempts. Please wait a moment and try again.'
+    return res.statusText || 'Something went wrong. Please try again.'
+  }
   try {
     const data = await res.json()
-    if (typeof data.detail === 'string') return data.detail
-    return JSON.stringify(data.detail || data)
+    const detail = data?.detail
+    if (typeof detail === 'string') return { message: res.status >= 500 ? fallback() : detail, fieldErrors: {} }
+    if (Array.isArray(detail)) {
+      const fieldErrors: Record<string, string> = {}
+      const sentences: string[] = []
+      for (const issue of detail as ValidationIssue[]) {
+        const path = (issue.loc ?? []).filter((part) => part !== 'body' && part !== 'query')
+        const field = [...path].reverse().find((part) => typeof part === 'string') as string | undefined
+        const sentence = humanizeIssue(issue, fieldLabel(field ?? 'This field'))
+        if (field && !fieldErrors[field]) fieldErrors[field] = sentence
+        sentences.push(sentence)
+      }
+      return { message: sentences.length ? sentences.join(' ') : 'Please check the details you entered.', fieldErrors }
+    }
+    return { message: fallback(), fieldErrors: {} }
   } catch {
-    return res.statusText
+    return { message: fallback(), fieldErrors: {} }
   }
 }
 
@@ -271,18 +372,24 @@ async function api<T>(path: string, initWithRole?: RequestInit & { authRole?: Au
   const { authRole, ...init } = initWithRole || {}
   const role = authRole ?? roleForPath(path)
   const token = role ? getAccessToken(role) : anyAccessToken()
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init?.headers || {}),
-    },
-    cache: 'no-store',
-  })
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: {
+        ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init?.headers || {}),
+      },
+      cache: 'no-store',
+    })
+  } catch (networkError) {
+    if (networkError instanceof DOMException && networkError.name === 'AbortError') throw networkError
+    throw new ApiError('Unable to reach the server. Please check your internet connection and try again.')
+  }
   if (!res.ok) {
-    const error = new Error(await readError(res)) as Error & { status?: number }
-    error.status = res.status
+    const { message, fieldErrors } = await readError(res)
+    const error = new ApiError(message, res.status, fieldErrors)
     if (res.status === 401 && token) {
       // The token we sent is expired or invalid — drop every cached session holding it
       // so polling components stop retrying with it and the app falls back to login.
@@ -372,6 +479,22 @@ export async function loginUser(payload: {
   return api('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) })
 }
 
+export async function requestPasswordReset(payload: {
+  identifier: string
+  role: AuthRole
+}): Promise<{ message: string; dev_otp: string | null }> {
+  return api('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export async function resetPassword(payload: {
+  identifier: string
+  role: AuthRole
+  otp: string
+  new_password: string
+}): Promise<{ message: string }> {
+  return api('/api/auth/reset-password', { method: 'POST', body: JSON.stringify(payload) })
+}
+
 export async function getCurrentUser(role?: AuthRole): Promise<AuthResponse> {
   try {
     const user = await api<AuthResponse>('/api/auth/me', role ? { authRole: role } : undefined)
@@ -435,7 +558,7 @@ export async function uploadVendorProfileImage(vendorId: string, file: File): Pr
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     cache: 'no-store',
   })
-  if (!res.ok) throw new Error(await readError(res))
+  if (!res.ok) { const { message, fieldErrors } = await readError(res); throw new ApiError(message, res.status, fieldErrors) }
   return res.json()
 }
 
@@ -468,7 +591,7 @@ export async function completeVendorBookingWithPhotos(bookingId: string, files: 
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     cache: 'no-store',
   })
-  if (!res.ok) throw new Error(await readError(res))
+  if (!res.ok) { const { message, fieldErrors } = await readError(res); throw new ApiError(message, res.status, fieldErrors) }
   return res.json()
 }
 

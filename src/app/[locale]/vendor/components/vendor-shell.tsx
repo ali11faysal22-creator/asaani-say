@@ -1,5 +1,6 @@
 'use client'
 
+import Breadcrumbs from '@/components/Breadcrumbs'
 import { useState, type ReactNode } from 'react'
 import { usePathname } from '@/i18n/navigation'
 import VendorSidebar from './vendor-sidebar'
@@ -19,7 +20,7 @@ export default function VendorShell({ children }: { children: ReactNode }) {
         <VendorTopbar onMenuClick={() => setMobileNavOpen(true)} />
 
         <main className="min-w-0 flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className={`min-w-0 ${contentClassName || 'w-full'} space-y-6`}>{children}</div>
+          <div className={`min-w-0 ${contentClassName || 'w-full'} space-y-6`}><Breadcrumbs />{children}</div>
         </main>
       </div>
     </div>

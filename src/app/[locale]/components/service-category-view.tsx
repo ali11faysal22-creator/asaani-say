@@ -1,5 +1,6 @@
 'use client'
 
+import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from '@/i18n/navigation'
@@ -18,10 +19,12 @@ import {
   Navigation,
   Loader2
 } from 'lucide-react'
-import { API_BASE, createCustomerAddress, fetchAddresses, fetchCategory, fetchDemoCustomer, formatSlotLabel, getAccessToken, getCurrentUser, getStoredAuth, updateCustomerAddress, type ApiAddress, type CatalogCategory, type CatalogService, type DateRow } from '../lib/booking-api'
+import { API_BASE, createCustomerAddress, fetchAddresses, fetchCategory, fetchDemoCustomer, formatSlotLabel, getAccessToken, getCurrentUser, getStoredAuth, readError, updateCustomerAddress, type ApiAddress, type CatalogCategory, type CatalogService, type DateRow } from '../lib/booking-api'
 import { categoryIcon } from '../lib/category-icons'
 import { LocationPicker } from './location-picker'
 import CustomerNavbar from './customer-navbar'
+
+import { BreadcrumbBar } from '@/components/Breadcrumbs'
 import PublicContactBar from './public-contact-bar'
 import PublicFooter from './public-footer'
 import { useLanguage } from '../lib/i18n'
@@ -91,6 +94,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   const [bookingData, setBookingData] = useState<BookingResponse | null>(null)
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
   const [bookingError, setBookingError] = useState('')
+  const [addressErrors, setAddressErrors] = useState<Record<string, string>>({})
   const resumedBookingRef = useRef<{ date?: string; slot?: { start: string; end: string } } | null>(null)
 
   const Icon = categoryIcon(category?.icon)
@@ -280,9 +284,13 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   }
 
   const handleAddAddress = async () => {
-    if (!newAddressLine.trim()) return
+    if (!newAddressLine.trim()) {
+      setAddressErrors({ line: 'Address is required.' })
+      return
+    }
     setSavingAddress(true)
     setBookingError('')
+    setAddressErrors({})
 
     try {
       const auth = await getCurrentUser('customer')
@@ -324,7 +332,9 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
         setShowAuthPrompt(true)
         return
       }
-      setBookingError(error instanceof Error ? error.message : 'Unable to save address')
+      const apiFieldErrors = fieldErrorsOf(error)
+      if (Object.keys(apiFieldErrors).length) setAddressErrors(apiFieldErrors)
+      else setBookingError(messageOf(error, 'Unable to save address'))
     } finally {
       setSavingAddress(false)
     }
@@ -403,16 +413,12 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
         localStorage.setItem('asaani_user_notifications', JSON.stringify([notification, ...existingNotifications]))
         router.push('/order-confirmation')
       } else {
-        const error = await res.json().catch(() => null)
-        setBookingError(error?.detail || 'Booking could not be completed. Please try again.')
+        const { message } = await readError(res)
+        setBookingError(message)
       }
     } catch (error) {
       console.error(error)
-      setBookingError(
-        error instanceof TypeError && error.message === 'Failed to fetch'
-          ? 'Booking service is unavailable. Please make sure the backend is running at http://localhost:8000 and try again.'
-          : 'Unable to connect to the booking service. Please try again.'
-      )
+      setBookingError('Unable to reach the server. Please check your internet connection and try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -426,6 +432,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
       <PublicContactBar />
 
       <CustomerNavbar active="services" showLanguageSwitcher={false} />
+      <BreadcrumbBar labels={category ? { [`/services/${slug}`]: t(category.name) } : undefined} />
 
       
       <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -549,16 +556,18 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                     <div className="space-y-2 rounded-xl border border-orange-100 bg-orange-50/40 p-3">
                       <input
                         value={newAddressLine}
-                        onChange={(event) => setNewAddressLine(event.target.value)}
+                        onChange={(event) => { setNewAddressLine(event.target.value); setAddressErrors((prev) => ({ ...prev, line: '' })) }}
                         placeholder={t('House 22, Street 5, Gulberg, Lahore')}
-                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-500"
+                        className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-500 ${errorBorder(addressErrors.line)}`}
                       />
+                      <FieldError message={addressErrors.line} />
                       <input
                         value={newAddressArea}
                         onChange={(event) => setNewAddressArea(event.target.value)}
                         placeholder={t('Area name, e.g. Gulberg')}
-                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-500"
+                        className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-500 ${errorBorder(addressErrors.area)}`}
                       />
+                      <FieldError message={addressErrors.area} />
                       <LocationPicker
                         label={t('Confirm this address on the map')}
                         hint={t('This pin is what we match you to the nearest, best-rated vendor with — drag it onto your exact spot.')}

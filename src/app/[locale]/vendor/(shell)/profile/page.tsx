@@ -16,6 +16,7 @@ import {
 import { API_BASE, fetchVendorProfile, formatSlotLabel, getStoredAuth, updateVendorProfile, uploadVendorProfileImage, type VendorProfileResponse } from '@/app/lib/booking-api'
 import UnsavedChangesGuard from '@/app/vendor/components/unsaved-changes-guard'
 import { useLanguage } from '@/app/lib/i18n'
+import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError'
 
 interface DaySchedule {
   day: string
@@ -144,6 +145,7 @@ export default function VendorProfilePage() {
   }, [router])
 
   const [newAreaInput, setNewAreaInput] = useState('')
+  const [profileErrors, setProfileErrors] = useState<Record<string, string>>({})
   const [showAddAreaInput, setShowAddAreaInput] = useState(false)
 
   const [toast, setToast] = useState<{
@@ -168,13 +170,25 @@ export default function VendorProfilePage() {
     }
   }
   const handleSaveChanges = async () => {
+    const problems: Record<string, string> = {}
+    if (!profile.businessName.trim()) problems.business_name = 'Business name is required.'
+    if (!profile.email.trim()) problems.email = 'Email is required.'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email.trim())) problems.email = 'Enter a valid email address.'
+    if (!profile.phone.trim()) problems.contact_number = 'Contact number is required.'
+    if (!profile.cnic.trim()) problems.cnic = 'CNIC is required.'
+    if (!profile.experienceYears.trim()) problems.experience_years = 'Experience is required.'
+    if (!profile.postalCode.trim()) problems.postal_code = 'Postal code is required.'
+    if (profile.serviceAreas.length === 0) problems.service_areas = 'Add at least one service area.'
+    setProfileErrors(problems)
+    if (Object.keys(problems).length) {
+      setToast({ show: false, message: '', type: 'success' })
+      window.setTimeout(() => document.querySelector('main [role="alert"], [role="alert"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
+      return
+    }
     setToast({ show: true, message: t('Saving profile details...'), type: 'saving' })
     try {
       const auth = getStoredAuth('vendor')
       if (!auth?.profile_id) throw new Error('Vendor session expired')
-      if (!profile.email || !profile.cnic || !profile.experienceYears || !profile.postalCode || profile.serviceAreas.length === 0) {
-        throw new Error('Contact email, CNIC, experience, postal code, and at least one service area are required')
-      }
       const updated = await updateVendorProfile(auth.profile_id, {
         first_name: profile.firstName,
         last_name: profile.lastName,
@@ -194,13 +208,20 @@ export default function VendorProfilePage() {
       setToast({ show: true, message: t('Profile saved successfully!'), type: 'success' })
       setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000)
     } catch (error) {
-      setToast({ show: true, message: error instanceof Error ? t(error.message) : t('Unable to save profile'), type: 'success' })
+      const apiFieldErrors = fieldErrorsOf(error)
+      if (Object.keys(apiFieldErrors).length) {
+        setProfileErrors(apiFieldErrors)
+        setToast({ show: false, message: '', type: 'success' })
+        window.setTimeout(() => document.querySelector('main [role="alert"], [role="alert"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
+      } else {
+        setToast({ show: true, message: t(messageOf(error, 'Unable to save profile')), type: 'success' })
+      }
     }
   }
   const handleAddServiceArea = () => {
     if (!newAreaInput.trim()) return
     if (profile.serviceAreas.includes(newAreaInput.trim())) {
-      alert(t('This area is already added!'))
+      setProfileErrors((prev) => ({ ...prev, service_areas: 'This area is already added.' }))
       return
     }
     setProfile((prev) => ({ ...prev, serviceAreas: [...prev.serviceAreas, newAreaInput.trim()] }))
@@ -323,8 +344,9 @@ export default function VendorProfilePage() {
                   placeholder={t('Enter your business name...')}
                   value={profile.businessName}
                   onChange={(e) => setProfile({ ...profile, businessName: e.target.value })}
-                  className="w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none"
+                  className={`w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none ${errorBorder(profileErrors.business_name)}`}
                 />
+                <FieldError message={profileErrors.business_name} />
               </div>
 
               <div className="space-y-1.5">
@@ -336,8 +358,9 @@ export default function VendorProfilePage() {
                   placeholder={t('Enter your email address...')}
                   value={profile.email}
                   onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                  className="w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none"
+                  className={`w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none ${errorBorder(profileErrors.email)}`}
                 />
+                <FieldError message={profileErrors.email} />
               </div>
             </div>
 
@@ -352,8 +375,9 @@ export default function VendorProfilePage() {
                   placeholder={t('e.g. +92 300 1234567')}
                   value={profile.phone}
                   onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                  className="w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none"
+                  className={`w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none ${errorBorder(profileErrors.contact_number)}`}
                 />
+                <FieldError message={profileErrors.contact_number} />
               </div>
 
               <div className="space-y-1.5">
@@ -365,8 +389,9 @@ export default function VendorProfilePage() {
                   placeholder="35201-XXXXXXX-X"
                   value={profile.cnic}
                   onChange={(e) => setProfile({ ...profile, cnic: e.target.value })}
-                  className="w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none"
+                  className={`w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none ${errorBorder(profileErrors.cnic)}`}
                 />
+                <FieldError message={profileErrors.cnic} />
               </div>
             </div>
 
@@ -389,8 +414,9 @@ export default function VendorProfilePage() {
                   placeholder={t('e.g. 5+ Years')}
                   value={profile.experienceYears}
                   onChange={(e) => setProfile({ ...profile, experienceYears: e.target.value })}
-                  className="w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none"
+                  className={`w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none ${errorBorder(profileErrors.experience_years)}`}
                 />
+                <FieldError message={profileErrors.experience_years} />
               </div>
             </div>
 
@@ -564,6 +590,8 @@ export default function VendorProfilePage() {
                   </button>
                 )}
               </div>
+              <FieldError message={profileErrors.service_areas} />
+              <FieldError message={profileErrors.postal_code} />
             </div>
 
             

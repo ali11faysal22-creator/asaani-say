@@ -36,12 +36,13 @@ export async function generateMetadata({
   const { locale } = await params
   const title = 'Asaani Say - Home Services'
   const description = 'Book home services quickly and easily.'
-  if (!hasLocale(routing.locales, locale) || locale === 'en') return { title, description }
+  if (!hasLocale(routing.locales, locale) || locale === 'en') return { title, description, other: { google: 'notranslate' } }
   const messages = (await getMessages({ locale })) as { Common?: Record<string, string> }
   const common = messages.Common ?? {}
   return {
     title: common[phraseKey(title)] ?? title,
     description: common[phraseKey(description)] ?? description,
+    other: { google: 'notranslate' },
   }
 }
 
@@ -65,6 +66,7 @@ export default async function RootLayout({
     <html
       lang={locale}
       dir={locale === 'ur' ? 'rtl' : 'ltr'}
+      translate="no"
       className={`${poppins.variable} ${notoNastaliqUrdu.variable} h-full antialiased`}
     >
       <body className={`min-h-full flex flex-col ${locale === 'ur' ? notoNastaliqUrdu.className : poppins.className}`}>

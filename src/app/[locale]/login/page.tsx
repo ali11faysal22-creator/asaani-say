@@ -10,14 +10,14 @@ export default function GetStartedPage(){
     <div className="min-h-screen w-full bg-[#171923] text-white flex flex-col justify-center items-center px-2 py-8 font-sans">
       
       <div className="text-center space-y-3 max-w-2xl mx-auto mt-4">
-        <div className="flex items-center justify-center gap-3">
+        <Link href="/" aria-label={t('Go to home page')} className="flex items-center justify-center gap-3">
           <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center shadow-lg">
             <Wrench className="w-5 h-5 text-white stroke-[2.5]"/>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
             {t('Asaani')} <span className="text-orange-500">{t('Say')}</span>
           </h1>
-        </div>
+        </Link>
         <h2 className="text-lg sm:text-xl font-bold text-slate-200">
           {t('Linking customers with technicians for fast, secure, and budget-friendly bookings.')}
         </h2>

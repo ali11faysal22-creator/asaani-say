@@ -4,7 +4,8 @@ import React from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/navigation'
 import Counter from '../components/counter'; 
-import CustomerNavbar from '../components/customer-navbar';
+import CustomerNavbar from '../components/customer-navbar'
+import { BreadcrumbBar } from '@/components/Breadcrumbs';
 import PublicContactBar from '../components/public-contact-bar'
 import { useLanguage } from '../lib/i18n'
 import PublicFooter from '../components/public-footer'
@@ -19,6 +20,7 @@ export default function AboutUsPage() {
 
       
       <CustomerNavbar active="about" showLanguageSwitcher={false} />
+      <BreadcrumbBar />
 
       
       <main>

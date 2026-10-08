@@ -1,5 +1,6 @@
 'use client';
 
+import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from '@/i18n/navigation'
 import { fetchVendorProfile, getStoredAuth, updateVendorProfile } from '@/app/lib/booking-api';
@@ -169,6 +170,7 @@ export default function VendorSettingsPage() {
   const [subServices, setSubServices] = useState<string[]>(() => getStoredStringArray(['vendor_selected_sub_services', 'vendor_sub_services']))
   const [availability, setAvailability] = useState<DaySetting[]>(getStoredAvailability)
 
+  const [accountErrors, setAccountErrors] = useState<Record<string, string>>({});
   const [accountInfo, setAccountInfo] = useState({
     fullName: '', phone: '', email: '', businessName: '', cnic: '', postalCode: '', address: ''
   })
@@ -286,10 +288,17 @@ export default function VendorSettingsPage() {
     const auth = getStoredAuth('vendor');
     if (!auth?.profile_id) return showToast('Vendor session expired. Please sign in again.');
     const nameParts = accountInfo.fullName.trim().split(/\s+/).filter(Boolean);
-    if (nameParts.length < 2 || !accountInfo.email || !accountInfo.phone || !accountInfo.businessName || !accountInfo.cnic || !accountInfo.postalCode) {
-      showToast('Full name, email, phone, business name, CNIC, and postal code are required.');
-      return;
-    }
+    const problems: Record<string, string> = {};
+    if (nameParts.length === 0) problems.first_name = 'Name is required.';
+    else if (nameParts.length < 2) problems.first_name = 'Enter your first and last name.';
+    if (!accountInfo.businessName.trim()) problems.business_name = 'Business name is required.';
+    if (!accountInfo.phone.trim()) problems.contact_number = 'Contact number is required.';
+    if (!accountInfo.email.trim()) problems.email = 'Email is required.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountInfo.email.trim())) problems.email = 'Enter a valid email address.';
+    if (!accountInfo.postalCode.trim()) problems.postal_code = 'Postal code is required.';
+    if (!accountInfo.cnic.trim()) problems.cnic = 'CNIC is required.';
+    setAccountErrors(problems);
+    if (Object.keys(problems).length) return;
     try {
       await updateVendorProfile(auth.profile_id, {
         first_name: nameParts[0],
@@ -306,7 +315,9 @@ export default function VendorSettingsPage() {
       showToast('Profile saved successfully!');
       setSavedSettings(settingsSnapshot);
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Unable to save profile');
+      const apiFieldErrors = fieldErrorsOf(error);
+      if (Object.keys(apiFieldErrors).length) setAccountErrors(apiFieldErrors);
+      else showToast(messageOf(error, 'Unable to save profile'));
     }
   };
 
@@ -519,23 +530,30 @@ export default function VendorSettingsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">{t('Full Name')}</label>
-                  <input type="text" value={accountInfo.fullName} onChange={(e) => setAccountInfo({ ...accountInfo, fullName: e.target.value })} className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:border-orange-500" />
+                  <input type="text" value={accountInfo.fullName} onChange={(e) => setAccountInfo({ ...accountInfo, fullName: e.target.value })} className={`w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:border-orange-500 ${errorBorder(accountErrors.first_name)}`} />
+                  <FieldError message={accountErrors.first_name} />
+                  <FieldError message={accountErrors.last_name} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">{t('Business Name')}</label>
-                  <input type="text" value={accountInfo.businessName} onChange={(e) => setAccountInfo({ ...accountInfo, businessName: e.target.value })} className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:border-orange-500" />
+                  <input type="text" value={accountInfo.businessName} onChange={(e) => setAccountInfo({ ...accountInfo, businessName: e.target.value })} className={`w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:border-orange-500 ${errorBorder(accountErrors.business_name)}`} />
+                  <FieldError message={accountErrors.business_name} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">{t('Phone Number')}</label>
-                  <input type="text" value={accountInfo.phone} onChange={(e) => setAccountInfo({ ...accountInfo, phone: e.target.value })} className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:border-orange-500" />
+                  <input type="text" value={accountInfo.phone} onChange={(e) => setAccountInfo({ ...accountInfo, phone: e.target.value })} className={`w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:border-orange-500 ${errorBorder(accountErrors.contact_number)}`} />
+                  <FieldError message={accountErrors.contact_number} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">{t('Email Address')}</label>
-                  <input type="email" value={accountInfo.email} onChange={(e) => setAccountInfo({ ...accountInfo, email: e.target.value })} className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:border-orange-500" />
+                  <input type="email" value={accountInfo.email} onChange={(e) => setAccountInfo({ ...accountInfo, email: e.target.value })} className={`w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:border-orange-500 ${errorBorder(accountErrors.email)}`} />
+                  <FieldError message={accountErrors.email} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">{t('Postal Code')}</label>
-                  <input type="text" required value={accountInfo.postalCode} onChange={(e) => setAccountInfo({ ...accountInfo, postalCode: e.target.value })} className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:border-orange-500" />
+                  <input type="text" required value={accountInfo.postalCode} onChange={(e) => setAccountInfo({ ...accountInfo, postalCode: e.target.value })} className={`w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:border-orange-500 ${errorBorder(accountErrors.postal_code)}`} />
+                  <FieldError message={accountErrors.postal_code} />
+                  <FieldError message={accountErrors.cnic} />
                 </div>
               </div>
               <div className="flex justify-end pt-2">

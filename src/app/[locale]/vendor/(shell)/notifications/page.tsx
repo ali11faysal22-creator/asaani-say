@@ -1,5 +1,6 @@
 'use client'
 
+import { FieldError, errorBorder, messageOf } from '@/components/FieldError'
 import React, { useState, useEffect } from 'react'
 import {
   Wrench,
@@ -73,6 +74,7 @@ export interface NotificationItem {
     | 'pending'
     | 'accepted'
     | 'declined'
+    | 'cancelled'
     | 'on_the_way'
     | 'reached'
     | 'in_progress'
@@ -103,6 +105,8 @@ export default function NotificationsPage() {
   const [showCompletionUpload, setShowCompletionUpload] = useState(false)
   const [completionPhotos, setCompletionPhotos] = useState<File[]>([])
   const [showCannotStartForm, setShowCannotStartForm] = useState(false)
+  const [reasonError, setReasonError] = useState('')
+  const [photoError, setPhotoError] = useState('')
   const [cannotStartReason, setCannotStartReason] = useState('')
 
   useEffect(() => {
@@ -143,14 +147,17 @@ export default function NotificationsPage() {
             'payment_requested',
             'completed',
           ])
-          const bookingStatus = isDeclinedNotice || booking?.status === 'rejected'
+          const isCancelled = booking?.status === 'cancelled' || row.title.toLowerCase().includes('cancelled')
+          const bookingStatus = isCancelled
+            ? 'cancelled'
+            : isDeclinedNotice || booking?.status === 'rejected'
             ? 'declined'
             : booking && trackedStatuses.has(booking.status)
               ? (booking.status as NotificationItem['bookingStatus'])
               : 'pending'
           return {
             id: row.id,
-            type: isDeclinedNotice ? 'booking_cancelled' : row.type === 'booking' ? 'booking_request' : 'booking_confirmed',
+            type: isDeclinedNotice || isCancelled ? 'booking_cancelled' : row.type === 'booking' ? 'booking_request' : 'booking_confirmed',
             title: row.title,
             message: row.body,
             timestamp: row.created_at || 'Just now',
@@ -286,6 +293,7 @@ export default function NotificationsPage() {
     if (!auth?.profile_id || !bookingId || !selectedNotif?.booking) return
     setActionInProgress(true)
     setActionError('')
+    setReasonError('')
     try {
       const updatedBooking = await updateVendorBookingStatus(auth.profile_id, bookingId, action, reason)
       setSelectedNotif((item) => item ? { ...item, booking: updatedBooking } : item)
@@ -299,7 +307,8 @@ export default function NotificationsPage() {
         setNotifications((items) => items.filter((item) => item.id !== staleId))
         setSelectedNotif(null)
       } else {
-        setActionError(error instanceof Error ? error.message : 'Unable to update tracking status')
+        if (reason !== undefined) setReasonError(messageOf(error, 'Unable to update tracking status'))
+        else setActionError(messageOf(error, 'Unable to update tracking status'))
       }
     } finally {
       setActionInProgress(false)
@@ -311,6 +320,7 @@ export default function NotificationsPage() {
     if (!bookingId || !selectedNotif?.booking) return
     setActionInProgress(true)
     setActionError('')
+    setPhotoError('')
     try {
       const updatedBooking = await completeVendorBookingWithPhotos(bookingId, completionPhotos)
       setSelectedNotif((item) => item ? { ...item, booking: updatedBooking } : item)
@@ -324,7 +334,7 @@ export default function NotificationsPage() {
         setNotifications((items) => items.filter((item) => item.id !== staleId))
         setSelectedNotif(null)
       } else {
-        setActionError(error instanceof Error ? error.message : 'Unable to complete order')
+        setPhotoError(messageOf(error, 'Unable to complete order'))
       }
     } finally {
       setActionInProgress(false)
@@ -474,9 +484,15 @@ export default function NotificationsPage() {
                     <div className="bg-white border border-slate-200/80 rounded-xl p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-900">{t(selectedNotif.service || '')}</span>
-                        <span className="text-xs font-bold bg-[#e6f7ef] text-[#10b981] px-2.5 py-0.5 rounded-full">
-                          {t('ACTIVE')}
-                        </span>
+                        {selectedNotif.bookingStatus === 'cancelled' ? (
+                          <span className="text-xs font-bold bg-rose-50 text-rose-600 px-2.5 py-0.5 rounded-full">
+                            {t('CANCELLED')}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-bold bg-[#e6f7ef] text-[#10b981] px-2.5 py-0.5 rounded-full">
+                            {t('ACTIVE')}
+                          </span>
+                        )}
                       </div>
 
                       <div className="space-y-2 text-xs pt-1">
@@ -540,7 +556,7 @@ export default function NotificationsPage() {
                   )}
 
                   
-                  {selectedNotif.type === 'booking_request' && (
+                  {(selectedNotif.type === 'booking_request' || selectedNotif.bookingStatus === 'cancelled') && (
                     <div className="pt-2">
                       {selectedNotif.bookingStatus === 'pending' ? (
                         <div className="space-y-2">
@@ -595,14 +611,15 @@ export default function NotificationsPage() {
                           <p className="text-[11px] font-bold text-rose-700">{t("Why can't you start this job?")}</p>
                           <textarea
                             value={cannotStartReason}
-                            onChange={(event) => setCannotStartReason(event.target.value)}
+                            onChange={(event) => { setCannotStartReason(event.target.value); setReasonError('') }}
                             placeholder={t('e.g. Customer not reachable, wrong address, out of scope…')}
                             rows={2}
                             maxLength={500}
-                            className="w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] text-slate-700 focus:outline-none focus:border-rose-400"
+                            className={`w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] text-slate-700 focus:outline-none focus:border-rose-400 ${errorBorder(reasonError)}`}
                           />
+                          <FieldError message={reasonError} />
                           <div className="flex gap-2">
-                            <button type="button" disabled={actionInProgress || !cannotStartReason.trim()} onClick={() => void handleTrackingStatus('cannot_start', cannotStartReason.trim())} className="rounded-lg bg-rose-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">
+                            <button type="button" disabled={actionInProgress} onClick={() => { if (!cannotStartReason.trim()) { setReasonError('Please tell us why you cannot start this job.'); return } void handleTrackingStatus('cannot_start', cannotStartReason.trim()) }} className="rounded-lg bg-rose-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">
                               {actionInProgress ? t('Submitting…') : t('Confirm — find another vendor')}
                             </button>
                             <button type="button" disabled={actionInProgress} onClick={() => { setShowCannotStartForm(false); setCannotStartReason('') }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600">
@@ -618,9 +635,10 @@ export default function NotificationsPage() {
                             type="file"
                             accept="image/jpeg,image/png,image/webp"
                             multiple
-                            onChange={(event) => setCompletionPhotos(Array.from(event.target.files || []))}
+                            onChange={(event) => { setCompletionPhotos(Array.from(event.target.files || [])); setPhotoError('') }}
                             className="block w-full text-[11px] text-slate-600 file:me-2 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-white"
                           />
+                          <FieldError message={photoError} />
                           {completionPhotos.length > 0 && (
                             <p className="text-[10px] text-slate-500">
                               {completionPhotos.length} {t(completionPhotos.length === 1 ? 'photo' : 'photos')} {t('selected')}

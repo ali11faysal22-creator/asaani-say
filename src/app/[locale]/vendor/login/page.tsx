@@ -1,12 +1,14 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { useRouter } from '@/i18n/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
 import { fetchPublicConfig, loginUser, registerVendor, setStoredAuth } from '@/app/lib/booking-api'
 import { PhoneInput, combinePhoneNumber } from '@/app/components/phone-input'
 import { DEFAULT_COUNTRY_ISO, COUNTRY_CODES } from '@/app/lib/country-codes'
 import { LocationPicker } from '@/app/components/location-picker'
 import { useLanguage } from '@/app/lib/i18n'
+import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import {
   Eye,
   EyeOff,
@@ -209,6 +211,7 @@ export default function VendorLoginPage() {
   const [showOtherInput] = useState(false)
   const [sameWhatsappNumber, setSameWhatsappNumber] = useState(false)
   const [formError, setFormError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [isProcessing, setIsProcessing] = useState(false)
   const [contactCountryCode, setContactCountryCode] = useState(DEFAULT_DIAL_CODE)
   const [whatsappCountryCode, setWhatsappCountryCode] = useState(DEFAULT_DIAL_CODE)
@@ -406,12 +409,12 @@ export default function VendorLoginPage() {
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
-    if (password.length < 8) {
-      setFormError(t('Password must be at least 8 characters.'))
-      return
-    }
-    if (password !== confirmPassword) {
-      setFormError(t('Passwords do not match.'))
+    setFieldErrors({})
+    const problems: Record<string, string> = {}
+    if (password.length < 8) problems.password = 'Password must be at least 8 characters.'
+    if (password !== confirmPassword) problems.confirm_password = 'Passwords do not match.'
+    if (Object.keys(problems).length) {
+      setFieldErrors(problems)
       return
     }
     const nameParts = name.trim().split(/\s+/).filter(Boolean)
@@ -433,6 +436,7 @@ export default function VendorLoginPage() {
     e.preventDefault()
     e.stopPropagation()
     setFormError('')
+    setFieldErrors({})
 
     if (selectedCategories.length === 0 && !showOtherInput) {
       setFormError(t('Please select at least 1 main category or specify a custom service.'))
@@ -501,7 +505,15 @@ export default function VendorLoginPage() {
         setFormError(t('Vendor registration did not return a valid vendor session.'))
       }
     } catch (error) {
-      setFormError(error instanceof Error ? t(error.message) : t('Vendor registration failed. Please try again.'))
+      const apiFieldErrors = fieldErrorsOf(error)
+      if (Object.keys(apiFieldErrors).length) {
+        setFieldErrors(apiFieldErrors)
+        // The account fields (password, email) live on step 1.
+        if (apiFieldErrors.password || apiFieldErrors.email) setRegStep(1)
+        setFormError('Please correct the highlighted fields.')
+      } else {
+        setFormError(messageOf(error, 'Vendor registration failed. Please try again.'))
+      }
     } finally {
       setIsProcessing(false)
     }
@@ -527,7 +539,7 @@ export default function VendorLoginPage() {
         setFormError(t('This account is not registered as a vendor.'))
       }
     } catch (error) {
-      setFormError(error instanceof Error ? t(error.message) : t('Vendor login failed. Please try again.'))
+      setFormError(messageOf(error, 'Vendor login failed. Please try again.'))
     } finally {
       setIsProcessing(false)
     }
@@ -537,6 +549,7 @@ export default function VendorLoginPage() {
     setIsRegister(registerMode)
     setRegStep(1)
     setFormError('')
+    setFieldErrors({})
   }
 
   return (
@@ -547,12 +560,12 @@ export default function VendorLoginPage() {
           className="md:col-span-4 bg-[#3B3E56] text-white p-6 md:p-10 flex flex-col justify-between relative"
           style={{ minHeight: '35rem' }}
         >
-          <div className="flex items-center gap-2">
+          <Link href="/" aria-label={t('Go to home page')} className="flex items-center gap-2 w-fit">
             <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
               <Wrench className="w-4 h-4 text-white" />
             </div>
             <span className="font-bold text-base text-white">{t('Asaani Say')}</span>
-          </div>
+          </Link>
 
           <div className="my-auto -translate-y-24 space-y-4">
             <h1 className="text-3xl font-extrabold leading-tight">
@@ -576,16 +589,19 @@ export default function VendorLoginPage() {
 
         
         <div className="md:col-span-8 bg-white p-6 md:p-12 flex flex-col justify-between min-h-screen overflow-y-auto">
+          <div className="flex justify-end">
+            <LanguageSwitcher compact />
+          </div>
           <div className="w-full max-w-xl mx-auto my-auto py-4">
             <div className="flex items-center justify-center mb-6">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => handleTabSwitch(false)}
-                  className={`text-xs font-bold px-5 py-2.5 rounded-xl transition cursor-pointer ${
+                  className={`text-base font-medium px-6 py-3 rounded-xl transition cursor-pointer ${
                     !isRegister
-                      ? 'text-[#2C2F45] bg-orange-50/20'
-                      : 'text-slate-400 hover:text-orange-500'
+                      ? 'bg-[#FF6A00] text-white'
+                      : 'text-slate-400 hover:text-[#FF6A00]'
                   }`}
                 >
                   {t('Sign in')}
@@ -594,10 +610,10 @@ export default function VendorLoginPage() {
                 <button
                   type="button"
                   onClick={() => handleTabSwitch(true)}
-                  className={`text-xs font-bold px-5 py-2.5 rounded-xl border border-orange-500 transition cursor-pointer ${
+                  className={`text-base font-medium px-6 py-3 rounded-xl transition cursor-pointer ${
                     isRegister
-                      ? 'bg-orange-500 text-white shadow-xs'
-                      : 'bg-white text-slate-500 hover:bg-slate-100'
+                      ? 'bg-[#FF6A00] text-white'
+                      : 'text-slate-400 hover:text-[#FF6A00]'
                   }`}
                 >
                   {t('Register')}
@@ -619,7 +635,7 @@ export default function VendorLoginPage() {
 
                 <form onSubmit={handleSignInSubmit} className="space-y-4">
                   {formError && (
-                    <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{formError}</p>
+                    <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(formError)}</p>
                   )}
                   <div>
                     <input
@@ -654,14 +670,15 @@ export default function VendorLoginPage() {
                       )}
                     </button>
                   </div>
+                  <FieldError message={fieldErrors.password} />
 
                   <div className="text-end">
-                    <a
-                      href="#"
-                      className="text-[11px] text-orange-500 hover:underline font-medium"
+                    <Link
+                      href="/forgot-password?role=vendor"
+                      className="text-xs text-[#FF6A00] hover:underline font-medium"
                     >
                       {t('Recover Password ?')}
-                    </a>
+                    </Link>
                   </div>
 
                   <button
@@ -689,28 +706,28 @@ export default function VendorLoginPage() {
 
                 <form onSubmit={handleNextStep} className="space-y-4">
                   {formError && (
-                    <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{formError}</p>
+                    <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(formError)}</p>
                   )}
                   <div>
-                    <input
+                    <div><input
                       type="text"
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder={t('Name')}
-                      className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
-                    />
+                      className={`w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.first_name)}`}
+                    /><FieldError message={fieldErrors.first_name} /></div>
                   </div>
 
                   <div>
-                    <input
+                    <div><input
                       type="text"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder={t('Email or Phone Number')}
                       maxLength={100}
-                      className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
-                    />
+                      className={`w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.email)}`}
+                    /><FieldError message={fieldErrors.email} /></div>
                   </div>
 
                   <div className="relative">
@@ -736,14 +753,14 @@ export default function VendorLoginPage() {
                   </div>
 
                   <div>
-                    <input
+                    <div><input
                       type="password"
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder={t('Confirm Password')}
-                      className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
-                    />
+                      className={`w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.confirm_password)}`}
+                    /><FieldError message={fieldErrors.confirm_password} /></div>
                   </div>
 
                   <button
@@ -780,7 +797,7 @@ export default function VendorLoginPage() {
 
                 <form onSubmit={handleFinalSubmit} className="flex flex-col space-y-5">
                   {formError && (
-                    <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{formError}</p>
+                    <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(formError)}</p>
                   )}
                   <div className="space-y-3">
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -788,29 +805,29 @@ export default function VendorLoginPage() {
                     </h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input
+                      <div><input
                         type="text"
                         name="firstName"
                         required
                         placeholder={t('FIRST NAME')}
                         value={vendorDetails.firstName}
                         onChange={handleInputChange}
-                        className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
-                      />
+                        className={`bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.first_name)}`}
+                      /><FieldError message={fieldErrors.first_name} /></div>
 
-                      <input
+                      <div><input
                         type="text"
                         name="lastName"
                         required
                         placeholder={t('LAST NAME')}
                         value={vendorDetails.lastName}
                         onChange={handleInputChange}
-                        className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
-                      />
+                        className={`bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.last_name)}`}
+                      /><FieldError message={fieldErrors.last_name} /></div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <PhoneInput
+                      <div><PhoneInput
                         countryCode={contactCountryCode}
                         onCountryCodeChange={(dial) => {
                           setContactCountryCode(dial)
@@ -827,7 +844,7 @@ export default function VendorLoginPage() {
                         placeholder={t('CONTACT NUMBER')}
                         required
                         fieldId="vendor-contact"
-                      />
+                      /><FieldError message={fieldErrors.contact_number} /></div>
 
                       <div className="space-y-2">
                         <PhoneInput
@@ -857,18 +874,18 @@ export default function VendorLoginPage() {
                       </div>
                     </div>
 
-                    <input
+                    <div><input
                       type="text"
                       name="houseAddress"
                       placeholder={t('HOUSE ADDRESS (optional)')}
                       value={vendorDetails.houseAddress}
                       onChange={handleInputChange}
-                      className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
-                    />
+                      className={`w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.house_address)}`}
+                    /><FieldError message={fieldErrors.house_address} /></div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input type="text" inputMode="numeric" name="cnic" required maxLength={15} placeholder={t('CNIC (e.g. 12345-1234567-1)')} value={vendorDetails.cnic} onChange={handleCnicChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
-                      <input type="text" name="experienceYears" required placeholder={t('YEARS OF EXPERIENCE')} value={vendorDetails.experienceYears} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
+                      <div><input type="text" inputMode="numeric" name="cnic" required maxLength={15} placeholder={t('CNIC (e.g. 12345-1234567-1)')} value={vendorDetails.cnic} onChange={handleCnicChange} className={`bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.cnic)}`} /><FieldError message={fieldErrors.cnic} /></div>
+                      <div><input type="text" name="experienceYears" required placeholder={t('YEARS OF EXPERIENCE')} value={vendorDetails.experienceYears} onChange={handleInputChange} className={`bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.experience_years)}`} /><FieldError message={fieldErrors.experience_years} /></div>
                     </div>
 
                   </div>
@@ -880,25 +897,25 @@ export default function VendorLoginPage() {
                       {t('Business Details')}
                     </h3>
 
-                    <input
+                    <div><input
                       type="text"
                       name="businessName"
                       required
                       placeholder={t('BUSINESS NAME')}
                       value={vendorDetails.businessName}
                       onChange={handleInputChange}
-                      className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
-                    />
+                      className={`w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.business_name)}`}
+                    /><FieldError message={fieldErrors.business_name} /></div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input
+                      <div><input
                         type="email"
                         name="businessEmail"
                         placeholder={t('BUSINESS EMAIL ADDRESS (optional)')}
                         value={vendorDetails.businessEmail}
                         onChange={handleInputChange}
-                        className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
-                      />
+                        className={`bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.business_email)}`}
+                      /><FieldError message={fieldErrors.business_email} /></div>
 
                     </div>
                   </div>
@@ -1015,8 +1032,8 @@ export default function VendorLoginPage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                      <input type="text" name="postalCode" placeholder={t('POSTAL CODE (optional)')} value={vendorDetails.postalCode} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
-                      <input type="text" name="serviceAreas" required placeholder={t('SERVICE AREAS (COMMA SEPARATED)')} value={vendorDetails.serviceAreas} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
+                      <div><input type="text" name="postalCode" placeholder={t('POSTAL CODE (optional)')} value={vendorDetails.postalCode} onChange={handleInputChange} className={`bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.postal_code)}`} /><FieldError message={fieldErrors.postal_code} /></div>
+                      <div><input type="text" name="serviceAreas" required placeholder={t('SERVICE AREAS (COMMA SEPARATED)')} value={vendorDetails.serviceAreas} onChange={handleInputChange} className={`bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition ${errorBorder(fieldErrors.service_areas)}`} /><FieldError message={fieldErrors.service_areas} /></div>
                     </div>
 
                     <div className="pt-2">

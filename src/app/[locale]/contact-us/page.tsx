@@ -4,10 +4,12 @@ import { Link } from '@/i18n/navigation'
 import {
   ChevronDown,
 } from 'lucide-react';
-import CustomerNavbar from '../components/customer-navbar';
+import CustomerNavbar from '../components/customer-navbar'
+import { BreadcrumbBar } from '@/components/Breadcrumbs';
 import PublicContactBar from '../components/public-contact-bar';
 import { useLanguage } from '../lib/i18n';
 import { submitContactMessage } from '../lib/booking-api';
+import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError';
 import PublicFooter from '../components/public-footer'
 
 export default function ContactPage() {
@@ -27,6 +29,7 @@ export default function ContactPage() {
   });
   const [contactStatus, setContactStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [contactMessage, setContactMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const updateContactField = (field: keyof typeof contactForm) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -37,9 +40,22 @@ export default function ContactPage() {
   const handleContactSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setContactMessage('');
-    if (!contactForm.fullName || !contactForm.email || !contactForm.subject || !contactForm.message) {
+    const problems: Record<string, string> = {};
+    const name = contactForm.fullName.trim();
+    const subject = contactForm.subject.trim();
+    const message = contactForm.message.trim();
+    if (!name) problems.full_name = 'Name is required.';
+    else if (name.length < 2) problems.full_name = 'Name must be at least 2 characters.';
+    if (!contactForm.email.trim()) problems.email = 'Email is required.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactForm.email.trim())) problems.email = 'Enter a valid email address.';
+    if (!subject) problems.subject = 'Subject is required.';
+    else if (subject.length < 2) problems.subject = 'Subject must be at least 2 characters.';
+    if (!message) problems.message = 'Message is required.';
+    else if (message.length < 5) problems.message = 'Message must be at least 5 characters.';
+    setFieldErrors(problems);
+    if (Object.keys(problems).length) {
       setContactStatus('error');
-      setContactMessage(t('Please fill in your name, email, subject, and message.'));
+      setContactMessage('Please correct the highlighted fields.');
       return;
     }
     setContactStatus('submitting');
@@ -55,8 +71,10 @@ export default function ContactPage() {
       setContactMessage(t('Message sent! Our team will get back to you shortly.'));
       setContactForm({ fullName: '', email: '', phone: '', subject: '', message: '' });
     } catch (error) {
+      const apiFieldErrors = fieldErrorsOf(error);
+      setFieldErrors(apiFieldErrors);
       setContactStatus('error');
-      setContactMessage(error instanceof Error ? error.message : t('Something went wrong. Please try again.'));
+      setContactMessage(Object.keys(apiFieldErrors).length ? 'Please correct the highlighted fields.' : messageOf(error, 'Something went wrong. Please try again.'));
     }
   };
 
@@ -87,6 +105,7 @@ export default function ContactPage() {
 
       
       <CustomerNavbar active="contact" showLanguageSwitcher={false} />
+      <BreadcrumbBar />
 
       
       <section className="bg-[#3D4059] text-white py-14 md:py-[72px] px-6 text-center">
@@ -156,7 +175,7 @@ export default function ContactPage() {
               <p className="text-slate-500 mt-2 text-sm">{t("Fill out the form below, and our team will get in touch with you shortly.")}</p>
             </div>
 
-            <form onSubmit={handleContactSubmit} className="space-y-5 text-sm">
+            <form onSubmit={handleContactSubmit} noValidate className="space-y-5 text-sm">
               {contactMessage && (
                 <p
                   className={`text-xs font-semibold px-3 py-2 rounded-lg ${
@@ -172,23 +191,23 @@ export default function ContactPage() {
                   <label className="font-semibold text-slate-800 text-sm">{t("Full Name")}</label>
                   <input
                     type="text"
-                    required
                     value={contactForm.fullName}
                     onChange={updateContactField('fullName')}
                     placeholder={t('John Doe')}
-                    className="w-full px-3.5 py-3 rounded-md border border-slate-300 bg-white text-slate-800 placeholder:text-slate-500 focus:outline-none focus:border-[#EE6C52] transition"
+                    className={`w-full px-3.5 py-3 rounded-md border border-slate-300 bg-white text-slate-800 placeholder:text-slate-500 focus:outline-none focus:border-[#EE6C52] transition ${errorBorder(fieldErrors.full_name)}`}
                   />
+                  <FieldError message={fieldErrors.full_name} />
                 </div>
                 <div className="space-y-1">
                   <label className="font-semibold text-slate-800 text-sm">{t("Email Address")}</label>
                   <input
                     type="email"
-                    required
                     value={contactForm.email}
                     onChange={updateContactField('email')}
                     placeholder={t('john@example.com')}
-                    className="w-full px-3.5 py-3 rounded-md border border-slate-300 bg-white text-slate-800 placeholder:text-slate-500 focus:outline-none focus:border-[#EE6C52] transition"
+                    className={`w-full px-3.5 py-3 rounded-md border border-slate-300 bg-white text-slate-800 placeholder:text-slate-500 focus:outline-none focus:border-[#EE6C52] transition ${errorBorder(fieldErrors.email)}`}
                   />
+                  <FieldError message={fieldErrors.email} />
                 </div>
               </div>
 
@@ -200,19 +219,20 @@ export default function ContactPage() {
                     value={contactForm.phone}
                     onChange={updateContactField('phone')}
                     placeholder={t('+92 300 0000000')}
-                    className="w-full px-3.5 py-3 rounded-md border border-slate-300 bg-white text-slate-800 placeholder:text-slate-500 focus:outline-none focus:border-[#EE6C52] transition"
+                    className={`w-full px-3.5 py-3 rounded-md border border-slate-300 bg-white text-slate-800 placeholder:text-slate-500 focus:outline-none focus:border-[#EE6C52] transition ${errorBorder(fieldErrors.phone)}`}
                   />
+                  <FieldError message={fieldErrors.phone} />
                 </div>
                 <div className="space-y-1">
                   <label className="font-semibold text-slate-800 text-sm">{t("Subject")}</label>
                   <input
                     type="text"
-                    required
                     value={contactForm.subject}
                     onChange={updateContactField('subject')}
                     placeholder={t('How can we help?')}
-                    className="w-full px-3.5 py-3 rounded-md border border-slate-300 bg-white text-slate-800 placeholder:text-slate-500 focus:outline-none focus:border-[#EE6C52] transition"
+                    className={`w-full px-3.5 py-3 rounded-md border border-slate-300 bg-white text-slate-800 placeholder:text-slate-500 focus:outline-none focus:border-[#EE6C52] transition ${errorBorder(fieldErrors.subject)}`}
                   />
+                  <FieldError message={fieldErrors.subject} />
                 </div>
               </div>
 
@@ -220,12 +240,12 @@ export default function ContactPage() {
                 <label className="font-semibold text-slate-800 text-sm">{t("Your Message")}</label>
                 <textarea
                   rows={4}
-                  required
                   value={contactForm.message}
                   onChange={updateContactField('message')}
                   placeholder={t('Describe your request or home service needs here…')}
-                  className="w-full px-3.5 py-3 rounded-md border border-slate-300 bg-white text-slate-800 placeholder:text-slate-500 focus:outline-none focus:border-[#EE6C52] transition resize-none"
+                  className={`w-full px-3.5 py-3 rounded-md border border-slate-300 bg-white text-slate-800 placeholder:text-slate-500 focus:outline-none focus:border-[#EE6C52] transition resize-none ${errorBorder(fieldErrors.message)}`}
                 ></textarea>
+                <FieldError message={fieldErrors.message} />
               </div>
 
               <button

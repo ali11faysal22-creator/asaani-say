@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useRouter } from '@/i18n/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import { loginUser, setStoredAuth } from '@/app/lib/booking-api'
 import { useLanguage } from '../../lib/i18n'
+import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError'
 
 export default function AdminLoginPage() {
   const { t } = useLanguage()
@@ -13,11 +14,15 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    const problems: Record<string, string> = {}
+    if (!email.trim()) problems.identifier = 'Email is required.'
+    if (!password) problems.password = 'Password is required.'
+    setFieldErrors(problems)
+    if (Object.keys(problems).length) return
     setIsProcessing(true)
     try {
       const auth = await loginUser({ identifier: email, password, role: 'admin' })
@@ -25,7 +30,8 @@ export default function AdminLoginPage() {
       setStoredAuth('admin', auth)
       router.push('/admin/dashboard')
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Sign in failed.')
+      const apiFieldErrors = fieldErrorsOf(requestError)
+      setFieldErrors(Object.keys(apiFieldErrors).length ? apiFieldErrors : { password: messageOf(requestError, 'Sign in failed.') })
     } finally {
       setIsProcessing(false)
     }
@@ -42,19 +48,17 @@ export default function AdminLoginPage() {
           <p className="text-xs text-slate-400">{t('Asaani Say platform administration')}</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400">{t(error)}</p>}
-
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div className="space-y-1">
             <label className="text-[11px] font-medium text-slate-400">{t('Email')}</label>
             <input
               type="email"
-              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@asaanisay.local"
-              className="w-full bg-[#171923] border border-white/10 rounded-lg px-3.5 py-3 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-400"
+              className={`w-full bg-[#171923] border border-white/10 rounded-lg px-3.5 py-3 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-400 ${errorBorder(fieldErrors.identifier)}`}
             />
+            <FieldError dark message={fieldErrors.identifier} />
           </div>
 
           <div className="space-y-1">
@@ -62,11 +66,10 @@ export default function AdminLoginPage() {
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
-                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••"
-                className="w-full bg-[#171923] border border-white/10 rounded-lg px-3.5 py-3 pe-10 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-400"
+                className={`w-full bg-[#171923] border border-white/10 rounded-lg px-3.5 py-3 pe-10 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-400 ${errorBorder(fieldErrors.password)}`}
               />
               <button
                 type="button"
@@ -75,6 +78,13 @@ export default function AdminLoginPage() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            <FieldError dark message={fieldErrors.password} />
+          </div>
+
+          <div className="text-end">
+            <Link href="/forgot-password?role=admin" className="text-xs text-orange-400 hover:underline font-medium">
+              {t('Recover Password ?')}
+            </Link>
           </div>
 
           <button

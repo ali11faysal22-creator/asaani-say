@@ -48,11 +48,14 @@ html[lang="ur"] body {
 .fs-p  { font-size: clamp(1rem, 0.95rem + 0.15vw, 1.125rem); line-height: 1.6; }
 .fs-sm { font-size: 0.875rem; line-height: 1.5; }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
+/* In the base layer so Tailwind text-*, font-* utilities on form controls win. */
+@layer base {
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
 }
 
 h1,
