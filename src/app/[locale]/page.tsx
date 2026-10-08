@@ -565,7 +565,7 @@ export default function HeroSection() {
             </div>
           </div>
           <div className="lg:col-span-6 space-y-6">
-           <div className="relative w-full h-95 rounded-2xl overflow-hidden shadow-sm border border-slate-100">
+           <div className="relative w-full h-80 lg:h-[420px] rounded-xl overflow-hidden">
           <Image
             src="/assets/home/couple-planning-home-renovation.png"
              alt={t("How To Get Our Service")}
@@ -582,24 +582,25 @@ export default function HeroSection() {
 
         </div>
       </section>
-      <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start mb-16">
-          <div className="lg:col-span-6 space-y-8">
-            <div>
+      <section className="bg-[#EDF1FC]">
+      <div className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-[72px] font-sans">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-12 gap-y-8 items-start mb-16">
+          <div className="lg:contents space-y-8 lg:space-y-0">
+            <div className="lg:col-span-6 lg:row-start-1">
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-6 h-0.5 bg-orange-500">
+                <span className="w-8 h-0.5 bg-[#EE6C52]">
                  </span>
 
-                <span className="text-sm font-bold text-orange-500 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-[#EE6C52] uppercase tracking-[0.15em]">
                   {t('Why Us')}
                 </span>
               </div>
-              <h2 className="font-extrabold text-[#23263B] leading-tight fs-h2">
+              <h2 className="font-semibold text-[#3D4059] leading-tight fs-h2">
                 {t('Trusted Service With')} <br/>
                 {t('Affordable Price')}
               </h2>
             </div>
-            <div className="relative w-full h-95 rounded-2xl overflow-hidden shadow-sm border border-slate-100">
+            <div className="relative w-full h-80 lg:h-auto lg:self-stretch rounded-xl overflow-hidden lg:col-span-6 lg:row-start-2">
               <Image
                 src="/assets/home/hand-drilling-screw-into-wood.png" 
                 alt={t("Trusted Service With Affordable Price")}
@@ -608,43 +609,43 @@ export default function HeroSection() {
                 className="object-cover"/>
             </div>
           </div>
-          <div className="lg:col-span-6 space-y-10 pt-2">
+          <div className="lg:contents space-y-10 lg:space-y-0 pt-2">
 
           <div
               ref={statsRef}
-              className="grid grid-cols-3 gap-4 border-b border-slate-100 pb-8 text-center sm:text-start">
+              className="grid grid-cols-3 gap-4 text-center sm:text-start lg:col-span-6 lg:col-start-7 lg:row-start-1">
               {stats.map((stat, idx) => (
                 <div
                   key={idx}
                   className={idx !== 0 ? 'border-s border-slate-200 ps-4 sm:ps-6':''}>
                   <h3
-                    className="counter-value font-semibold text-[#23263B] fs-h3"
+                    className="counter-value font-semibold text-[#3D4059] fs-h3"
                     data-target={stat.target}>
                     0 +
 
                   </h3>
-                  <p className="text-slate-500 font-medium mt-1 fs-p">{t(stat.label)}</p>
+                  <p className="text-slate-600 mt-1 text-sm">{t(stat.label)}</p>
 
       </div>
 ))}
      </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 lg:col-span-6 lg:col-start-7 lg:row-start-2">
                {whyUsFeatures.map((item, idx) => (
 
                 <div
                   key={idx}
-                  className="bg-[#EEF2FB] rounded-2xl p-6 flex flex-col items-start transition-all duration-300 hover:shadow-md">
+                  className="bg-[#DDE1F0] rounded-lg p-6 flex flex-col items-start transition-all duration-300 hover:shadow-md">
                   <div className="w-14 h-14 flex items-center justify-center mb-4">
 
                     {item.icon}
 
             </div>
 
-                  <h4 className="text-lg font-bold text-[#23263B] mb-2">{t(item.title)}
+                  <h4 className="text-lg font-bold text-[#3D4059] mb-2">{t(item.title)}
                   </h4>
 
-         <p className="text-slate-500 leading-relaxed fs-p">{t(item.desc)}
+         <p className="text-[#3D4059] leading-relaxed text-sm">{t(item.desc)}
 
          </p>
                 </div>
@@ -654,31 +655,32 @@ export default function HeroSection() {
                </div>
      </div>
 
-           <div className="bg-[#050B30] rounded-2xl overflow-hidden flex flex-col md:flex-row items-center justify-between shadow-lg">
+           <div className="bg-[#050B30] rounded-lg overflow-hidden flex flex-col md:flex-row items-center justify-between">
 
-          <div className="bg-[#2C3352] px-5 py-4 w-full md:w-auto flex flex-row items-center justify-center gap-2 shrink-0 md:min-w-50 md:flex-col md:items-start md:gap-0 md:px-8 md:py-6">
+          <div className="bg-[#2C3352] px-5 py-4 w-full md:w-auto flex flex-row items-center justify-center gap-2 shrink-0 md:min-w-64 md:flex-col md:items-start md:justify-center md:gap-0 md:px-12 md:py-8 md:self-stretch">
             
-            <span className="text-xl font-semibold text-orange-500 leading-none md:text-2xl">{t("Asaani")}</span>
-            <span className="text-xl font-semibold text-orange-500 leading-none md:text-2xl md:leading-tight">{t("Say")}</span>
+            <span className="text-xl font-bold text-[#EE6C52] leading-none md:text-4xl">{t("Asaani")}</span>
+            <span className="text-xl font-bold text-[#EE6C52] leading-none md:text-4xl md:leading-tight">{t("Say")}</span>
        </div>
 
-          <div className="px-5 pt-5 pb-2 md:p-8 text-center md:text-start text-white flex-1">
-            <h3 className="font-bold mb-1 fs-h4">{t("Need Help At Home?")}</h3>
+          <div className="px-5 pt-5 pb-2 md:px-10 md:py-8 text-center md:text-start text-white flex-1">
+            <h3 className="font-bold mb-1 text-lg md:text-xl">{t("Need Help At Home?")}</h3>
 
-            <p className="leading-relaxed text-slate-300 fs-p">
+            <p className="leading-relaxed text-slate-300 text-sm md:text-base">
               {t("Book Expert Services Anytime, Anywhere With Just One Tap.")}</p>
 
     </div>
 
-          <div className="flex w-full justify-center px-5 pt-4 pb-5 md:w-auto md:justify-start md:px-0 md:py-0 md:pe-8">
+          <div className="flex w-full justify-center px-5 pt-4 pb-5 md:w-auto md:justify-start md:px-0 md:py-0 md:pe-10">
             <Link
               href="/login"
-              className="inline-flex w-full max-w-xs items-center justify-center gap-2 rounded-lg bg-orange-500 px-6 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-orange-600 md:w-auto"
+              className="inline-flex w-full max-w-xs items-center justify-center gap-2 rounded-lg bg-[#EE6C52] px-8 py-3 text-sm md:text-base font-semibold text-white transition hover:bg-[#d95c43] md:w-auto"
             >
               {t("Get Started")}
             </Link>
           </div>
         </div>
+      </div>
       </section>
       <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans border-t border-slate-200">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
