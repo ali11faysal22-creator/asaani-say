@@ -1,6 +1,7 @@
 'use client'
 
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useLanguage } from '../../lib/i18n'
 
 function pageNumbers(page: number, pageCount: number): (number | 'ellipsis')[] {
   if (pageCount <= 7) return Array.from({ length: pageCount }, (_, i) => i + 1)
@@ -25,19 +26,20 @@ export function Pagination({
   pageCount: number
   onPageChange: (page: number) => void
 }) {
+  const { t } = useLanguage()
   if (pageCount <= 1) return null
 
   return (
     <div className="flex items-center justify-between gap-3 px-1">
       <p className="text-[11px] font-semibold text-slate-400">
-        Page {page} of {pageCount}
+        {t('Page')} {page} {t('of')} {pageCount}
       </p>
       <div className="flex items-center gap-1.5">
         <button
           type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          aria-label="Previous page"
+          aria-label={t('Previous page')}
           className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
@@ -53,7 +55,7 @@ export function Pagination({
               key={p}
               type="button"
               onClick={() => onPageChange(p)}
-              aria-label={`Page ${p}`}
+              aria-label={`${t('Page')} ${p}`}
               aria-current={p === page ? 'page' : undefined}
               className={`w-8 h-8 inline-flex items-center justify-center rounded-lg border text-xs font-semibold transition cursor-pointer ${
                 p === page
@@ -70,7 +72,7 @@ export function Pagination({
           type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= pageCount}
-          aria-label="Next page"
+          aria-label={t('Next page')}
           className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
           <ChevronRight className="w-3.5 h-3.5" />

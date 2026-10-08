@@ -237,13 +237,13 @@ export default function NotificationsPage() {
     try {
       const auth = getStoredAuth('vendor')
       if (!auth) {
-        alert('Vendor session expired. Please sign in again.')
+        alert(t('Vendor session expired. Please sign in again.'))
         return
       }
       const action = status === 'accepted' ? 'accept' : 'reject'
       const bookingId = selectedNotif?.bookingId || id
       if (!bookingId) {
-        alert('This notification does not include a booking reference.')
+        alert(t('This notification does not include a booking reference.'))
         return
       }
       const updatedBooking = await decideVendorBooking(auth.profile_id || auth.user_id, bookingId, action)

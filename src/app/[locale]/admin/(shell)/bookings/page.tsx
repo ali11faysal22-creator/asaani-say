@@ -16,6 +16,7 @@ import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
 import { UnassignedBookingActionsModal } from '../../components/unassigned-booking-actions-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
+import { useLanguage } from '../../../lib/i18n'
 import { ResponseCountdown } from '@/app/components/response-countdown'
 import { BookingTimeline } from '@/app/components/booking-timeline'
 
@@ -46,6 +47,7 @@ function paymentInfo(booking: AdminBooking): { label: string; className: string 
 }
 
 export default function AdminBookingsPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -131,12 +133,12 @@ export default function AdminBookingsPage() {
       <TableToolbar
         search={search}
         onSearchChange={setSearch}
-        placeholder="Search by order ID, customer, vendor, service…"
+        placeholder={t('Search by order ID, customer, vendor, service…')}
         resultCount={filtered.length}
         totalCount={bookings.length}
         onRefresh={handleRefresh}
         refreshing={refreshing}
-        extraFilters={<DateFilter value={dateFilter} onChange={setDateFilter} label="Filter by scheduled date" />}
+        extraFilters={<DateFilter value={dateFilter} onChange={setDateFilter} label={t('Filter by scheduled date')} />}
       />
 
       <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-fit overflow-x-auto">
@@ -148,7 +150,7 @@ export default function AdminBookingsPage() {
               filter === f.key ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            {f.label}
+            {t(f.label)}
           </button>
         ))}
       </div>
@@ -157,15 +159,15 @@ export default function AdminBookingsPage() {
         <table className="w-full text-start text-xs">
           <thead className="bg-slate-50 text-slate-500 uppercase tracking-wide">
             <tr>
-              <th className="px-4 py-3 font-bold">Customer</th>
-              <th className="px-4 py-3 font-bold">Vendor</th>
-              <th className="px-4 py-3 font-bold">Service</th>
-              <th className="px-4 py-3 font-bold">City</th>
-              <th className="px-4 py-3 font-bold">Date</th>
-              <th className="px-4 py-3 font-bold">Amount</th>
-              <th className="px-4 py-3 font-bold">Payment</th>
-              <th className="px-4 py-3 font-bold">Status</th>
-              <th className="px-4 py-3 font-bold text-end">Actions</th>
+              <th className="px-4 py-3 font-bold">{t('Customer')}</th>
+              <th className="px-4 py-3 font-bold">{t('Vendor')}</th>
+              <th className="px-4 py-3 font-bold">{t('Service')}</th>
+              <th className="px-4 py-3 font-bold">{t('City')}</th>
+              <th className="px-4 py-3 font-bold">{t('Date')}</th>
+              <th className="px-4 py-3 font-bold">{t('Amount')}</th>
+              <th className="px-4 py-3 font-bold">{t('Payment')}</th>
+              <th className="px-4 py-3 font-bold">{t('Status')}</th>
+              <th className="px-4 py-3 font-bold text-end">{t('Actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -179,7 +181,7 @@ export default function AdminBookingsPage() {
                       {booking.vendor_contact_name && <p className="text-[11px] text-slate-400">{booking.vendor_name}</p>}
                     </>
                   ) : (
-                    <span className="font-semibold text-amber-600">Needs vendor</span>
+                    <span className="font-semibold text-amber-600">{t('Needs vendor')}</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-slate-500">{booking.service_name}</td>
@@ -188,20 +190,20 @@ export default function AdminBookingsPage() {
                   {booking.scheduled_date}
                   <span className="text-slate-400"> · {booking.slot_start}–{booking.slot_end}</span>
                 </td>
-                <td className="px-4 py-3 text-slate-500">{booking.total_amount != null ? `Rs. ${booking.total_amount.toLocaleString()}` : '—'}</td>
+                <td className="px-4 py-3 text-slate-500">{booking.total_amount != null ? `${t('Rs.')} ${booking.total_amount.toLocaleString()}` : '—'}</td>
                 <td className="px-4 py-3">
                   <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black ${paymentInfo(booking).className}`}>
-                    {paymentInfo(booking).label}
+                    {t(paymentInfo(booking).label)}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   <StatusBadge label={booking.status.replace('_', ' ')} tone={bookingStatusTone(booking.status)} />
                   {booking.admin_hold && (
-                    <span className="ms-1.5 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">On hold</span>
+                    <span className="ms-1.5 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{t('On hold')}</span>
                   )}
                   {booking.paused_for_customer_decision && (
                     <span className="ms-1.5 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-                      Paused — waiting for customer
+                      {t('Paused — waiting for customer')}
                     </span>
                   )}
                   {booking.status === 'pending' && booking.vendor_response_deadline && (
@@ -223,7 +225,7 @@ export default function AdminBookingsPage() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
-                  {bookings.length === 0 ? 'No bookings yet.' : 'No bookings match your filters.'}
+                  {bookings.length === 0 ? t('No bookings yet.') : t('No bookings match your filters.')}
                 </td>
               </tr>
             )}
@@ -234,7 +236,7 @@ export default function AdminBookingsPage() {
       {selectedBooking && (
         <DetailModal
           title={selectedBooking.service_name}
-          subtitle={`${selectedBooking.customer_name} → ${selectedBooking.vendor_contact_name || selectedBooking.vendor_name || 'Unassigned'}`}
+          subtitle={`${selectedBooking.customer_name} → ${selectedBooking.vendor_contact_name || selectedBooking.vendor_name || t('Unassigned')}`}
           onClose={() => setSelectedBooking(null)}
           fields={[
             { label: 'Customer', value: selectedBooking.customer_name },
@@ -242,17 +244,17 @@ export default function AdminBookingsPage() {
               label: 'Vendor',
               value: selectedBooking.vendor_name
                 ? `${selectedBooking.vendor_contact_name || selectedBooking.vendor_name}${selectedBooking.vendor_contact_name ? ` (${selectedBooking.vendor_name})` : ''}`
-                : 'Needs vendor',
+                : t('Needs vendor'),
             },
             { label: 'Service', value: selectedBooking.service_name },
             { label: 'City', value: [selectedBooking.city, selectedBooking.area].filter(Boolean).join(', ') || '—' },
             { label: 'Scheduled', value: `${selectedBooking.scheduled_date} · ${selectedBooking.slot_start}–${selectedBooking.slot_end}` },
-            { label: 'Amount', value: selectedBooking.total_amount != null ? `Rs. ${selectedBooking.total_amount.toLocaleString()}` : '—' },
+            { label: 'Amount', value: selectedBooking.total_amount != null ? `${t('Rs.')} ${selectedBooking.total_amount.toLocaleString()}` : '—' },
             {
               label: 'Payment',
               value: (
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${paymentInfo(selectedBooking).className}`}>
-                  {paymentInfo(selectedBooking).label}
+                  {t(paymentInfo(selectedBooking).label)}
                 </span>
               ),
             },
@@ -268,7 +270,7 @@ export default function AdminBookingsPage() {
                     <div className="flex flex-wrap justify-end gap-1.5">
                       {selectedBooking.photos.map((url) => (
                         <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
-                          <img src={`${API_BASE}${url}`} alt="Completion" className="h-12 w-12 rounded-lg border border-slate-200 object-cover" />
+                          <img src={`${API_BASE}${url}`} alt={t('Completion')} className="h-12 w-12 rounded-lg border border-slate-200 object-cover" />
                         </a>
                       ))}
                     </div>
@@ -287,11 +289,11 @@ export default function AdminBookingsPage() {
                   }}
                   className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
                 >
-                  No vendor accepted — resolve
+                  {t('No vendor accepted — resolve')}
                 </button>
               )}
               <div>
-                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Status history</p>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('Status history')}</p>
                 <BookingTimeline bookingId={selectedBooking.id} role="admin" />
               </div>
             </div>

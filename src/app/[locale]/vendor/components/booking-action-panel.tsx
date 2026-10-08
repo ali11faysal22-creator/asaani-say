@@ -11,6 +11,7 @@ import {
   type VendorBookingAction,
 } from '@/app/lib/booking-api'
 import { ResponseCountdown } from '@/app/components/response-countdown'
+import { useLanguage } from '@/app/lib/i18n'
 
 const TRACKED_STATUSES = ['accepted', 'on_the_way', 'reached', 'in_progress', 'paused', 'work_completed', 'payment_requested']
 const CANNOT_START_STATUSES = ['accepted', 'on_the_way', 'reached']
@@ -32,6 +33,7 @@ export function VendorBookingActionPanel({
   onUpdated: (updated: BookingResult) => void
   onUnavailable?: () => void
 }) {
+  const { t } = useLanguage()
   const [actionInProgress, setActionInProgress] = useState(false)
   const [error, setError] = useState('')
   const [showCompletionUpload, setShowCompletionUpload] = useState(false)
@@ -101,7 +103,7 @@ export function VendorBookingActionPanel({
 
   return (
     <div className="space-y-3">
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{error}</p>}
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
 
       {booking.status === 'pending' && (
         <div className="space-y-2">
@@ -117,7 +119,7 @@ export function VendorBookingActionPanel({
             onClick={() => void handleDecision('accept')}
             className="flex-1 rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 disabled:opacity-50"
           >
-            Accept Booking
+            {t('Accept Booking')}
           </button>
           <button
             type="button"
@@ -125,7 +127,7 @@ export function VendorBookingActionPanel({
             onClick={() => void handleDecision('reject')}
             className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
           >
-            Decline
+            {t('Decline')}
           </button>
           </div>
         </div>
@@ -133,54 +135,54 @@ export function VendorBookingActionPanel({
 
       {TRACKED_STATUSES.includes(booking.status) && (
         <div>
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Job tracking</p>
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('Job tracking')}</p>
           <div className="flex flex-wrap gap-2">
             {booking.status === 'accepted' && (
-              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('on_the_way')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Mark on the way</button>
+              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('on_the_way')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Mark on the way')}</button>
             )}
             {booking.status === 'on_the_way' && (
-              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('reached')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Mark reached</button>
+              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('reached')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Mark reached')}</button>
             )}
             {booking.status === 'reached' && (
-              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('work_started')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Start work</button>
+              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('work_started')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Start work')}</button>
             )}
             {booking.status === 'in_progress' && (
-              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('pause')} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 disabled:opacity-50">Pause work</button>
+              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('pause')} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 disabled:opacity-50">{t('Pause work')}</button>
             )}
             {booking.status === 'paused' && (
-              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('resume')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Resume work</button>
+              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('resume')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Resume work')}</button>
             )}
             {(booking.status === 'in_progress' || booking.status === 'paused') && !showCompletionUpload && (
-              <button type="button" disabled={actionInProgress} onClick={() => setShowCompletionUpload(true)} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Mark work complete</button>
+              <button type="button" disabled={actionInProgress} onClick={() => setShowCompletionUpload(true)} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Mark work complete')}</button>
             )}
             {booking.status === 'work_completed' && (
-              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('request_payment')} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Request payment</button>
+              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('request_payment')} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Request payment')}</button>
             )}
             {booking.status === 'payment_requested' && (
-              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('payment_received')} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">Payment received</button>
+              <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('payment_received')} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Payment received')}</button>
             )}
             {CANNOT_START_STATUSES.includes(booking.status) && !showCannotStartForm && (
-              <button type="button" disabled={actionInProgress} onClick={() => setShowCannotStartForm(true)} className="rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] font-bold text-rose-600 disabled:opacity-50">Cannot start job</button>
+              <button type="button" disabled={actionInProgress} onClick={() => setShowCannotStartForm(true)} className="rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] font-bold text-rose-600 disabled:opacity-50">{t('Cannot start job')}</button>
             )}
           </div>
 
           {showCannotStartForm && (
             <div className="mt-3 space-y-2 rounded-xl border border-rose-200 bg-rose-50/50 p-3">
-              <p className="text-[11px] font-bold text-rose-700">Why can&apos;t you start this job?</p>
+              <p className="text-[11px] font-bold text-rose-700">{t("Why can't you start this job?")}</p>
               <textarea
                 value={cannotStartReason}
                 onChange={(event) => setCannotStartReason(event.target.value)}
-                placeholder="e.g. Customer not reachable, wrong address, out of scope…"
+                placeholder={t('e.g. Customer not reachable, wrong address, out of scope…')}
                 rows={2}
                 maxLength={500}
                 className="w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] text-slate-700 focus:outline-none focus:border-rose-400"
               />
               <div className="flex gap-2">
                 <button type="button" disabled={actionInProgress || !cannotStartReason.trim()} onClick={() => void handleTrackingStatus('cannot_start', cannotStartReason.trim())} className="rounded-lg bg-rose-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">
-                  {actionInProgress ? 'Submitting…' : 'Confirm — find another vendor'}
+                  {actionInProgress ? t('Submitting…') : t('Confirm — find another vendor')}
                 </button>
                 <button type="button" disabled={actionInProgress} onClick={() => { setShowCannotStartForm(false); setCannotStartReason('') }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600">
-                  Cancel
+                  {t('Cancel')}
                 </button>
               </div>
             </div>
@@ -188,7 +190,7 @@ export function VendorBookingActionPanel({
 
           {(booking.status === 'in_progress' || booking.status === 'paused') && showCompletionUpload && (
             <div className="mt-3 space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3">
-              <p className="text-[11px] font-bold text-emerald-700">Add photos of the completed job (optional)</p>
+              <p className="text-[11px] font-bold text-emerald-700">{t('Add photos of the completed job (optional)')}</p>
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
@@ -197,14 +199,14 @@ export function VendorBookingActionPanel({
                 className="block w-full text-[11px] text-slate-600 file:me-2 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-white"
               />
               {completionPhotos.length > 0 && (
-                <p className="text-[10px] text-slate-500">{completionPhotos.length} photo{completionPhotos.length === 1 ? '' : 's'} selected</p>
+                <p className="text-[10px] text-slate-500">{completionPhotos.length} {completionPhotos.length === 1 ? t('photo') : t('photos')} {t('selected')}</p>
               )}
               <div className="flex gap-2">
                 <button type="button" disabled={actionInProgress} onClick={() => void handleCompleteBooking()} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">
-                  {actionInProgress ? 'Completing…' : 'Confirm completion'}
+                  {actionInProgress ? t('Completing…') : t('Confirm completion')}
                 </button>
                 <button type="button" disabled={actionInProgress} onClick={() => { setShowCompletionUpload(false); setCompletionPhotos([]) }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600">
-                  Cancel
+                  {t('Cancel')}
                 </button>
               </div>
             </div>
@@ -214,11 +216,11 @@ export function VendorBookingActionPanel({
 
       {booking.status === 'completed' && booking.photos.length > 0 && (
         <div>
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Completion photos</p>
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('Completion photos')}</p>
           <div className="flex flex-wrap gap-2">
             {booking.photos.map((url) => (
               <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
-                <img src={`${API_BASE}${url}`} alt="Completion" className="h-16 w-16 rounded-lg object-cover border border-slate-200" />
+                <img src={`${API_BASE}${url}`} alt={t('Completion')} className="h-16 w-16 rounded-lg object-cover border border-slate-200" />
               </a>
             ))}
           </div>

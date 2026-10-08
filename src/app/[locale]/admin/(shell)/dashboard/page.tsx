@@ -19,6 +19,7 @@ import { TrendLineChart, type TrendPoint } from '@/app/components/charts/trend-l
 import { StatusStackedBar } from '@/app/components/charts/status-stacked-bar'
 import { RankedBarList } from '@/app/components/charts/ranked-bar-list'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
+import { useLanguage } from '../../../lib/i18n'
 
 type BookingBucket = 'completed' | 'active' | 'pending' | 'unassigned' | 'cancelled'
 
@@ -31,6 +32,7 @@ function bucketForStatus(status: string): BookingBucket {
 }
 
 export default function AdminDashboardPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [overview, setOverview] = useState<AdminOverview | null>(null)
@@ -131,53 +133,53 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <StatTile
-          label="Needs Vendor"
+          label={t('Needs Vendor')}
           value={statusStats.unassigned}
-          sublabel={statusStats.unassigned > 0 ? 'Awaiting assignment' : undefined}
+          sublabel={statusStats.unassigned > 0 ? t('Awaiting assignment') : undefined}
           icon={UserPlus}
         />
         <StatTile
-          label="Vendors"
+          label={t('Vendors')}
           value={totalVendors}
-          sublabel={`${verifiedVendors} verified`}
+          sublabel={`${verifiedVendors} ${t('verified')}`}
           icon={Store}
         />
-        <StatTile label="Customers" value={overview?.total_customers ?? 0} icon={Users} />
-        <StatTile label="Total Bookings" value={overview?.total_bookings ?? bookings.length} icon={ClipboardList} />
-        <StatTile label="Completed" value={overview?.completed_bookings ?? statusStats.completed} icon={CheckCircle2} />
-        <StatTile label="Total Revenue" value={`Rs. ${(overview?.total_revenue ?? 0).toLocaleString()}`} icon={Wallet} />
+        <StatTile label={t('Customers')} value={overview?.total_customers ?? 0} icon={Users} />
+        <StatTile label={t('Total Bookings')} value={overview?.total_bookings ?? bookings.length} icon={ClipboardList} />
+        <StatTile label={t('Completed')} value={overview?.completed_bookings ?? statusStats.completed} icon={CheckCircle2} />
+        <StatTile label={t('Total Revenue')} value={`${t('Rs.')} ${(overview?.total_revenue ?? 0).toLocaleString()}`} icon={Wallet} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-stretch">
         <div className="lg:col-span-3">
-          <TrendLineChart data={trend} title="Bookings — last 14 days" subtitle="New bookings placed per day, platform-wide" unitLabel="booking" />
+          <TrendLineChart data={trend} title={t('Bookings — last 14 days')} subtitle={t('New bookings placed per day, platform-wide')} unitLabel="booking" />
         </div>
         <div className="lg:col-span-2">
           <StatusStackedBar
-            title="Booking Status"
-            subtitle={`Share of all ${statusStats.total} bookings`}
+            title={t('Booking Status')}
+            subtitle={`${t('Share of all')} ${statusStats.total} ${t('bookings')}`}
             total={statusStats.total}
-            emptyText="No bookings yet."
+            emptyText={t('No bookings yet.')}
             segments={[
-              { key: 'completed', label: 'Completed', value: statusStats.completed, color: STATUS_GOOD },
-              { key: 'active', label: 'In Progress', value: statusStats.active, color: CHART_BLUE },
-              { key: 'pending', label: 'Pending', value: statusStats.pending, color: STATUS_WARNING },
-              { key: 'unassigned', label: 'Needs Vendor', value: statusStats.unassigned, color: CHART_ACCENT },
-              { key: 'cancelled', label: 'Cancelled', value: statusStats.cancelled, color: STATUS_CRITICAL },
+              { key: 'completed', label: t('Completed'), value: statusStats.completed, color: STATUS_GOOD },
+              { key: 'active', label: t('In Progress'), value: statusStats.active, color: CHART_BLUE },
+              { key: 'pending', label: t('Pending'), value: statusStats.pending, color: STATUS_WARNING },
+              { key: 'unassigned', label: t('Needs Vendor'), value: statusStats.unassigned, color: CHART_ACCENT },
+              { key: 'cancelled', label: t('Cancelled'), value: statusStats.cancelled, color: STATUS_CRITICAL },
             ]}
           />
         </div>
       </div>
 
-      <RankedBarList title="Top Vendors" subtitle="Ranked by number of bookings received" data={topVendors} emptyText="No bookings yet." />
+      <RankedBarList title={t('Top Vendors')} subtitle={t('Ranked by number of bookings received')} data={topVendors} emptyText={t('No bookings yet.')} />
 
       {totalVendors > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs flex items-center gap-3">
           <ShieldCheck className="w-4 h-4 text-[#EE6C52] shrink-0" />
           <p className="text-xs text-slate-500">
-            {totalVendors - verifiedVendors} vendor{totalVendors - verifiedVendors === 1 ? '' : 's'} still awaiting verification.{' '}
+            {totalVendors - verifiedVendors} {t(totalVendors - verifiedVendors === 1 ? 'vendor' : 'vendors')} {t('still awaiting verification.')}{' '}
             <Link href="/admin/vendors" className="font-bold text-[#EE6C52] hover:underline">
-              Review vendors
+              {t('Review vendors')}
             </Link>
           </p>
         </div>

@@ -135,13 +135,13 @@ export default function OrderHistoryPage() {
               <Search className="w-4 h-4 text-slate-400 absolute start-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search order ID, service, customer…"
+                placeholder={t('Search order ID, service, customer…')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-white border border-slate-200 rounded-lg ps-9 pe-3.5 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition"
               />
             </div>
-            <DateFilter value={dateFilter} onChange={setDateFilter} label="Filter by scheduled date" />
+            <DateFilter value={dateFilter} onChange={setDateFilter} label={t('Filter by scheduled date')} />
           </div>
 
           <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 text-xs font-bold gap-1">
@@ -153,7 +153,7 @@ export default function OrderHistoryPage() {
                   selectedTab === tab ? 'bg-[#EE6C52] text-white shadow-2xs' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                {tab}
+                {t(tab)}
                 {tab === 'Needs action' && needsActionCount > 0 && ` (${needsActionCount})`}
               </button>
             ))}
@@ -178,7 +178,7 @@ export default function OrderHistoryPage() {
               {filteredOrders.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400 font-bold">
-                    {orders.length === 0 ? 'No orders yet.' : 'No orders match your filter criteria.'}
+                    {orders.length === 0 ? t('No orders yet.') : t('No orders match your filter criteria.')}
                   </td>
                 </tr>
               ) : (
@@ -197,7 +197,7 @@ export default function OrderHistoryPage() {
                     <td className="py-4 px-4 text-slate-600">{order.customer_name}</td>
                     <td className="py-4 px-4 text-center">
                       <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black capitalize ${statusBadgeClass(order.status)}`}>
-                        {statusLabel(order.status)}
+                        {t(statusLabel(order.status))}
                       </span>
                       {order.status === 'pending' && order.vendor_response_deadline && (
                         <p className="mt-1 text-[10px] font-bold text-orange-600">
@@ -206,7 +206,7 @@ export default function OrderHistoryPage() {
                       )}
                     </td>
                     <td className="py-4 px-4 text-end font-black text-slate-900">
-                      {order.total_amount != null ? `Rs: ${order.total_amount.toLocaleString()}` : '—'}
+                      {order.total_amount != null ? `${t('Rs:')} ${order.total_amount.toLocaleString()}` : '—'}
                     </td>
                     <td className="py-4 px-4 text-center">
                       {(() => {
@@ -216,7 +216,7 @@ export default function OrderHistoryPage() {
                             className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black ${payment.className}`}
                             title={payment.detail}
                           >
-                            {payment.label}
+                            {t(payment.label)}
                           </span>
                         )
                       })()}
@@ -227,7 +227,7 @@ export default function OrderHistoryPage() {
                         className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md text-[11px] font-bold transition cursor-pointer inline-flex items-center gap-1"
                       >
                         <Eye className="w-3 h-3 text-slate-500" />
-                        <span>{order.status === 'pending' ? 'Respond' : 'View'}</span>
+                        <span>{order.status === 'pending' ? t('Respond') : t('View')}</span>
                       </button>
                     </td>
                   </tr>
@@ -259,7 +259,7 @@ export default function OrderHistoryPage() {
             <div className="bg-slate-50 p-4 rounded-xl space-y-2 text-xs border border-slate-100">
               <div className="flex justify-between">
                 <span className="text-slate-500">{t("Status")}</span>
-                <span className={`font-black capitalize ${statusBadgeClass(selectedOrder.status)} px-2 py-0.5 rounded-full`}>{statusLabel(selectedOrder.status)}</span>
+                <span className={`font-black capitalize ${statusBadgeClass(selectedOrder.status)} px-2 py-0.5 rounded-full`}>{t(statusLabel(selectedOrder.status))}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">{t("Date")}</span>
@@ -283,7 +283,7 @@ export default function OrderHistoryPage() {
               </div>
               <div className="border-t border-slate-200 pt-2 flex justify-between font-black text-sm">
                 <span>{t("Amount")}</span>
-                <span className="text-[#EE6C52]">{selectedOrder.total_amount != null ? `Rs: ${selectedOrder.total_amount.toLocaleString()}` : 'Not available'}</span>
+                <span className="text-[#EE6C52]">{selectedOrder.total_amount != null ? `${t('Rs:')} ${selectedOrder.total_amount.toLocaleString()}` : t('Not available')}</span>
               </div>
             </div>
 
@@ -295,7 +295,7 @@ export default function OrderHistoryPage() {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">{t("Status")}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${payment.className}`}>{payment.label}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${payment.className}`}>{t(payment.label)}</span>
                     </div>
                     {selectedOrder.payment_requested_at && (
                       <div className="flex items-center justify-between">

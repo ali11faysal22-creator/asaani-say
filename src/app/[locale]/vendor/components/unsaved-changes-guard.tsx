@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from '@/i18n/navigation'
+import { useLanguage } from '@/app/lib/i18n'
 
 export default function UnsavedChangesGuard({
   isDirty,
@@ -11,6 +12,7 @@ export default function UnsavedChangesGuard({
   onSave: () => Promise<void> | void
 }) {
   const router = useRouter()
+  const { t } = useLanguage()
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [pendingHref, setPendingHref] = useState<string | null>(null)
@@ -76,11 +78,11 @@ export default function UnsavedChangesGuard({
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/30 p-4">
       <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
-        <h2 className="text-sm font-extrabold text-slate-900">Unsaved changes</h2>
-        <p className="mt-2 text-xs leading-relaxed text-slate-500">You have changes that have not been saved yet.</p>
+        <h2 className="text-sm font-extrabold text-slate-900">{t('Unsaved changes')}</h2>
+        <p className="mt-2 text-xs leading-relaxed text-slate-500">{t('You have changes that have not been saved yet.')}</p>
         <div className="mt-5 flex justify-end gap-2">
-          <button type="button" onClick={discard} disabled={saving} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Discard changes</button>
-          <button type="button" onClick={() => void save()} disabled={saving} className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600 disabled:opacity-50">{saving ? 'Saving...' : 'Save changes'}</button>
+          <button type="button" onClick={discard} disabled={saving} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50">{t('Discard changes')}</button>
+          <button type="button" onClick={() => void save()} disabled={saving} className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600 disabled:opacity-50">{saving ? t('Saving...') : t('Save changes')}</button>
         </div>
       </div>
     </div>

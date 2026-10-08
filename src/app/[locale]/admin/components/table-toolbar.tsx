@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { RefreshCw, Search } from 'lucide-react'
+import { useLanguage } from '../../lib/i18n'
 
 export function TableToolbar({
   search,
@@ -22,6 +23,7 @@ export function TableToolbar({
   refreshing?: boolean
   extraFilters?: ReactNode
 }) {
+  const { t } = useLanguage()
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
@@ -31,7 +33,7 @@ export function TableToolbar({
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={placeholder}
+            placeholder={t(placeholder)}
             className="w-full bg-white border border-slate-200 rounded-xl ps-9 pe-3 py-2.5 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#EE6C52] transition shadow-2xs"
           />
         </div>
@@ -39,15 +41,15 @@ export function TableToolbar({
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <p className="text-[11px] font-semibold text-slate-400">
-          {resultCount === totalCount ? <>{totalCount} total</> : <>{resultCount} of {totalCount}</>}
+          {resultCount === totalCount ? <>{totalCount} {t('total')}</> : <>{resultCount} {t('of')} {totalCount}</>}
         </p>
         {onRefresh && (
           <button
             type="button"
             onClick={onRefresh}
             disabled={refreshing}
-            title="Refresh"
-            aria-label="Refresh"
+            title={t('Refresh')}
+            aria-label={t('Refresh')}
             className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />

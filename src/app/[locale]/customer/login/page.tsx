@@ -8,11 +8,13 @@ import { PhoneInput, combinePhoneNumber } from '../../components/phone-input'
 import { LocationPicker } from '../../components/location-picker'
 import { DEFAULT_COUNTRY_ISO, COUNTRY_CODES } from '../../lib/country-codes'
 import { readPendingServiceBooking } from '../../lib/service-booking-resume'
+import { useLanguage } from '../../lib/i18n'
 
 const DEFAULT_DIAL_CODE = COUNTRY_CODES.find((c) => c.iso === DEFAULT_COUNTRY_ISO)?.dial || '+92'
 
 export default function CustomerAuthPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [isRegister, setIsRegister] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [emailOrPhone, setEmailOrPhone] = useState('')
@@ -32,7 +34,7 @@ export default function CustomerAuthPage() {
     e.preventDefault()
     setError('')
     if (isRegister && password !== confirmPassword) {
-      setError('Passwords do not match.')
+      setError(t('Passwords do not match.'))
       return
     }
     setIsProcessing(true)
@@ -82,9 +84,9 @@ export default function CustomerAuthPage() {
       if (accountCreated) {
         setIsRegister(false)
         setEmailOrPhone(email)
-        setError('Your account was created, but your Home address could not be saved. Please sign in and try again.')
+        setError(t('Your account was created, but your Home address could not be saved. Please sign in and try again.'))
       } else {
-        setError(requestError instanceof Error ? requestError.message : 'Authentication failed.')
+        setError(requestError instanceof Error ? requestError.message : t('Authentication failed.'))
       }
     } finally {
       setIsProcessing(false)
@@ -109,27 +111,26 @@ export default function CustomerAuthPage() {
               <Hand className="w-4 h-4 text-white" />
               <Sparkles className="w-2.5 h-2.5 text-white absolute -top-0.5 -end-0.5" />
             </div>
-            <span className="font-bold text-base text-white">Asaani Say</span>
+            <span className="font-bold text-base text-white">{t('Asaani Say')}</span>
           </div>
 
           <div className="my-auto -translate-y-24 space-y-4">
             <h1 className="text-3xl font-extrabold leading-tight">
-              Welcome to <span className="text-orange-500">Asaani Say</span>
+              {t('Welcome to')} <span className="text-orange-500">{t('Asaani Say')}</span>
             </h1>
 
             <p className="text-xs text-slate-300 leading-relaxed font-normal max-w-md">
-              Book trusted home service professionals in minutes and track every job from your own dashboard.
+              {t('Book trusted home service professionals in minutes and track every job from your own dashboard.')}
             </p>
 
             <p className="text-[11px] text-slate-300 leading-relaxed font-normal max-w-md">
-              Create an account to save your addresses, follow your bookings in real time, and keep a complete
-              history of every service completed at your home.
+              {t('Create an account to save your addresses, follow your bookings in real time, and keep a complete history of every service completed at your home.')}
             </p>
           </div>
 
           <div className="pt-4 border-t border-slate-600/50 flex items-center gap-2 text-[10px] text-slate-300">
             <ShieldCheck className="w-4 h-4 text-orange-500 shrink-0" />
-            <span>Secure, encrypted connections for all transactions.</span>
+            <span>{t('Secure, encrypted connections for all transactions.')}</span>
           </div>
         </div>
 
@@ -146,7 +147,7 @@ export default function CustomerAuthPage() {
                       : 'text-slate-400 hover:text-orange-500'
                   }`}
                 >
-                  Sign in
+                  {t('Sign in')}
                 </button>
 
                 <button
@@ -158,24 +159,24 @@ export default function CustomerAuthPage() {
                       : 'bg-white text-slate-500 hover:bg-slate-100'
                   }`}
                 >
-                  Register
+                  {t('Register')}
                 </button>
               </div>
             </div>
 
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-[#2C2F45]">
-                {isRegister ? 'Customer Sign Up' : 'Customer Sign In'}
+                {isRegister ? t('Customer Sign Up') : t('Customer Sign In')}
               </h2>
               <p className="text-xs text-slate-600 mt-1">
                 {isRegister
-                  ? 'Create your account to start booking trusted home services.'
-                  : 'Please enter your credentials to access your dashboard.'}
+                  ? t('Create your account to start booking trusted home services.')
+                  : t('Please enter your credentials to access your dashboard.')}
               </p>
             </div>
 
             <form onSubmit={handleAuthSubmit} className="space-y-4">
-              {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{error}</p>}
+              {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
 
               {isRegister ? (
                 <>
@@ -184,7 +185,7 @@ export default function CustomerAuthPage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Full name"
+                    placeholder={t('Full name')}
                     className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                   />
 
@@ -193,7 +194,7 @@ export default function CustomerAuthPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email address"
+                    placeholder={t('Email address')}
                     className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                   />
 
@@ -202,7 +203,7 @@ export default function CustomerAuthPage() {
                     onCountryCodeChange={setPhoneCountryCode}
                     localNumber={phone}
                     onLocalNumberChange={setPhone}
-                    placeholder="Phone number"
+                    placeholder={t('Phone number')}
                     required
                     fieldId="customer-phone"
                   />
@@ -211,13 +212,13 @@ export default function CustomerAuthPage() {
                     required
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Home address"
+                    placeholder={t('Home address')}
                     className="min-h-20 w-full resize-none bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                   />
 
                   <LocationPicker
-                    label="Confirm your location on the map"
-                    hint="Drag the pin, or tap anywhere on the map, to pin your address exactly — this helps us match you with nearby vendors."
+                    label={t('Confirm your location on the map')}
+                    hint={t('Drag the pin, or tap anywhere on the map, to pin your address exactly — this helps us match you with nearby vendors.')}
                     latitude={homeLatitude}
                     longitude={homeLongitude}
                     onAddressResolved={({ address }) => setAddress(address)}
@@ -230,7 +231,7 @@ export default function CustomerAuthPage() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Password"
+                      placeholder={t('Password')}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 pe-10 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                     />
                     <button
@@ -247,7 +248,7 @@ export default function CustomerAuthPage() {
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm password"
+                    placeholder={t('Confirm password')}
                     className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                   />
 
@@ -256,7 +257,7 @@ export default function CustomerAuthPage() {
                     disabled={isProcessing}
                     className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl text-xs transition shadow-md cursor-pointer disabled:opacity-60"
                   >
-                    {isProcessing ? 'Creating account…' : 'Create account'}
+                    {isProcessing ? t('Creating account…') : t('Create account')}
                   </button>
                 </>
               ) : (
@@ -266,7 +267,7 @@ export default function CustomerAuthPage() {
                     required
                     value={emailOrPhone}
                     onChange={(e) => setEmailOrPhone(e.target.value)}
-                    placeholder="Enter Email or Phone"
+                    placeholder={t('Enter Email or Phone')}
                     className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                   />
 
@@ -276,7 +277,7 @@ export default function CustomerAuthPage() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Password"
+                      placeholder={t('Password')}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 pe-10 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                     />
                     <button
@@ -290,7 +291,7 @@ export default function CustomerAuthPage() {
 
                   <div className="text-end">
                     <a href="#" className="text-[11px] text-orange-500 hover:underline font-medium">
-                      Recover Password ?
+                      {t('Recover Password ?')}
                     </a>
                   </div>
 
@@ -299,7 +300,7 @@ export default function CustomerAuthPage() {
                     disabled={isProcessing}
                     className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl text-xs transition shadow-md cursor-pointer disabled:opacity-60"
                   >
-                    {isProcessing ? 'Signing in…' : 'Sign in'}
+                    {isProcessing ? t('Signing in…') : t('Sign in')}
                   </button>
                 </>
               )}

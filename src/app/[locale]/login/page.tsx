@@ -3,7 +3,9 @@ import React from 'react'
 import Image from 'next/image'
 import { Link } from '@/i18n/navigation'
 import { Wrench, ArrowRight } from 'lucide-react'
+import { useLanguage } from '../lib/i18n'
 export default function GetStartedPage(){
+  const { t } = useLanguage()
   return (
     <div className="min-h-screen w-full bg-[#171923] text-white flex flex-col justify-center items-center px-2 py-8 font-sans">
       
@@ -13,14 +15,14 @@ export default function GetStartedPage(){
             <Wrench className="w-5 h-5 text-white stroke-[2.5]"/>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Asaani <span className="text-orange-500">Say</span>
+            {t('Asaani')} <span className="text-orange-500">{t('Say')}</span>
           </h1>
         </div>
         <h2 className="text-lg sm:text-xl font-bold text-slate-200">
-          Linking customers with technicians for fast, secure, and budget-friendly bookings.
+          {t('Linking customers with technicians for fast, secure, and budget-friendly bookings.')}
         </h2>
         <p className="text-xs sm:text-sm text-slate-400 font-medium">
-          Choose how you&apos;d like to continue to the platform
+          {t("Choose how you'd like to continue to the platform")}
         </p>
       </div>
       <div className="max-w-4xl w-full mx-auto grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 my-8 px-2 sm:px-6 justify-items-center">
@@ -30,21 +32,21 @@ export default function GetStartedPage(){
             <div className="relative w-full h-40 rounded-xl overflow-hidden bg-slate-800">
               <Image
                 src="/assets/login/vendor-login.jpg"
-                alt="Vendor"
+                alt={t('Vendor')}
                 fill
                 className="object-cover"/>
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-bold text-white">Vendor</h3>
+              <h3 className="text-lg font-bold text-white">{t('Vendor')}</h3>
               <p className="text-xs text-slate-300 leading-relaxed font-normal">
-                Manage your vendor profile, list specialized services, monitor bookings, and expand your business.
+                {t('Manage your vendor profile, list specialized services, monitor bookings, and expand your business.')}
               </p>
             </div>
           </div>
 
           <Link href="/vendor/login" className="mt-5">
             <button className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-md">
-              <span>Enter Vendor Portal</span>
+              <span>{t('Enter Vendor Portal')}</span>
               <ArrowRight className="w-4 h-4"/>
             </button>
           </Link>
@@ -54,21 +56,21 @@ export default function GetStartedPage(){
             <div className="relative w-full h-40 rounded-xl overflow-hidden bg-slate-800">
               <Image
                 src="/assets/login/customer-login.jpg"
-                alt="Look For a Service"
+                alt={t('Look For a Service')}
                 fill
                 className="object-cover"/>
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-bold text-white">Looking For a Service ?</h3>
+              <h3 className="text-lg font-bold text-white">{t('Looking For a Service ?')}</h3>
               <p className="text-xs text-slate-300 leading-relaxed font-normal">
-                Explore carefully selected collections and connect directly with reliable local experts and independent creators.
+                {t('Explore carefully selected collections and connect directly with reliable local experts and independent creators.')}
               </p>
             </div>
           </div>
 
           <Link href="/customer/login" className="mt-5">
             <button className="w-full bg-[#3D4566] hover:bg-[#495278] text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition">
-              <span>Login / Signup</span>
+              <span>{t('Login / Signup')}</span>
               <ArrowRight className="w-4 h-4"/>
             </button>
           </Link>
@@ -79,7 +81,7 @@ export default function GetStartedPage(){
         <div className="relative flex items-center justify-center">
           <div className="border-t border-slate-800 w-full"/>
           <span className="bg-[#171923] px-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider absolute">
-            ALREADY HAVE AN ACCOUNT?
+            {t('ALREADY HAVE AN ACCOUNT?')}
           </span>
         </div>
 

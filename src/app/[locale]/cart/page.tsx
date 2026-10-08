@@ -365,6 +365,7 @@ export default function CartAndCheckoutPage() {
   const [showVendorModal, setShowVendorModal] = useState(false)
   const [filteredVendors] = useState<VendorProfile[]>([])
 
+  const displaySlot = (slot: string) => slot.replace(/\b(AM|PM)\b/, (period) => t(period))
   const today = useMemo(() => new Date(), [])
 
   useEffect(() => {
@@ -598,24 +599,24 @@ export default function CartAndCheckoutPage() {
 
   const handlePlaceOrder = async (requestedVendorId?: string) => {
     if (cartItems.length === 0) {
-      alert('Your cart is empty! Please add some services to your cart first..')
+      alert(t('Your cart is empty! Please add some services to your cart first..'))
       return
     }
 
     if (!selectedDate || !selectedTimeSlot) {
-      alert('Please select a service date and an available time slot before proceeding..')
+      alert(t('Please select a service date and an available time slot before proceeding..'))
       return
     }
 
     if (!billingDetails.fullName || !billingDetails.phone || !billingDetails.address) {
-      alert('Please complete your billing and booking details (Name, Phone Number, and Address) before proceeding..')
+      alert(t('Please complete your billing and booking details (Name, Phone Number, and Address) before proceeding..'))
       return
     }
 
     try {
       const auth = await getCurrentUser('customer')
       if (auth.role !== 'customer' || !auth.profile_id) {
-        alert('Please sign in as a customer before placing an order.')
+        alert(t('Please sign in as a customer before placing an order.'))
         return
       }
 
@@ -623,7 +624,7 @@ export default function CartAndCheckoutPage() {
       let selectedAddress = addresses.find((address) => address.line === billingDetails.address)
 
       if (!billingDetails.address.trim()) {
-        alert('Please enter a service address before placing an order.')
+        alert(t('Please enter a service address before placing an order.'))
         return
       }
 
@@ -691,7 +692,7 @@ export default function CartAndCheckoutPage() {
       setShowModal(true)
       window.setTimeout(() => router.push('/order-confirmation'), 800)
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Unable to place booking')
+      alert(error instanceof Error ? t(error.message) : t('Unable to place booking'))
     }
   }
 
@@ -978,7 +979,7 @@ export default function CartAndCheckoutPage() {
                   <input 
                     type="text" 
                     name="fullName"
-                    placeholder="e.g. Muhammad Ali"
+                    placeholder={t('e.g. Muhammad Ali')}
                     value={billingDetails.fullName}
                     onChange={handleInputChange}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium"
@@ -1002,7 +1003,7 @@ export default function CartAndCheckoutPage() {
                   <input 
                     type="email" 
                     name="email"
-                    placeholder="ali.service@gmail.com"
+                    placeholder={t('ali.service@gmail.com')}
                     value={billingDetails.email}
                     onChange={handleInputChange}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium"
@@ -1028,15 +1029,15 @@ export default function CartAndCheckoutPage() {
                     <input
                       type="text"
                       name="address"
-                      placeholder="Flat 44B, Sector Y Block, DHA Phase 3, Lahore, Pakistan"
+                      placeholder={t('Flat 44B, Sector Y Block, DHA Phase 3, Lahore, Pakistan')}
                       value={billingDetails.address}
                       onChange={handleInputChange}
                       onBlur={() => void handleAddressBlur()}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-orange-500 transition font-medium"
                     />
                     <LocationPicker
-                      label="Confirm this address on the map"
-                      hint="This pin is what we match you to the nearest, best-rated vendor with — drag it onto your exact spot."
+                      label={t('Confirm this address on the map')}
+                      hint={t('This pin is what we match you to the nearest, best-rated vendor with — drag it onto your exact spot.')}
                       latitude={addressLat}
                       longitude={addressLng}
                       onAddressResolved={({ address }) => {
@@ -1055,7 +1056,7 @@ export default function CartAndCheckoutPage() {
                   <input 
                     type="text" 
                     readOnly
-                    value={selectedDate || 'Not selected yet'}
+                    value={selectedDate || t('Not selected yet')}
                     className="w-full bg-slate-100 border border-slate-200 text-slate-600 rounded-xl px-3.5 py-2.5 font-semibold cursor-not-allowed"
                   />
                 </div>
@@ -1065,7 +1066,7 @@ export default function CartAndCheckoutPage() {
                   <input 
                     type="text" 
                     readOnly
-                    value={selectedTimeSlot || 'Not selected yet'}
+                    value={selectedTimeSlot ? displaySlot(selectedTimeSlot) : t('Not selected yet')}
                     className="w-full bg-slate-100 border border-slate-200 text-slate-600 rounded-xl px-3.5 py-2.5 font-semibold cursor-not-allowed"
                   />
                 </div>
@@ -1098,7 +1099,7 @@ export default function CartAndCheckoutPage() {
                 </button>
 
                 <span className="text-sm font-extrabold text-slate-900">
-                  {MONTH_NAMES[viewMonth]} {viewYear}
+                  {t(MONTH_NAMES[viewMonth])} {viewYear}
                 </span>
 
                 <button
@@ -1114,7 +1115,7 @@ export default function CartAndCheckoutPage() {
               <div className="grid grid-cols-7 gap-1 text-center">
                 {WEEKDAY_LABELS.map((wd) => (
                   <span key={wd} className="text-[10px] font-bold text-slate-400">
-                    {wd}
+                    {t(wd)}
                   </span>
                 ))}
               </div>
@@ -1137,7 +1138,7 @@ export default function CartAndCheckoutPage() {
                       type="button"
                       disabled={isDisabled}
                       onClick={() => cell.dateKey && handleDateSelect(cell.dateKey)}
-                      title={fullyBooked ? 'This date is fully booked' : undefined}
+                      title={fullyBooked ? t('This date is fully booked') : undefined}
                       className={`aspect-square rounded-lg text-[11px] font-bold transition flex items-center justify-center border ${
                         isDisabled
                           ? 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed line-through decoration-slate-300'
@@ -1155,7 +1156,7 @@ export default function CartAndCheckoutPage() {
               
               <div className="space-y-2 pt-2">
                 <label className="text-xs font-bold text-slate-700">
-                  {selectedDate ? 'Select Time Slot' : 'Select a date first to see time slots'}
+                  {selectedDate ? t('Select Time Slot') : t('Select a date first to see time slots')}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {TIME_SLOTS.map((slot) => {
@@ -1175,9 +1176,9 @@ export default function CartAndCheckoutPage() {
                               ? 'bg-[#EE6C52] text-white border-[#EE6C52] shadow-xs cursor-pointer'
                               : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-orange-300 cursor-pointer'
                         }`}
-                        title={selectedDate && unavailableSlots.has(slot) ? 'No vendor available at this time' : undefined}
+                        title={selectedDate && unavailableSlots.has(slot) ? t('No vendor available at this time') : undefined}
                       >
-                        {slot}
+                        {displaySlot(slot)}
                       </button>
                     )
                   })}

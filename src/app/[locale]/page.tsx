@@ -1,6 +1,6 @@
 'use client'
 import React, {useEffect,useRef,useState } from 'react'
-import {Sparkles,ChevronDown,User,Star,Quote,Wrench,Drill,Sun,Truck,Bug,Clock,MousePointerClick,Users,Award,RefreshCw,ArrowRight,ArrowUpRight,AlertCircle,ExternalLink as ExternalLinkIcon} from 'lucide-react'
+import {ChevronDown,User,Star,Quote,Truck,Clock,MousePointerClick,ArrowRight,ArrowUpRight,AlertCircle,ExternalLink as ExternalLinkIcon} from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import Image from 'next/image'
 import CustomerNavbar from './components/customer-navbar'
@@ -22,23 +22,33 @@ const expertsData: ExpertItem[] = [
     name: 'Thomas Schroeder',
     jobsCompleted: '199 Job Completed',
     bio: 'Hello there, i am one of Asaani say plumbing service expert. I am ready to help you solve whatever plumbing problem in your house.',
-    image: '/assets/home/plumber-repairing-kitchen-sink.jpg',
+    image: '/assets/home/plumber-expert-blue-cap-smiling.png',
   },
   {
     number: '02',
     name: 'Timothy Brake',
     jobsCompleted: '199 Job Completed',
     bio: 'Hello there, i am one of Asaani say plumbing service expert. I am ready to help you solve whatever plumbing problem in your house.',
-    image: '/assets/home/plumber-expert-arms-crossed.jpg',
+    image: '/assets/home/plumber-expert-navy-uniform-arms-crossed.png',
   },
   {
     number: '03',
     name: 'Charlie Sinclair',
     jobsCompleted: '199 Job Completed',
     bio: 'Hello there, i am one of Asaani say plumbing service expert. I am ready to help you solve whatever plumbing problem in your house.',
-    image: '/assets/shared/plumbing-professional-at-work.jpg',
+    image: '/assets/home/plumber-expert-overalls-holding-wrench.png',
+  },
+  {
+    number: '01',
+    name: 'Thomas Schroeder',
+    jobsCompleted: '199 Job Completed',
+    bio: 'Hello there, i am one of Asaani say plumbing service expert. I am ready to help you solve whatever plumbing problem in your house.',
+    image: '/assets/home/plumber-expert-blue-cap-smiling.png',
   },
 ]
+const iconImage = (file: string, size: number) => (
+  <Image src={`/assets/home/icons/${file}`} alt="" width={size} height={size} className="object-contain" style={{ width: size, height: size }} />
+)
 function renderStars(rating: number): React.ReactNode {
   const percentage = Math.round((rating / 5) * 100)
   return (
@@ -84,7 +94,7 @@ function renderStars(rating: number): React.ReactNode {
     problem: 'Problem : Dripping Faucets',
     rating: 4.5,
     text: 'Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.',
-    image: '/assets/home/customer-testimonial-andrea-elliott.png',
+    image: '/assets/home/customer-fixing-bathroom-faucet.png',
   },
   small: [
     {
@@ -134,7 +144,7 @@ export default function HeroSection() {
     setOrderMessage('')
     if (!orderForm.zipCode || !orderForm.city || !orderForm.service || !orderForm.date || !orderForm.time || !orderForm.email || !orderForm.phone) {
       setOrderStatus('error')
-      setOrderMessage('Please fill in every field.')
+      setOrderMessage(t('Please fill in every field.'))
       return
     }
     setOrderStatus('submitting')
@@ -149,11 +159,11 @@ export default function HeroSection() {
         phone: orderForm.phone,
       })
       setOrderStatus('success')
-      setOrderMessage("Request sent! We'll match you with a professional shortly.")
+      setOrderMessage(t("Request sent! We'll match you with a professional shortly."))
       setOrderForm({ zipCode: '', city: '', service: '', date: '', time: '', email: '', phone: '' })
     } catch (error) {
       setOrderStatus('error')
-      setOrderMessage(error instanceof Error ? error.message : 'Something went wrong. Please try again.')
+      setOrderMessage(error instanceof Error ? error.message : t('Something went wrong. Please try again.'))
     }
   }
 
@@ -195,38 +205,38 @@ export default function HeroSection() {
   }, [])
   const services = [
                {
-               icon: <Wrench className="w-8 h-8 text-[#23263B]"/>,
+               icon: iconImage('home-inspection-service-icon.png', 56),
                 title: 'Home Inspection',
                 desc: 'Are You Having Issues With Your Faucets And Sinks? Common Problems Can Include Leaky Faucets, Low Water Pressure, Clogged Drains, Hot Water Issues, Loose Faucet Handles, And More.',
                 href: '/services/home-inspection',
              },
              {
-              icon: <Drill className="w-8 h-8 text-[#23263B]"/>,
+              icon: iconImage('home-repair-service-icon.png', 56),
               title: 'Home Repair Services',
                desc: 'A Smarter Way To Keep Up With Home Maintenance. We Provide Home Repair And Maintenance Services At Your Doorstep In Pakistan.',
                href: '/services/handyman',
              },
           {
-          icon: <Truck className="w-8 h-8 text-[#23263B]"/>,
+          icon: iconImage('home-shifting-service-icon.png', 56),
           title: 'Home Shifting Services',
            desc: 'Asaani Say Helps To Take The Entire Relocation Burden Off From The Customers Shoulders And Helps To Provide The Most Trusted Shifting Service Solution',
            href: '/services',
           },
        {
-         icon: <Bug className="w-8 h-8 text-[#23263B]"/>,
+         icon: iconImage('pest-control-service-icon.png', 56),
         title: 'Pest Control Services',
          desc: 'We Provide Professional Pest Control Services For Your Home And Business. Book Highly Experienced In-House Professionals & Get It Done, Instantly.',
          href: '/services/pest-control',
        },
      {
-      icon: <Sparkles className="w-8 h-8 text-[#23263B]"/>,
+      icon: iconImage('cleaning-service-icon.png', 56),
       title: 'Cleaning Services',
       desc: 'Are You Having Issues With Your Faucets And Sinks? Common Problems Can Include Leaky Faucets, Low Water Pressure, Clogged Drains, Hot Water Issues, Loose Faucet Handles, And More.',
       href: '/services',
      },
 
      {
-      icon: <Sun className="w-8 h-8 text-[#23263B]"/>,
+      icon: iconImage('solar-panel-installation-service-icon.png', 56),
       title: 'Solar Panel Installation',
       desc: 'Servicely Offers Flexible Solutions For Installation, Removal And Repair Of Your AC Units At Competitive Prices In All Pakistani Cities.',
       href: '/services',
@@ -258,22 +268,22 @@ export default function HeroSection() {
 
   const whyUsFeatures = [
     {
-    icon: <Users className="w-7 h-7 text-orange-500"/>,
+    icon: iconImage('experienced-team-feature-icon.png', 48),
      title: 'Experienced',
         desc: 'Handled By Skilled Professionals With Proven Experience.',
     },
     {
-     icon:<Award className="w-7 h-7 text-orange-500"/>,
+     icon:iconImage('reliable-handshake-feature-icon.png', 48),
       title: 'Reliable',
         desc: 'We Show Up, Follow Through, And Get It Done Right.',
     },
     {
-    icon:<Wrench className="w-7 h-7 text-orange-500"/>,
+    icon:iconImage('capable-team-feature-icon.png', 48),
        title: 'Capable',
          desc: 'Expertly Handled By A Skilled And Capable Team.',
     },
     {
-    icon:<RefreshCw className="w-7 h-7 text-orange-500"/>,
+    icon:iconImage('flexible-service-feature-icon.png', 48),
       title: 'Flexible',
        desc: "Your Time, Your Choice We're Flexible.",
     },
@@ -308,7 +318,7 @@ export default function HeroSection() {
       <PublicContactBar />
 
       <CustomerNavbar active="home" showLanguageSwitcher={false} />
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
 
           <div className="lg:col-span-7 pt-2 space-y-8">
@@ -316,7 +326,7 @@ export default function HeroSection() {
               <h1 className="font-extrabold text-[#23263B] leading-tight tracking-tight fs-h2">
                 {t('Welcome To')}
               </h1>
-              <h1 className="font-black text-[#EF6A42] tracking-tight leading-none mt-1 mb-8 fs-h1">
+              <h1 className="font-semibold text-[#EF6A42] tracking-tight leading-none mt-1 mb-8 fs-h1">
                 {t("Asaani Say")}</h1>
               <p className="text-sm font-bold tracking-widest text-slate-400 uppercase mb-3">
                 {t('BEST SERVICES')}
@@ -366,7 +376,7 @@ export default function HeroSection() {
                       orderStatus === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
                     }`}
                   >
-                    {orderMessage}
+                    {t(orderMessage)}
                   </p>
                 )}
 
@@ -473,7 +483,7 @@ export default function HeroSection() {
 
         </div>
       </section>
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 font-sans">
+      <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-10 font-sans">
         <div className="flex items-start justify-between gap-3 mb-8">
           <div>
             <p className="font-semibold text-[#3A3E59] mb-0.5 fs-p">
@@ -501,7 +511,7 @@ export default function HeroSection() {
               key={index}
               href={item.href}
               className="bg-white rounded-2xl p-8 border border-orange-500 flex flex-col items-center text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer" >
-              <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mb-6">
+              <div className="w-24 h-24 bg-[#EEF2FB] rounded-2xl flex items-center justify-center mb-6">
                 {item.icon}
               </div>
               <h3 className="font-bold text-[#23263B] mb-3 fs-h4">
@@ -514,7 +524,7 @@ export default function HeroSection() {
           ))}
         </div>
       </section>
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans">
+      <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-6 space-y-8">
             <div>
@@ -557,8 +567,8 @@ export default function HeroSection() {
           <div className="lg:col-span-6 space-y-6">
            <div className="relative w-full h-95 rounded-2xl overflow-hidden shadow-sm border border-slate-100">
           <Image
-            src="/assets/home/carpenter-booking-service-by-phone.jpg"
-             alt="How To Get Our Service"
+            src="/assets/home/couple-planning-home-renovation.png"
+             alt={t("How To Get Our Service")}
               sizes="(min-width: 1024px) 50vw, 100vw"
               fill
                 className="object-cover"/>
@@ -572,7 +582,7 @@ export default function HeroSection() {
 
         </div>
       </section>
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans">
+      <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start mb-16">
           <div className="lg:col-span-6 space-y-8">
             <div>
@@ -591,8 +601,8 @@ export default function HeroSection() {
             </div>
             <div className="relative w-full h-95 rounded-2xl overflow-hidden shadow-sm border border-slate-100">
               <Image
-                src="/assets/home/carpenter-drilling-wood.jpg" 
-                alt="Trusted Service With Affordable Price"
+                src="/assets/home/hand-drilling-screw-into-wood.png" 
+                alt={t("Trusted Service With Affordable Price")}
                 fill
                 sizes="(min-width: 1024px) 50vw, 100vw"
                 className="object-cover"/>
@@ -608,7 +618,7 @@ export default function HeroSection() {
                   key={idx}
                   className={idx !== 0 ? 'border-s border-slate-200 ps-4 sm:ps-6':''}>
                   <h3
-                    className="counter-value font-black text-[#23263B] fs-h3"
+                    className="counter-value font-semibold text-[#23263B] fs-h3"
                     data-target={stat.target}>
                     0 +
 
@@ -625,7 +635,7 @@ export default function HeroSection() {
                 <div
                   key={idx}
                   className="bg-[#EEF2FB] rounded-2xl p-6 flex flex-col items-start transition-all duration-300 hover:shadow-md">
-                  <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center mb-4 shadow-sm">
+                  <div className="w-14 h-14 flex items-center justify-center mb-4">
 
                     {item.icon}
 
@@ -648,8 +658,8 @@ export default function HeroSection() {
 
           <div className="bg-[#2C3352] px-5 py-4 w-full md:w-auto flex flex-row items-center justify-center gap-2 shrink-0 md:min-w-50 md:flex-col md:items-start md:gap-0 md:px-8 md:py-6">
             
-            <span className="text-xl font-black text-orange-500 leading-none md:text-2xl">{t("Asaani")}</span>
-            <span className="text-xl font-black text-orange-500 leading-none md:text-2xl md:leading-tight">{t("Say")}</span>
+            <span className="text-xl font-semibold text-orange-500 leading-none md:text-2xl">{t("Asaani")}</span>
+            <span className="text-xl font-semibold text-orange-500 leading-none md:text-2xl md:leading-tight">{t("Say")}</span>
        </div>
 
           <div className="px-5 pt-5 pb-2 md:p-8 text-center md:text-start text-white flex-1">
@@ -670,7 +680,7 @@ export default function HeroSection() {
           </div>
         </div>
       </section>
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans border-t border-slate-200">
+      <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans border-t border-slate-200">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           
       <div className="lg:col-span-6 space-y-6">
@@ -723,13 +733,13 @@ export default function HeroSection() {
                 </div>
             </div>
             <div className="lg:col-span-6 flex flex-col items-end gap-4">
-                <div className="relative w-full max-w-lg aspect-4/3 rounded-tl-140px rounded-tr-2xl rounded-b-2xl overflow-hidden bg-[#3D425A]">
+                <div className="relative w-full max-w-lg aspect-670/544">
                     <Image
-                        src="/assets/home/handyman-talking-on-mobile-phone.png"
-                        alt="Handyman talking on mobile phone"
+                        src="/assets/home/handyman-pointing-at-phone-app.png"
+                        alt={t("Handyman talking on mobile phone")}
                         fill
                         sizes="(min-width: 1024px) 50vw, 100vw"
-                        className="object-cover object-center"/>
+                        className="object-contain object-center"/>
                 </div>
 
                    <Link
@@ -739,7 +749,7 @@ export default function HeroSection() {
             </div>
         </div>
     </section>
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans">
+    <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -760,31 +770,28 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
 
           {expertsData.map((expert, index) => (
             <div key={index} className="flex flex-col group">
-              <div className="relative w-full aspect-4/5 rounded-2xl overflow-hidden bg-slate-100 mb-5">
+              <div className="relative w-full aspect-360/563 rounded-2xl overflow-hidden bg-slate-100 mb-5">
                 <Image
                   src={expert.image}
-                  alt={expert.name}
+                  alt={t(expert.name)}
                   fill
-                  sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                  sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
                   className="object-cover object-center group-hover:scale-105 transition-transform duration-300"/>
-                <div className="absolute top-0 start-0 bg-[#3D425A]/90 text-white font-bold text-xl px-5 py-3 rounded-br-2xl shadow-sm z-10">
-                  {expert.number}
-                </div>
               </div>
 
               <div className="space-y-1.5 px-1">
                 <h3 className="font-bold text-[#23263B] group-hover:text-orange-500 transition-colors fs-h4">
-                  {expert.name}
+                  {t(expert.name)}
                 </h3>
                 <p className="font-bold text-[#23263B] pb-1 fs-p">
-                  {expert.jobsCompleted}
+                  {t(expert.jobsCompleted)}
                 </p>
                 <p className="text-slate-500 leading-relaxed fs-p">
-                  {expert.bio}
+                  {t(expert.bio)}
                 </p>
               </div>
             </div>
@@ -792,7 +799,7 @@ export default function HeroSection() {
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans border-t border-slate-100">
+      <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans border-t border-slate-100">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-16">
           <div className="lg:col-span-7 space-y-6">
             <div>
@@ -826,13 +833,13 @@ export default function HeroSection() {
 
        
        <div className="lg:col-span-5 flex justify-center lg:justify-end">
-        <div className="relative w-full max-w-md aspect-4/3 sm:aspect-square">
+        <div className="relative w-full max-w-md aspect-518/464">
          <Image
-                src="/assets/shared/home-service-worker.png"
-                alt="Hire The Best Home Services In Town"
+                src="/assets/home/smiling-handyman-in-blue-cap.png"
+                alt={t("Hire The Best Home Services In Town")}
                 fill
                 sizes="(min-width: 1024px) 50vw, 100vw"
-                className="object-cover object-center"/>
+                className="object-contain object-center"/>
 
         </div>
 
@@ -846,13 +853,13 @@ export default function HeroSection() {
                 {t(item.title)}
               </h3>
               <p className="text-slate-500 leading-relaxed fs-p">
-                {item.description}
+                {t(item.description)}
               </p>
               <div className="pt-2">
                 <a
                   href={item.linkMref}
                   className="text-sm font-bold text-[#23263B] hover:text-orange-500 transition-colors">
-                  {item.linktext}
+                  {t(item.linktext)}
                 </a>
               </div>
             </div>
@@ -860,7 +867,7 @@ export default function HeroSection() {
         </div>
 
       </section>
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans border-t border-slate-100">
+      <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans border-t border-slate-100">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -899,7 +906,7 @@ export default function HeroSection() {
           <div className="lg:col-span-5 relative min-h-[240px] lg:min-h-[380px]">
             <Image
               src={testimonialsData.featured.image}
-              alt={testimonialsData.featured.name}
+              alt={t(testimonialsData.featured.name)}
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="object-cover object-center"/>
@@ -910,12 +917,12 @@ export default function HeroSection() {
 
           <div className="min-w-0 p-6 sm:p-12 flex flex-col justify-center space-y-4 lg:col-span-7">
             <h3 className="break-words font-extrabold text-[#23263B] fs-h3">
-              {testimonialsData.featured.name}
+              {t(testimonialsData.featured.name)}
             </h3>
 
             <div className="flex w-fit max-w-full items-start gap-2 rounded-md bg-white/60 px-3 py-1.5 text-xs font-bold text-slate-600">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-500"/>
-              <span className="min-w-0 break-words">{testimonialsData.featured.problem}</span>
+              <span className="min-w-0 break-words">{t(testimonialsData.featured.problem)}</span>
             </div>
 
             <div className="py-1">
@@ -923,7 +930,7 @@ export default function HeroSection() {
             </div>
 
             <p className="max-w-xl break-words leading-relaxed text-slate-600 fs-p">
-              {testimonialsData.featured.text}
+              {t(testimonialsData.featured.text)}
             </p>
           </div>
         </div>
@@ -933,24 +940,24 @@ export default function HeroSection() {
               <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-slate-200 shrink-0 shadow-sm">
                 <Image
                   src={item.image}
-                  alt={item.name}
+                  alt={t(item.name)}
                   fill
                   sizes="112px"
                   className="object-cover"/>
               </div>
 
               <div className="min-w-0 flex-1 space-y-2">
-                <h4 className="break-words text-lg font-bold text-[#23263B]">{item.name}</h4>
+                <h4 className="break-words text-lg font-bold text-[#23263B]">{t(item.name)}</h4>
 
                 <div className="flex items-center gap-1.5 text-xs text-slate-600">
                   <AlertCircle className="w-3.5 h-3.5 text-[#EF6A42] shrink-0" />
-                  <span className="min-w-0 break-words font-medium">{item.problem}</span>
+                  <span className="min-w-0 break-words font-medium">{t(item.problem)}</span>
                 </div>
 
                 <div>{renderStars(item.rating)}</div>
 
                 <p className="break-words pt-1 leading-relaxed text-slate-500 fs-p">
-                  {item.text}
+                  {t(item.text)}
                 </p>
               </div>
             </div>

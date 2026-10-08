@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from '@/i18n/navigation'
 import { Timer, X } from 'lucide-react'
+import { useLanguage } from '../lib/i18n'
 import { fetchCustomerBookings, getStoredAuth, type BookingResult } from '../lib/booking-api'
 
 const REQUEST_TIMEOUT_SECONDS = 180
@@ -23,6 +24,7 @@ function readStoredOrder(): StoredOrder | null {
 
 export default function CustomerRequestMonitor() {
   const pathname = usePathname()
+  const { t } = useLanguage()
   const [order, setOrder] = useState<StoredOrder | null>(null)
   const [booking, setBooking] = useState<BookingResult | null>(null)
   const [secondsRemaining, setSecondsRemaining] = useState(0)
@@ -108,17 +110,17 @@ export default function CustomerRequestMonitor() {
         type="button"
         onClick={() => setDismissed(true)}
         className="absolute end-2 top-2 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-        aria-label="Close order timer"
+        aria-label={t('Close order timer')}
       >
         <X className="h-4 w-4" />
       </button>
       <div className="flex items-start gap-3 pe-5">
         <div className="rounded-xl bg-orange-100 p-2 text-orange-600"><Timer className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-extrabold text-slate-900">Order received</p>
-          <p className="mt-1 text-xs leading-relaxed text-slate-600">We are assigning the best available vendor.</p>
-          <p className="mt-2 text-[11px] font-bold text-orange-600">Vendor response time: {minutes}:{seconds}</p>
-          <p className="mt-1 truncate text-[10px] text-slate-400">Order ID: {order.orderId}</p>
+          <p className="text-sm font-extrabold text-slate-900">{t('Order received')}</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-600">{t('We are assigning the best available vendor.')}</p>
+          <p className="mt-2 text-[11px] font-bold text-orange-600">{t('Vendor response')}: {minutes}:{seconds}</p>
+          <p className="mt-1 truncate text-[10px] text-slate-400">{t('Order ID')}: {order.orderId}</p>
         </div>
       </div>
     </div>

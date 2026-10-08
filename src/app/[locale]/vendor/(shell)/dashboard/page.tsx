@@ -139,7 +139,7 @@ export default function VendorDashboardPage() {
     <div className="space-y-6">
       <div>
         <p className="text-sm font-bold text-slate-700">
-          {t('Welcome back,')} {profile?.first_name || 'there'}
+          {t('Welcome back,')} {profile?.first_name || t('there')}
         </p>
         {profile?.business_name && (
           <p className="text-xs text-slate-400">{profile.business_name}</p>

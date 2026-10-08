@@ -4,8 +4,10 @@ import React, { useState } from 'react'
 import { useRouter } from '@/i18n/navigation'
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import { loginUser, setStoredAuth } from '@/app/lib/booking-api'
+import { useLanguage } from '../../lib/i18n'
 
 export default function AdminLoginPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -36,15 +38,15 @@ export default function AdminLoginPage() {
           <div className="w-12 h-12 rounded-full bg-orange-500/15 flex items-center justify-center">
             <ShieldCheck className="w-6 h-6 text-orange-500" />
           </div>
-          <h1 className="text-xl font-extrabold text-white">Admin Sign In</h1>
-          <p className="text-xs text-slate-400">Asaani Say platform administration</p>
+          <h1 className="text-xl font-extrabold text-white">{t('Admin Sign In')}</h1>
+          <p className="text-xs text-slate-400">{t('Asaani Say platform administration')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400">{error}</p>}
+          {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400">{t(error)}</p>}
 
           <div className="space-y-1">
-            <label className="text-[11px] font-medium text-slate-400">Email</label>
+            <label className="text-[11px] font-medium text-slate-400">{t('Email')}</label>
             <input
               type="email"
               required
@@ -56,7 +58,7 @@ export default function AdminLoginPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] font-medium text-slate-400">Password</label>
+            <label className="text-[11px] font-medium text-slate-400">{t('Password')}</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -79,7 +81,7 @@ export default function AdminLoginPage() {
             type="submit"
             disabled={isProcessing}
             className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold py-3 rounded-lg text-xs uppercase tracking-wider transition shadow-md">
-            {isProcessing ? 'Signing in...' : 'Sign in'}
+            {isProcessing ? t('Signing in...') : t('Sign in')}
           </button>
         </form>
       </div>

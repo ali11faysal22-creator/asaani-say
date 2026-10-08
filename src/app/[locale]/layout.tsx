@@ -18,10 +18,32 @@ const notoNastaliqUrdu = Noto_Nastaliq_Urdu({
   weight: "400",
 })
 
-export const metadata: Metadata = {
-  title: "Asaani Say - Home Services",
-  description: "Book home services quickly and easily.",
-};
+// Same hashing as phraseKey() in ./lib/i18n (which is a client module).
+function phraseKey(text: string): string {
+  let hash = 2166136261
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return `p_${(hash >>> 0).toString(36)}`
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  const title = 'Asaani Say - Home Services'
+  const description = 'Book home services quickly and easily.'
+  if (!hasLocale(routing.locales, locale) || locale === 'en') return { title, description }
+  const messages = (await getMessages({ locale })) as { Common?: Record<string, string> }
+  const common = messages.Common ?? {}
+  return {
+    title: common[phraseKey(title)] ?? title,
+    description: common[phraseKey(description)] ?? description,
+  }
+}
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }))

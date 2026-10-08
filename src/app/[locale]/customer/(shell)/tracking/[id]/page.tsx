@@ -46,7 +46,7 @@ const statusRank: Record<string, number> = {
   payment_requested: 5,
   completed: 6,
 }
-const formatTrackingTime = (value: string | Date) => new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', hour12: true })
+
 
 const HERO_COPY: Record<string, { title: string; icon: typeof Truck }> = {
   pending: { title: 'Waiting for vendor to accept', icon: Clock3 },
@@ -61,7 +61,8 @@ const HERO_COPY: Record<string, { title: string; icon: typeof Truck }> = {
 }
 
 export default function CustomerTrackingPage({ params }: { params: Promise<{ id: string }> }) {
-  const { t } = useLanguage()
+  const { language, t } = useLanguage()
+  const formatTrackingTime = (value: string | Date) => new Date(value).toLocaleString(language === 'ur' ? 'ur-PK' : undefined, { dateStyle: 'medium', timeStyle: 'short', hour12: true })
   const router = useRouter()
   const [bookingId, setBookingId] = useState('')
   const [booking, setBooking] = useState<BookingResult | null>(null)
@@ -100,10 +101,10 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
   const progressPercent = Math.min(100, Math.round((currentRank / (statusSteps.length - 1)) * 100))
   const eta = useMemo(() => {
     if (!booking) return ''
-    if (booking.status === 'completed' || booking.status === 'in_progress' || booking.status === 'paused') return 'At your address'
-    if (booking.status === 'on_the_way') return 'Arriving in approximately 20 minutes'
-    return `Scheduled for ${formatSlotLabel(booking.slot_start)} - ${formatSlotLabel(booking.slot_end)}`
-  }, [booking])
+    if (booking.status === 'completed' || booking.status === 'in_progress' || booking.status === 'paused') return t('At your address')
+    if (booking.status === 'on_the_way') return t('Arriving in approximately 20 minutes')
+    return `${t('Scheduled for')} ${formatSlotLabel(booking.slot_start)} - ${formatSlotLabel(booking.slot_end)}`
+  }, [booking, t])
 
   if (loading) {
     return (
@@ -129,7 +130,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
     try {
       setBooking(await cancelCustomerBooking(booking.id))
     } catch (requestError) {
-      setCancelError(requestError instanceof Error ? requestError.message : 'Could not cancel this order.')
+      setCancelError(requestError instanceof Error ? requestError.message : t('Could not cancel this order.'))
     } finally {
       setCancelling(false)
     }
@@ -141,7 +142,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
     try {
       setBooking(await resumeCustomerBookingSearch(booking.id))
     } catch (requestError) {
-      setCancelError(requestError instanceof Error ? requestError.message : 'Could not resume the search.')
+      setCancelError(requestError instanceof Error ? requestError.message : t('Could not resume the search.'))
     } finally {
       setResuming(false)
     }
@@ -162,7 +163,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
         <>
           <p className="text-xs font-bold text-red-700">{t("Cancel this order?")}</p>
           <p className="mt-1 text-[11px] text-slate-600">{t("This cannot be undone — you'll need to place a new order if you change your mind.")}</p>
-          {cancelError && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-600">{cancelError}</p>}
+          {cancelError && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-600">{t(cancelError)}</p>}
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -170,7 +171,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
               onClick={() => void runCancelOrder()}
               className="rounded-lg bg-red-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-red-700 disabled:opacity-50"
             >
-              {cancelling ? 'Cancelling…' : 'Yes, cancel this order'}
+              {cancelling ? t('Cancelling…') : t('Yes, cancel this order')}
             </button>
             <button
               type="button"
@@ -191,7 +192,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
               <p className="mt-0.5">{t("You can resume searching, pick a different date/time, or cancel.")}</p>
             </div>
           </div>
-          {cancelError && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-600">{cancelError}</p>}
+          {cancelError && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-600">{t(cancelError)}</p>}
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" onClick={() => setDecisionMode('reschedule')} className="rounded-lg bg-[#EE6C52] px-3 py-2 text-[11px] font-bold text-white hover:bg-orange-600">
               {t("Pick a different time")}</button>
@@ -201,7 +202,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
               onClick={() => void runResumeSearch()}
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
-              {resuming ? 'Resuming…' : 'Keep searching'}
+              {resuming ? t('Resuming…') : t('Keep searching')}
             </button>
             <button
               type="button"
@@ -258,7 +259,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
 
           <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-lg font-black sm:text-xl">{hero.title}</p>
+              <p className="text-lg font-black sm:text-xl">{t(hero.title)}</p>
               <p className="mt-1 text-xs text-orange-50">{eta}</p>
             </div>
           </div>
@@ -293,7 +294,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
         {booking.cannot_start_reason && !['completed', 'cancelled'].includes(booking.status) && (
           <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <AlertTriangle className="h-5 w-5 shrink-0 text-slate-400" />
-            <p className="text-xs text-slate-600">{t("A previous vendor couldn't start this job (")}{booking.cannot_start_reason}{t(") — you've been matched with a new one.")}</p>
+            <p className="text-xs text-slate-600">{t("A previous vendor couldn't start this job (")}{t(booking.cannot_start_reason)}{t(") — you've been matched with a new one.")}</p>
           </div>
         )}
 
@@ -342,8 +343,8 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
                     )}
                   </div>
                   <div className={`min-w-0 flex-1 ${index < statusSteps.length - 1 ? 'pb-6' : ''}`}>
-                    <p className={`text-sm font-extrabold ${done ? 'text-slate-900' : 'text-slate-400'}`}>{step.label}</p>
-                    <p className={`mt-0.5 text-xs ${done ? 'text-slate-500' : 'text-slate-300'}`}>{step.detail}</p>
+                    <p className={`text-sm font-extrabold ${done ? 'text-slate-900' : 'text-slate-400'}`}>{t(step.label)}</p>
+                    <p className={`mt-0.5 text-xs ${done ? 'text-slate-500' : 'text-slate-300'}`}>{t(step.detail)}</p>
                     {step.key === 'accepted' && booking.accepted_at && (
                       <p className="mt-1.5 text-[11px] text-slate-400">{formatTrackingTime(booking.accepted_at)}</p>
                     )}
@@ -363,7 +364,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
                       <div className="mt-3 flex flex-wrap gap-2">
                         {booking.photos.map((url) => (
                           <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
-                            <img src={`${API_BASE}${url}`} alt="Completed job" className="h-16 w-16 rounded-lg border border-slate-200 object-cover" />
+                            <img src={`${API_BASE}${url}`} alt={t('Completed job')} className="h-16 w-16 rounded-lg border border-slate-200 object-cover" />
                           </a>
                         ))}
                       </div>
@@ -381,12 +382,12 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
               <div className="rounded-xl bg-white p-2.5 text-orange-600 shadow-xs"><CreditCard className="h-5 w-5" /></div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-extrabold text-slate-900">
-                  {booking.status === 'payment_requested' ? 'Payment requested' : 'Job finished'}
+                  {booking.status === 'payment_requested' ? t('Payment requested') : t('Job finished')}
                 </p>
                 <p className="text-xs text-slate-500">
                   {booking.status === 'payment_requested'
-                    ? `Please pay your vendor directly to complete the order.`
-                    : `Your vendor will request payment shortly.`}
+                    ? t('Please pay your vendor directly to complete the order.')
+                    : t('Your vendor will request payment shortly.')}
                 </p>
               </div>
               {booking.total_amount != null && (
@@ -405,7 +406,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
                   <Star key={value} className={`h-5 w-5 ${booking.rating! >= value ? 'fill-orange-400 text-orange-400' : 'text-slate-300'}`} />
                 ))}
               </div>
-              {booking.rating_comment && <p className="mt-2 text-xs text-slate-600">{t("&ldquo;")}{booking.rating_comment}{t("&rdquo;")}</p>}
+              {booking.rating_comment && <p className="mt-2 text-xs text-slate-600">&ldquo;{booking.rating_comment}&rdquo;</p>}
             </div>
           ) : (
             <div className="rounded-3xl border border-orange-200 bg-orange-50/60 p-5">

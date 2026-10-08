@@ -1,3 +1,7 @@
+'use client'
+
+import { useLanguage } from '../../lib/i18n'
+
 export type StatusTone = 'good' | 'warning' | 'critical' | 'neutral'
 
 const TONE_CLASSES: Record<StatusTone, string> = {
@@ -8,9 +12,10 @@ const TONE_CLASSES: Record<StatusTone, string> = {
 }
 
 export function StatusBadge({ label, tone }: { label: string; tone: StatusTone }) {
+  const { t } = useLanguage()
   return (
     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border capitalize ${TONE_CLASSES[tone]}`}>
-      {label}
+      {t(label)}
     </span>
   )
 }

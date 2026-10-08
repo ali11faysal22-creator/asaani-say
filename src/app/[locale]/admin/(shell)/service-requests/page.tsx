@@ -16,6 +16,7 @@ import { TableToolbar } from '../../components/table-toolbar'
 import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
+import { useLanguage } from '../../../lib/i18n'
 
 function statusTone(status: ServiceRequest['status']): StatusTone {
   if (status === 'assigned') return 'good'
@@ -24,6 +25,7 @@ function statusTone(status: ServiceRequest['status']): StatusTone {
 }
 
 export default function AdminServiceRequestsPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -123,26 +125,26 @@ export default function AdminServiceRequestsPage() {
       <TableToolbar
         search={search}
         onSearchChange={setSearch}
-        placeholder="Search requests…"
+        placeholder={t('Search requests…')}
         resultCount={filtered.length}
         totalCount={requests.length}
         onRefresh={handleRefresh}
         refreshing={refreshing}
       />
 
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{error}</p>}
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
 
       <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
         <table className="w-full text-start text-xs">
           <thead className="bg-slate-50 text-slate-500 uppercase tracking-wide">
             <tr>
-              <th className="px-4 py-3 font-bold">Service</th>
-              <th className="px-4 py-3 font-bold">Contact</th>
-              <th className="px-4 py-3 font-bold">Location</th>
-              <th className="px-4 py-3 font-bold">Preferred</th>
-              <th className="px-4 py-3 font-bold">Status</th>
-              <th className="px-4 py-3 font-bold">Assigned Vendor</th>
-              <th className="px-4 py-3 font-bold text-end">Actions</th>
+              <th className="px-4 py-3 font-bold">{t('Service')}</th>
+              <th className="px-4 py-3 font-bold">{t('Contact')}</th>
+              <th className="px-4 py-3 font-bold">{t('Location')}</th>
+              <th className="px-4 py-3 font-bold">{t('Preferred')}</th>
+              <th className="px-4 py-3 font-bold">{t('Status')}</th>
+              <th className="px-4 py-3 font-bold">{t('Assigned Vendor')}</th>
+              <th className="px-4 py-3 font-bold text-end">{t('Actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -181,7 +183,7 @@ export default function AdminServiceRequestsPage() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
-                  {requests.length === 0 ? 'No service requests yet.' : 'No requests match your search.'}
+                  {requests.length === 0 ? t('No service requests yet.') : t('No requests match your search.')}
                 </td>
               </tr>
             )}
@@ -204,7 +206,7 @@ export default function AdminServiceRequestsPage() {
               label: 'Assigned vendor',
               value: selectedRequest.assigned_vendor_name
                 ? `${selectedRequest.assigned_vendor_contact_name || selectedRequest.assigned_vendor_name}${selectedRequest.assigned_vendor_contact_name ? ` (${selectedRequest.assigned_vendor_name})` : ''}`
-                : 'Not assigned yet',
+                : t('Not assigned yet'),
             },
             { label: 'Submitted', value: new Date(selectedRequest.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) },
           ]}
@@ -216,7 +218,7 @@ export default function AdminServiceRequestsPage() {
               }}
               className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
             >
-              {selectedRequest.assigned_vendor_id ? 'Reassign vendor' : 'Assign vendor'}
+              {selectedRequest.assigned_vendor_id ? t('Reassign vendor') : t('Assign vendor')}
             </button>
           }
         />
@@ -224,7 +226,7 @@ export default function AdminServiceRequestsPage() {
 
       {assigningRequest && (
         <DetailModal
-          title="Assign a vendor"
+          title={t('Assign a vendor')}
           subtitle={`${assigningRequest.service_name} · ${assigningRequest.city}`}
           onClose={() => setAssigningRequest(null)}
           fields={[]}
@@ -235,7 +237,7 @@ export default function AdminServiceRequestsPage() {
                 onChange={(e) => setAssignVendorId(e.target.value)}
                 className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52]"
               >
-                <option value="">Select a vendor…</option>
+                <option value="">{t('Select a vendor…')}</option>
                 {vendors.map((vendor) => (
                   <option key={vendor.id} value={vendor.id}>
                     {vendor.first_name} {vendor.last_name} — {vendor.business_name} {vendor.city ? `(${vendor.city})` : ''}
@@ -247,7 +249,7 @@ export default function AdminServiceRequestsPage() {
                 disabled={!assignVendorId || assigning}
                 className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 disabled:opacity-50 cursor-pointer"
               >
-                {assigning ? 'Assigning…' : 'Confirm assignment'}
+                {assigning ? t('Assigning…') : t('Confirm assignment')}
               </button>
             </div>
           }

@@ -87,13 +87,13 @@ export default function CustomerOrdersPage() {
               <Search className="w-4 h-4 text-slate-400 absolute start-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search order ID or service…"
+                placeholder={t('Search order ID or service…')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-white border border-slate-200 rounded-lg ps-9 pe-3.5 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition"
               />
             </div>
-            <DateFilter value={dateFilter} onChange={setDateFilter} label="Filter by scheduled date" />
+            <DateFilter value={dateFilter} onChange={setDateFilter} label={t('Filter by scheduled date')} />
             <p className="text-[11px] font-semibold text-slate-400">
               {filteredOrders.length === orders.length ? <>{orders.length} {t("total")}</> : <>{filteredOrders.length} {t("of")}{' '}{orders.length}</>}
             </p>
@@ -124,15 +124,15 @@ export default function CustomerOrdersPage() {
                   </td>
                   <td className="px-4 py-3 text-slate-600">{order.date}</td>
                   <td className="px-4 py-3 text-slate-600">{formatSlotLabel(order.slot_start)} - {formatSlotLabel(order.slot_end)}</td>
-                  <td className="px-4 py-3 text-slate-600">{canTrack(order) && order.vendor ? order.vendor.business_name : 'Pending acceptance'}</td>
+                  <td className="px-4 py-3 text-slate-600">{canTrack(order) && order.vendor ? order.vendor.business_name : t('Pending acceptance')}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-3 py-1.5 text-[11px] font-bold ${statusTone(order.status)}`}>{statusLabel(order.status)}</span>
+                    <span className={`rounded-full px-3 py-1.5 text-[11px] font-bold ${statusTone(order.status)}`}>{t(statusLabel(order.status))}</span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         type="button"
-                        title="View details"
+                        title={t('View details')}
                         onClick={() => setSelectedOrder(order)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer"
                       >
@@ -168,17 +168,17 @@ export default function CustomerOrdersPage() {
                 <p className="text-[11px] font-bold uppercase tracking-wide text-orange-500">{t("Order details")}</p>
                 <h2 className="mt-1 text-xl font-black text-slate-900">{t(selectedOrder.service_name)}</h2>
               </div>
-              <button type="button" title="Close" onClick={() => setSelectedOrder(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
+              <button type="button" title={t('Close')} onClick={() => setSelectedOrder(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="mt-5 grid gap-4 border-y border-slate-100 py-5 text-xs sm:grid-cols-2">
               <div><p className="text-slate-400">{t("Customer name")}</p><p className="mt-1 font-bold text-slate-900">{selectedOrder.customer_name}</p></div>
               <div><p className="text-slate-400">{t("Order ID")}</p><p className="mt-1 break-all font-bold text-slate-900">{selectedOrder.id}</p></div>
-              <div><p className="text-slate-400">{t("Status")}</p><p className="mt-1 font-bold capitalize text-orange-600">{selectedOrder.status.replace(/_/g, ' ')}</p></div>
-              <div><p className="text-slate-400">{t("Payment")}</p><p className="mt-1 font-bold text-emerald-600">{selectedOrder.total_amount == null ? 'Not available' : `Rs. ${selectedOrder.total_amount.toLocaleString()}`}</p></div>
-              <div><p className="text-slate-400">{t("Vendor name")}</p><p className="mt-1 font-bold text-slate-900">{selectedOrder.vendor?.business_name || 'Not assigned yet'}</p></div>
-              <div><p className="text-slate-400">{t("Customer phone")}</p><p className="mt-1 font-bold text-slate-900">{selectedOrder.customer_phone || 'Not available'}</p></div>
+              <div><p className="text-slate-400">{t("Status")}</p><p className="mt-1 font-bold capitalize text-orange-600">{t(selectedOrder.status.replace(/_/g, ' '))}</p></div>
+              <div><p className="text-slate-400">{t("Payment")}</p><p className="mt-1 font-bold text-emerald-600">{selectedOrder.total_amount == null ? t('Not available') : `${t('Rs.')} ${selectedOrder.total_amount.toLocaleString()}`}</p></div>
+              <div><p className="text-slate-400">{t("Vendor name")}</p><p className="mt-1 font-bold text-slate-900">{selectedOrder.vendor?.business_name || t('Not assigned yet')}</p></div>
+              <div><p className="text-slate-400">{t("Customer phone")}</p><p className="mt-1 font-bold text-slate-900">{selectedOrder.customer_phone || t('Not available')}</p></div>
             </div>
             {selectedOrder.vendor && (
               <div className="border-b border-slate-100 py-4">
@@ -199,7 +199,7 @@ export default function CustomerOrdersPage() {
                 <div className="flex flex-wrap gap-2">
                   {selectedOrder.photos.map((url) => (
                     <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
-                      <img src={`${API_BASE}${url}`} alt="Completed job" className="h-16 w-16 rounded-lg border border-slate-200 object-cover" />
+                      <img src={`${API_BASE}${url}`} alt={t('Completed job')} className="h-16 w-16 rounded-lg border border-slate-200 object-cover" />
                     </a>
                   ))}
                 </div>

@@ -72,7 +72,7 @@ export default function CustomerDecisionPrompt() {
       await resumeCustomerBookingSearch(booking.id)
       setBooking(null)
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not resume the search.')
+      setError(requestError instanceof Error ? requestError.message : t('Could not resume the search.'))
     } finally {
       setResuming(false)
     }
@@ -85,7 +85,7 @@ export default function CustomerDecisionPrompt() {
       await cancelCustomerBooking(booking.id)
       setBooking(null)
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not cancel this order.')
+      setError(requestError instanceof Error ? requestError.message : t('Could not cancel this order.'))
     } finally {
       setCancelling(false)
     }
@@ -98,7 +98,7 @@ export default function CustomerDecisionPrompt() {
           type="button"
           onClick={close}
           className="absolute end-4 top-4 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-          aria-label="Close"
+          aria-label={t('Close')}
         >
           <X className="h-5 w-5" />
         </button>
@@ -110,7 +110,7 @@ export default function CustomerDecisionPrompt() {
             <p className="mt-2 text-xs leading-relaxed text-slate-500">
               {booking.vendor_miss_count} {t("nearby vendors haven't responded, so we've paused the search. You can resume searching, pick a different date/time, or cancel the order.")}</p>
 
-            {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{error}</p>}
+            {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
 
             <div className="mt-4 space-y-2">
               <button
@@ -125,7 +125,7 @@ export default function CustomerDecisionPrompt() {
                 onClick={() => void runResume()}
                 className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
               >
-                {resuming ? 'Resuming…' : 'Keep searching'}
+                {resuming ? t('Resuming…') : t('Keep searching')}
               </button>
               <button
                 type="button"
@@ -157,7 +157,7 @@ export default function CustomerDecisionPrompt() {
             <p className="mt-1 text-sm font-extrabold text-slate-900">{t(booking.service_name)}</p>
             <p className="mt-2 text-xs leading-relaxed text-slate-500">{t("This cannot be undone — you'll need to place a new order if you change your mind.")}</p>
 
-            {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{error}</p>}
+            {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
 
             <div className="mt-4 space-y-2">
               <button
@@ -166,7 +166,7 @@ export default function CustomerDecisionPrompt() {
                 onClick={() => void runCancel()}
                 className="w-full rounded-xl bg-red-600 py-2.5 text-xs font-bold text-white transition hover:bg-red-700 disabled:opacity-50"
               >
-                {cancelling ? 'Cancelling…' : 'Yes, cancel this order'}
+                {cancelling ? t('Cancelling…') : t('Yes, cancel this order')}
               </button>
               <button
                 type="button"

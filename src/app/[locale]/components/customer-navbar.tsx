@@ -120,7 +120,7 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
   }
 
   return (
-    <header className="relative max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-6 lg:px-8">
+    <header className="relative site-container mx-auto flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-6 lg:px-8">
       <Link href="/" className="flex items-center gap-2">
         <div className="relative"><Hand size={28} strokeWidth={2} className="text-black" /><Sparkles size={14} strokeWidth={2} className="text-orange-500 absolute -top-1 -end-1" /></div>
         <div className="flex flex-col leading-tight"><span className="font-extrabold text-xl tracking-tight text-orange-500">{t("Asaani")}</span><span className="font-bold text-lg tracking-tight -mt-1.5 text-orange-500">{t("Say")}</span></div>
@@ -143,7 +143,7 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
             <button
               ref={profileButtonRef}
               type="button"
-              aria-label="Open customer account menu"
+              aria-label={t('Open customer account menu')}
               aria-expanded={profileOpen}
               aria-controls="customer-account-menu"
               onClick={() => setProfileOpen((open) => !open)}
@@ -154,7 +154,7 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
               <ChevronDown className={`hidden h-3.5 w-3.5 transition-transform sm:inline ${profileOpen ? 'rotate-180' : ''}`} />
             </button>
             {profileOpen && (
-              <div id="customer-account-menu" aria-label="Customer account options" className="fixed left-1/2 top-28 z-50 w-56 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 rounded-xl border border-slate-200 bg-white p-2 shadow-xl md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:translate-x-0">
+              <div id="customer-account-menu" aria-label={t('Customer account options')} className="fixed left-1/2 top-28 z-50 w-56 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 rounded-xl border border-slate-200 bg-white p-2 shadow-xl md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:translate-x-0">
                   <Link
                     href="/customer/dashboard"
                     onClick={() => setProfileOpen(false)}
@@ -175,7 +175,7 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
                     className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${isActivePath('/customer/notifications', 'notifications') ? 'bg-orange-50 text-orange-600' : 'text-slate-700 hover:bg-orange-50 hover:text-orange-600'}`}
                   >
                     <span className="flex items-center gap-3"><Bell className="h-4 w-4" /> {t('Notifications')}</span>
-                    {unreadCount > 0 && <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-black text-white">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+                    {unreadCount > 0 && <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-semibold text-white">{unreadCount > 9 ? '9+' : unreadCount}</span>}
                   </Link>
                   <div className="my-1 border-t border-slate-100" />
                   <button
@@ -193,11 +193,11 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
             {t('Get Started')}
           </Link>
         )}
-        <button type="button" onClick={() => setMobileOpen((open) => !open)} className="rounded-lg border border-slate-200 p-2 text-slate-700 md:hidden" aria-label="Open navigation menu">
+        <button type="button" onClick={() => setMobileOpen((open) => !open)} className="rounded-lg border border-slate-200 p-2 text-slate-700 md:hidden" aria-label={t('Open navigation menu')}>
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
-      {alertNotification && <div className="fixed end-4 top-4 z-60 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-orange-100 bg-white p-4 shadow-xl"><button type="button" title="Close notification" aria-label="Close notification" onClick={() => void markNotificationRead(alertNotification)} className="absolute end-2 top-2 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-4 w-4" /></button><div className="flex items-start gap-3 pe-5"><Bell className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" /><div className="min-w-0"><p className="text-xs font-extrabold text-slate-900">{alertNotification.title}</p><p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-600">{alertNotification.body}</p><button type="button" onClick={() => void markNotificationRead(alertNotification)} className="mt-2 text-[10px] font-bold text-orange-600">{t("Mark as read")}</button><Link href="/customer/notifications" onClick={() => void markNotificationRead(alertNotification)} className="ms-3 inline-block text-[10px] font-bold text-orange-600">{t("View notification")}</Link></div></div></div>}
+      {alertNotification && <div className="fixed end-4 top-4 z-60 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-orange-100 bg-white p-4 shadow-xl"><button type="button" title={t('Close notification')} aria-label={t('Close notification')} onClick={() => void markNotificationRead(alertNotification)} className="absolute end-2 top-2 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-4 w-4" /></button><div className="flex items-start gap-3 pe-5"><Bell className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" /><div className="min-w-0"><p className="text-xs font-extrabold text-slate-900">{t(alertNotification.title)}</p><p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-600">{t(alertNotification.body)}</p><button type="button" onClick={() => void markNotificationRead(alertNotification)} className="mt-2 text-[10px] font-bold text-orange-600">{t("Mark as read")}</button><Link href="/customer/notifications" onClick={() => void markNotificationRead(alertNotification)} className="ms-3 inline-block text-[10px] font-bold text-orange-600">{t("View notification")}</Link></div></div></div>}
       {mobileOpen && (
         <div className="absolute start-0 end-0 top-full z-40 max-h-[calc(100dvh-5rem)] overflow-y-auto border-b border-slate-200 bg-white p-4 shadow-lg md:hidden">
           <div className="flex flex-col gap-1 text-sm font-semibold">

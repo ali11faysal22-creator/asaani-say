@@ -1,14 +1,19 @@
+'use client'
+
+import { useLanguage } from '../lib/i18n'
+
 const INSTAGRAM_URL = 'https://www.instagram.com/'
 const FACEBOOK_URL = 'https://www.facebook.com/'
 
 export default function SocialLinks() {
+  const { t } = useLanguage()
   return (
     <div className="flex items-center gap-2 text-slate-700">
       <a
         href={INSTAGRAM_URL}
         target="_blank"
         rel="noreferrer"
-        aria-label="Instagram"
+        aria-label={t('Instagram')}
         className="transition hover:text-orange-500"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -21,7 +26,7 @@ export default function SocialLinks() {
         href={FACEBOOK_URL}
         target="_blank"
         rel="noreferrer"
-        aria-label="Facebook"
+        aria-label={t('Facebook')}
         className="transition hover:text-orange-500"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">

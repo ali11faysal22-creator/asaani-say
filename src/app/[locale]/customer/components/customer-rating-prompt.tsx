@@ -61,7 +61,7 @@ export default function CustomerRatingPrompt() {
           type="button"
           onClick={() => { dismiss(booking.id); setBooking(null) }}
           className="absolute end-4 top-4 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-          aria-label="Maybe later"
+          aria-label={t("Maybe later")}
         >
           <X className="h-5 w-5" />
         </button>

@@ -11,6 +11,7 @@ import {
   type DateRow,
   type SlotRow,
 } from '@/app/lib/booking-api'
+import { useLanguage } from '@/app/lib/i18n'
 
 export function BookingRescheduleForm({
   booking,
@@ -19,6 +20,7 @@ export function BookingRescheduleForm({
   booking: BookingResult
   onRescheduled: (updated: BookingResult) => void
 }) {
+  const { language, t } = useLanguage()
   const [dates, setDates] = useState<DateRow[]>([])
   const [loadingDates, setLoadingDates] = useState(true)
   const [datesError, setDatesError] = useState('')
@@ -37,16 +39,16 @@ export function BookingRescheduleForm({
         if (!active) return
         const available = rows.filter((row) => row.available)
         setDates(available)
-        if (available.length === 0) setDatesError('No open dates found for this service near you right now.')
+        if (available.length === 0) setDatesError(t('No open dates found for this service near you right now.'))
       })
       .catch((requestError) => {
         if (!active) return
         setDates([])
-        setDatesError(requestError instanceof Error ? requestError.message : 'Could not load available dates.')
+        setDatesError(requestError instanceof Error ? requestError.message : t('Could not load available dates.'))
       })
       .finally(() => { if (active) setLoadingDates(false) })
     return () => { active = false }
-  }, [booking.address.id, booking.service_id, booking.service_name, datesReloadKey])
+  }, [booking.address.id, booking.service_id, booking.service_name, datesReloadKey, t])
 
   useEffect(() => {
     if (!selectedDate) return
@@ -71,7 +73,7 @@ export function BookingRescheduleForm({
     try {
       onRescheduled(await rescheduleCustomerBooking(booking.id, selectedDate, selectedSlot.start, selectedSlot.end))
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not reschedule this order.')
+      setError(requestError instanceof Error ? requestError.message : t('Could not reschedule this order.'))
     } finally {
       setBusy(false)
     }
@@ -84,21 +86,21 @@ export function BookingRescheduleForm({
     <div className="space-y-3">
       <div className="space-y-2">
         <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-          <Calendar className="h-4 w-4 text-orange-500" /> Available Dates
+          <Calendar className="h-4 w-4 text-orange-500" /> {t('Available Dates')}
         </label>
         {loadingDates ? (
           <div className="flex items-center gap-2 py-3 text-xs font-semibold text-slate-400">
-            <Loader2 className="h-4 w-4 animate-spin text-orange-500" /> Checking availability...
+            <Loader2 className="h-4 w-4 animate-spin text-orange-500" /> {t('Checking availability...')}
           </div>
         ) : dates.length === 0 ? (
           <p className="flex items-center justify-between gap-2 text-xs font-semibold text-red-600">
-            <span>{datesError}</span>
+            <span>{t(datesError)}</span>
             <button
               type="button"
               onClick={() => { setLoadingDates(true); setDatesError(''); setDatesReloadKey((key) => key + 1) }}
               className="shrink-0 font-bold text-orange-600 hover:underline"
             >
-              Retry
+              {t('Retry')}
             </button>
           </p>
         ) : (
@@ -117,9 +119,9 @@ export function BookingRescheduleForm({
                       : 'border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100'
                   }`}
                 >
-                  <span className="text-[10px] font-medium">{d.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                  <span className="text-[10px] font-medium">{d.toLocaleDateString(language === 'ur' ? 'ur-PK' : 'en-US', { weekday: 'short' })}</span>
                   <span className="text-base font-extrabold">{d.getDate()}</span>
-                  <span className="text-[9px] font-semibold text-emerald-500">{item.vendor_count} free</span>
+                  <span className="text-[9px] font-semibold text-emerald-500">{item.vendor_count} {t('free')}</span>
                 </button>
               )
             })}
@@ -130,14 +132,14 @@ export function BookingRescheduleForm({
       {selectedDate && (
         <div className="space-y-2 pt-1">
           <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-            <Clock className="h-4 w-4 text-orange-500" /> Time Slots
+            <Clock className="h-4 w-4 text-orange-500" /> {t('Time Slots')}
           </label>
           {loadingSlots ? (
             <div className="flex items-center gap-2 py-3 text-xs font-semibold text-slate-400">
-              <Loader2 className="h-4 w-4 animate-spin text-orange-500" /> Loading one-hour slots...
+              <Loader2 className="h-4 w-4 animate-spin text-orange-500" /> {t('Loading one-hour slots...')}
             </div>
           ) : slots.length === 0 ? (
-            <p className="text-xs text-slate-400">No open slots on this day — try another date.</p>
+            <p className="text-xs text-slate-400">{t('No open slots on this day — try another date.')}</p>
           ) : (
             <div className="grid grid-cols-3 gap-2">
               {slots.map((slot) => {
@@ -167,7 +169,7 @@ export function BookingRescheduleForm({
         </div>
       )}
 
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{error}</p>}
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
 
       <button
         type="button"
@@ -175,7 +177,7 @@ export function BookingRescheduleForm({
         onClick={() => void runReschedule()}
         className="mt-1 w-full cursor-pointer rounded-xl bg-[#EE6C52] py-3 text-sm font-extrabold text-white shadow-md transition hover:bg-orange-600 disabled:bg-slate-300"
       >
-        {busy ? 'Saving…' : 'Confirm new time'}
+        {busy ? t('Saving…') : t('Confirm new time')}
       </button>
     </div>
   )

@@ -5,9 +5,11 @@ import { useEffect, useState } from 'react'
 import { usePathname } from '@/i18n/navigation'
 import { Bell, X } from 'lucide-react'
 import { fetchVendorNotifications, getStoredAuth, markVendorNotificationRead } from '@/app/lib/booking-api'
+import { useLanguage } from '@/app/lib/i18n'
 
 export default function VendorNotificationMonitor() {
   const pathname = usePathname()
+  const { t } = useLanguage()
   const [request, setRequest] = useState<{ id: string; body: string } | null>(null)
 
   useEffect(() => {
@@ -44,11 +46,11 @@ export default function VendorNotificationMonitor() {
       <div className="flex items-start gap-3">
         <div className="rounded-xl bg-orange-100 p-2 text-orange-600"><Bell className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-extrabold text-slate-900">New service request</p>
+          <p className="text-sm font-extrabold text-slate-900">{t('New service request')}</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-600">{request.body}</p>
-          <Link href="/vendor/notifications" onClick={() => { const auth = getStoredAuth('vendor'); if (auth?.profile_id) void markVendorNotificationRead(auth.profile_id, request.id); setRequest(null) }} className="mt-3 inline-block rounded-lg bg-orange-500 px-3 py-2 text-xs font-bold text-white">Review request</Link>
+          <Link href="/vendor/notifications" onClick={() => { const auth = getStoredAuth('vendor'); if (auth?.profile_id) void markVendorNotificationRead(auth.profile_id, request.id); setRequest(null) }} className="mt-3 inline-block rounded-lg bg-orange-500 px-3 py-2 text-xs font-bold text-white">{t('Review request')}</Link>
         </div>
-        <button type="button" title="Dismiss" onClick={() => { const auth = getStoredAuth('vendor'); if (auth?.profile_id) void markVendorNotificationRead(auth.profile_id, request.id); setRequest(null) }} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
+        <button type="button" title={t('Dismiss')} onClick={() => { const auth = getStoredAuth('vendor'); if (auth?.profile_id) void markVendorNotificationRead(auth.profile_id, request.id); setRequest(null) }} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
       </div>
     </div>
   )

@@ -6,6 +6,7 @@ import { fetchPublicConfig, loginUser, registerVendor, setStoredAuth } from '@/a
 import { PhoneInput, combinePhoneNumber } from '@/app/components/phone-input'
 import { DEFAULT_COUNTRY_ISO, COUNTRY_CODES } from '@/app/lib/country-codes'
 import { LocationPicker } from '@/app/components/location-picker'
+import { useLanguage } from '@/app/lib/i18n'
 import {
   Eye,
   EyeOff,
@@ -166,6 +167,7 @@ type DayAvailability = {
 
 export default function VendorLoginPage() {
   const router = useRouter()
+  const { t } = useLanguage()
 
   const [isRegister, setIsRegister] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -310,7 +312,7 @@ export default function VendorLoginPage() {
     }
 
     if (selectedCategories.length >= 2) {
-      setFormError('You can only select 2 main categories.')
+      setFormError(t('You can only select 2 main categories.'))
       return
     }
 
@@ -405,11 +407,11 @@ export default function VendorLoginPage() {
     e.preventDefault()
     setFormError('')
     if (password.length < 8) {
-      setFormError('Password must be at least 8 characters.')
+      setFormError(t('Password must be at least 8 characters.'))
       return
     }
     if (password !== confirmPassword) {
-      setFormError('Passwords do not match.')
+      setFormError(t('Passwords do not match.'))
       return
     }
     const nameParts = name.trim().split(/\s+/).filter(Boolean)
@@ -433,11 +435,11 @@ export default function VendorLoginPage() {
     setFormError('')
 
     if (selectedCategories.length === 0 && !showOtherInput) {
-      setFormError('Please select at least 1 main category or specify a custom service.')
+      setFormError(t('Please select at least 1 main category or specify a custom service.'))
       return
     }
     if (selectedSubServices.length === 0 && !showOtherInput) {
-      setFormError('Please select sub-services for your selected categories.')
+      setFormError(t('Please select sub-services for your selected categories.'))
       return
     }
 
@@ -445,7 +447,7 @@ export default function VendorLoginPage() {
       (day) => availability[day].isSelected && availability[day].slots.length > 0
     )
     if (!hasAvailability) {
-      setFormError('Please select at least one working day and time slot.')
+      setFormError(t('Please select at least one working day and time slot.'))
       return
     }
 
@@ -496,10 +498,10 @@ export default function VendorLoginPage() {
         setStoredAuth('vendor', auth)
         router.push('/vendor/dashboard')
       } else {
-        setFormError('Vendor registration did not return a valid vendor session.')
+        setFormError(t('Vendor registration did not return a valid vendor session.'))
       }
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Vendor registration failed. Please try again.')
+      setFormError(error instanceof Error ? t(error.message) : t('Vendor registration failed. Please try again.'))
     } finally {
       setIsProcessing(false)
     }
@@ -511,7 +513,7 @@ export default function VendorLoginPage() {
     setFormError('')
 
     if (!emailOrPhone || !password) {
-      setFormError('Please enter your email/phone and password.')
+      setFormError(t('Please enter your email/phone and password.'))
       return
     }
 
@@ -522,10 +524,10 @@ export default function VendorLoginPage() {
         setStoredAuth('vendor', auth)
         router.push('/vendor/dashboard')
       } else {
-        setFormError('This account is not registered as a vendor.')
+        setFormError(t('This account is not registered as a vendor.'))
       }
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Vendor login failed. Please try again.')
+      setFormError(error instanceof Error ? t(error.message) : t('Vendor login failed. Please try again.'))
     } finally {
       setIsProcessing(false)
     }
@@ -549,29 +551,26 @@ export default function VendorLoginPage() {
             <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
               <Wrench className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-base text-white">Asaani Say</span>
+            <span className="font-bold text-base text-white">{t('Asaani Say')}</span>
           </div>
 
           <div className="my-auto -translate-y-24 space-y-4">
             <h1 className="text-3xl font-extrabold leading-tight">
-              Welcome to <span className="text-orange-500">Asaani Say</span>
+              {t('Welcome to')} <span className="text-orange-500">{t('Asaani Say')}</span>
             </h1>
 
             <p className="text-xs text-slate-300 leading-relaxed font-normal max-w-md">
-              Partner with us to grow your business and reach thousands of local
-              clients.
+              {t('Partner with us to grow your business and reach thousands of local clients.')}
             </p>
 
             <p className="text-[11px] text-slate-300 leading-relaxed font-normal max-w-md">
-              Here, we believe that building a strong professional network begins
-              with your participation. Join the Asaani platform and start
-              managing your vendor services with confidence.
+              {t('Here, we believe that building a strong professional network begins with your participation. Join the Asaani platform and start managing your vendor services with confidence.')}
             </p>
           </div>
 
           <div className="pt-4 border-t border-slate-600/50 flex items-center gap-2 text-[10px] text-slate-300">
             <ShieldCheck className="w-4 h-4 text-orange-500 shrink-0" />
-            <span>Secure, encrypted connections for all transactions.</span>
+            <span>{t('Secure, encrypted connections for all transactions.')}</span>
           </div>
         </div>
 
@@ -589,7 +588,7 @@ export default function VendorLoginPage() {
                       : 'text-slate-400 hover:text-orange-500'
                   }`}
                 >
-                  Sign in
+                  {t('Sign in')}
                 </button>
 
                 <button
@@ -601,7 +600,7 @@ export default function VendorLoginPage() {
                       : 'bg-white text-slate-500 hover:bg-slate-100'
                   }`}
                 >
-                  Register
+                  {t('Register')}
                 </button>
               </div>
             </div>
@@ -611,10 +610,10 @@ export default function VendorLoginPage() {
               <div className="max-w-md mx-auto space-y-6">
                 <div className="text-center">
                   <h2 className="text-2xl font-bold text-[#2C2F45]">
-                    Vendor Sign In
+                    {t('Vendor Sign In')}
                   </h2>
                   <p className="text-xs text-slate-600 mt-1">
-                    Please enter your credentials to access your store dashboard.
+                    {t('Please enter your credentials to access your store dashboard.')}
                   </p>
                 </div>
 
@@ -628,7 +627,7 @@ export default function VendorLoginPage() {
                       required
                       value={emailOrPhone}
                       onChange={(e) => setEmailOrPhone(e.target.value)}
-                      placeholder="Enter Email or Phone"
+                      placeholder={t('Enter Email or Phone')}
                       maxLength={100}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                     />
@@ -640,7 +639,7 @@ export default function VendorLoginPage() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Password"
+                      placeholder={t('Password')}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 pe-10 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                     />
                     <button
@@ -661,7 +660,7 @@ export default function VendorLoginPage() {
                       href="#"
                       className="text-[11px] text-orange-500 hover:underline font-medium"
                     >
-                      Recover Password ?
+                      {t('Recover Password ?')}
                     </a>
                   </div>
 
@@ -670,7 +669,7 @@ export default function VendorLoginPage() {
                     disabled={isProcessing}
                     className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl text-xs transition shadow-md cursor-pointer disabled:opacity-60"
                   >
-                    {isProcessing ? 'Signing in…' : 'Sign in'}
+                    {isProcessing ? t('Signing in…') : t('Sign in')}
                   </button>
                 </form>
               </div>
@@ -681,10 +680,10 @@ export default function VendorLoginPage() {
               <div className="max-w-md mx-auto space-y-6">
                 <div className="text-center">
                   <h2 className="text-2xl font-bold text-[#2C2F45]">
-                    Vendor Sign Up
+                    {t('Vendor Sign Up')}
                   </h2>
                   <p className="text-xs text-slate-600 mt-1">
-                    Create your vendor account to start offering services.
+                    {t('Create your vendor account to start offering services.')}
                   </p>
                 </div>
 
@@ -698,7 +697,7 @@ export default function VendorLoginPage() {
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Name"
+                      placeholder={t('Name')}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                     />
                   </div>
@@ -708,7 +707,7 @@ export default function VendorLoginPage() {
                       type="text"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Email or Phone Number"
+                      placeholder={t('Email or Phone Number')}
                       maxLength={100}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                     />
@@ -720,7 +719,7 @@ export default function VendorLoginPage() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Password"
+                      placeholder={t('Password')}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 pe-10 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                     />
                     <button
@@ -742,7 +741,7 @@ export default function VendorLoginPage() {
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm Password"
+                      placeholder={t('Confirm Password')}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 transition"
                     />
                   </div>
@@ -751,7 +750,7 @@ export default function VendorLoginPage() {
                     type="submit"
                     className="block ms-auto px-10 bg-slate-400 hover:bg-orange-600 text-white font-bold py-3 rounded-xl text-xs transition shadow-md uppercase tracking-wider cursor-pointer"
                   >
-                    NEXT
+                    {t('NEXT')}
                   </button>
                 </form>
               </div>
@@ -765,16 +764,16 @@ export default function VendorLoginPage() {
                     type="button"
                     onClick={() => { setRegStep(1); setFormError('') }}
                     className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition text-slate-600"
-                    title="Go Back"
+                    title={t('Go Back')}
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </button>
                   <div>
                     <h2 className="text-xl font-bold text-[#2C2F45]">
-                      Vendor Details & Services
+                      {t('Vendor Details & Services')}
                     </h2>
                     <p className="text-xs text-slate-600">
-                      Please complete the required information to get onboarded.
+                      {t('Please complete the required information to get onboarded.')}
                     </p>
                   </div>
                 </div>
@@ -785,7 +784,7 @@ export default function VendorLoginPage() {
                   )}
                   <div className="space-y-3">
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Personal Details
+                      {t('Personal Details')}
                     </h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -793,7 +792,7 @@ export default function VendorLoginPage() {
                         type="text"
                         name="firstName"
                         required
-                        placeholder="FIRST NAME"
+                        placeholder={t('FIRST NAME')}
                         value={vendorDetails.firstName}
                         onChange={handleInputChange}
                         className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
@@ -803,7 +802,7 @@ export default function VendorLoginPage() {
                         type="text"
                         name="lastName"
                         required
-                        placeholder="LAST NAME"
+                        placeholder={t('LAST NAME')}
                         value={vendorDetails.lastName}
                         onChange={handleInputChange}
                         className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
@@ -825,7 +824,7 @@ export default function VendorLoginPage() {
                             ...(sameWhatsappNumber ? { businessPhone: value } : {}),
                           }))
                         }}
-                        placeholder="CONTACT NUMBER"
+                        placeholder={t('CONTACT NUMBER')}
                         required
                         fieldId="vendor-contact"
                       />
@@ -836,7 +835,7 @@ export default function VendorLoginPage() {
                           onCountryCodeChange={setWhatsappCountryCode}
                           localNumber={vendorDetails.businessPhone}
                           onLocalNumberChange={(value) => setVendorDetails((prev) => ({ ...prev, businessPhone: value }))}
-                          placeholder="WHATSAPP NUMBER (optional)"
+                          placeholder={t('WHATSAPP NUMBER (optional)')}
                           fieldId="vendor-whatsapp"
                         />
                         <label className="flex items-center gap-2 text-[10px] font-semibold text-slate-500">
@@ -853,7 +852,7 @@ export default function VendorLoginPage() {
                             }}
                             className="h-3.5 w-3.5 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
                           />
-                          WhatsApp number is the same as contact number
+                          {t('WhatsApp number is the same as contact number')}
                         </label>
                       </div>
                     </div>
@@ -861,15 +860,15 @@ export default function VendorLoginPage() {
                     <input
                       type="text"
                       name="houseAddress"
-                      placeholder="HOUSE ADDRESS (optional)"
+                      placeholder={t('HOUSE ADDRESS (optional)')}
                       value={vendorDetails.houseAddress}
                       onChange={handleInputChange}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
                     />
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input type="text" inputMode="numeric" name="cnic" required maxLength={15} placeholder="CNIC (e.g. 12345-1234567-1)" value={vendorDetails.cnic} onChange={handleCnicChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
-                      <input type="text" name="experienceYears" required placeholder="YEARS OF EXPERIENCE" value={vendorDetails.experienceYears} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
+                      <input type="text" inputMode="numeric" name="cnic" required maxLength={15} placeholder={t('CNIC (e.g. 12345-1234567-1)')} value={vendorDetails.cnic} onChange={handleCnicChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
+                      <input type="text" name="experienceYears" required placeholder={t('YEARS OF EXPERIENCE')} value={vendorDetails.experienceYears} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
                     </div>
 
                   </div>
@@ -878,14 +877,14 @@ export default function VendorLoginPage() {
 
                   <div className="space-y-3">
                     <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Business Details
+                      {t('Business Details')}
                     </h3>
 
                     <input
                       type="text"
                       name="businessName"
                       required
-                      placeholder="BUSINESS NAME"
+                      placeholder={t('BUSINESS NAME')}
                       value={vendorDetails.businessName}
                       onChange={handleInputChange}
                       className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
@@ -895,7 +894,7 @@ export default function VendorLoginPage() {
                       <input
                         type="email"
                         name="businessEmail"
-                        placeholder="BUSINESS EMAIL ADDRESS (optional)"
+                        placeholder={t('BUSINESS EMAIL ADDRESS (optional)')}
                         value={vendorDetails.businessEmail}
                         onChange={handleInputChange}
                         className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition"
@@ -915,10 +914,10 @@ export default function VendorLoginPage() {
                       <CalendarDays className="w-5 h-5 text-orange-500" />
                       <div>
                         <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                          Weekly Availability
+                          {t('Weekly Availability')}
                         </h3>
                         <p className="text-[10px] text-slate-500">
-                          Select your working days and available time slots.
+                          {t('Select your working days and available time slots.')}
                         </p>
                       </div>
                     </div>
@@ -943,7 +942,7 @@ export default function VendorLoginPage() {
                                 className="w-4 h-4 text-orange-500 border-slate-300 rounded focus:ring-orange-500 cursor-pointer"
                               />
                               <span className="text-sm font-bold text-[#2C2F45]">
-                                {day}
+                                {t(day)}
                               </span>
                             </label>
 
@@ -963,7 +962,7 @@ export default function VendorLoginPage() {
                                           : 'bg-white text-slate-600 border-slate-200 hover:border-orange-300 hover:text-orange-600'
                                       }`}
                                     >
-                                      {slot}
+                                      {t(slot)}
                                     </button>
                                   )
                                 })}
@@ -978,7 +977,7 @@ export default function VendorLoginPage() {
                     <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 mt-2 shadow-inner">
                       <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
                         <Check className="w-3.5 h-3.5 text-green-500" />
-                        Your Availability Summary
+                        {t('Your Availability Summary')}
                       </h4>
                       <div className="space-y-2 text-xs text-slate-600">
                         {DAYS_OF_WEEK.filter(
@@ -997,10 +996,10 @@ export default function VendorLoginPage() {
                                   className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-slate-200/60 pb-1 last:border-0"
                                 >
                                   <span className="font-bold text-slate-700 min-w-20">
-                                    {day}
+                                    {t(day)}
                                   </span>
                                   <span className="text-orange-600 font-medium text-[11px] text-start sm:text-end">
-                                    {availability[day].slots.join(', ')}
+                                    {availability[day].slots.map((slot) => t(slot)).join(', ')}
                                   </span>
                                 </div>
                               )
@@ -1009,20 +1008,20 @@ export default function VendorLoginPage() {
                           })
                         ) : (
                           <span className="text-slate-400 italic block text-center">
-                            No availability selected yet. Select a day and time slots above.
+                            {t('No availability selected yet. Select a day and time slots above.')}
                           </span>
                         )}
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                      <input type="text" name="postalCode" placeholder="POSTAL CODE (optional)" value={vendorDetails.postalCode} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
-                      <input type="text" name="serviceAreas" required placeholder="SERVICE AREAS (COMMA SEPARATED)" value={vendorDetails.serviceAreas} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
+                      <input type="text" name="postalCode" placeholder={t('POSTAL CODE (optional)')} value={vendorDetails.postalCode} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
+                      <input type="text" name="serviceAreas" required placeholder={t('SERVICE AREAS (COMMA SEPARATED)')} value={vendorDetails.serviceAreas} onChange={handleInputChange} className="bg-white border border-slate-200/90 rounded-xl px-4 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none focus:border-orange-500 transition" />
                     </div>
 
                     <div className="pt-2">
                       <LocationPicker
-                        label="Your service location"
+                        label={t('Your service location')}
                         latitude={vendorLatitude}
                         longitude={vendorLongitude}
                         radiusKm={serviceRadiusKm}
@@ -1040,10 +1039,10 @@ export default function VendorLoginPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                          Services Offered
+                          {t('Services Offered')}
                         </h3>
                         <p className="text-[10px] text-orange-500">
-                          Select up to 2 main service categories.
+                          {t('Select up to 2 main service categories.')}
                         </p>
                       </div>
 
@@ -1054,7 +1053,7 @@ export default function VendorLoginPage() {
                             : 'bg-slate-100 text-slate-500'
                         }`}
                       >
-                        {selectedCategories.length}/2 Categories Selected
+                        {selectedCategories.length}/2 {t('Categories Selected')}
                       </span>
                     </div>
 
@@ -1082,11 +1081,11 @@ export default function VendorLoginPage() {
                           >
                             <div className="text-start pe-2">
                               <span className="text-[11px] block font-bold leading-tight">
-                                {category}
+                                {t(category)}
                               </span>
                               {isCategorySelected && subSelectedCount > 0 && (
                                 <span className="text-[9px] text-slate-500 font-medium block mt-0.5">
-                                  {subSelectedCount} services
+                                  {subSelectedCount} {t('services')}
                                 </span>
                               )}
                             </div>
@@ -1098,7 +1097,7 @@ export default function VendorLoginPage() {
                                   onClick={(e) =>
                                     handleRemoveCategory(category, e)
                                   }
-                                  title="Deselect Category"
+                                  title={t('Deselect Category')}
                                   className="w-3 h-3 rounded-full bg-red-500 text-white hover:bg-red-600 flex items-center justify-center text-[8px] transition"
                                 >
                                   ✕
@@ -1121,10 +1120,10 @@ export default function VendorLoginPage() {
                       <div className="mt-4 p-3 rounded-xl bg-[#FFFDFB] border border-slate-200 shadow-sm space-y-3 transition-all duration-300">
                         <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                           <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">
-                            Service Sub-categories
+                            {t('Service Sub-categories')}
                           </span>
                           <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-slate-100 text-slate-600">
-                            {selectedSubServices.length} selected
+                            {selectedSubServices.length} {t('selected')}
                           </span>
                         </div>
 
@@ -1134,7 +1133,7 @@ export default function VendorLoginPage() {
                               <div className="flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
                                 <span className="text-[11px] font-bold text-slate-700">
-                                  {activeCategory}
+                                  {t(activeCategory)}
                                 </span>
                               </div>
 
@@ -1145,7 +1144,7 @@ export default function VendorLoginPage() {
                                 }
                                 className="text-[10px] text-orange-500 hover:text-orange-600 font-bold px-2 py-1 bg-orange-50 hover:bg-orange-100 rounded-md transition"
                               >
-                                Select All
+                                {t('Select All')}
                               </button>
                             </div>
 
@@ -1162,7 +1161,7 @@ export default function VendorLoginPage() {
                                     className="w-3 h-3 text-orange-500 rounded border-slate-300 focus:ring-orange-500"
                                   />
                                   <span className="text-[11px] text-slate-600 font-medium">
-                                    {sub}
+                                    {t(sub)}
                                   </span>
                                 </label>
                               ))}
@@ -1179,7 +1178,7 @@ export default function VendorLoginPage() {
                       disabled={isProcessing}
                       className="px-10 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl text-xs transition shadow-md uppercase tracking-wider cursor-pointer disabled:opacity-60"
                     >
-                      {isProcessing ? 'Submitting…' : 'Submit Registration'}
+                      {isProcessing ? t('Submitting…') : t('Submit Registration')}
                     </button>
                   </div>
                 </form>

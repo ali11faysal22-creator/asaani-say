@@ -11,7 +11,7 @@ export function DateFilter({ value, onChange, label = 'Date' }: { value: string;
         type="date"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        aria-label={label}
+        aria-label={t(label)}
         className="w-full rounded-xl border border-slate-200 bg-white py-2.5 ps-3 pe-8 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52] transition shadow-2xs sm:w-auto"
       />
       {value && (

@@ -10,6 +10,7 @@ import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
 import { UnassignedBookingActionsModal } from '../../components/unassigned-booking-actions-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
+import { useLanguage } from '../../../lib/i18n'
 import { ResponseCountdown } from '@/app/components/response-countdown'
 import { BookingTimeline } from '@/app/components/booking-timeline'
 
@@ -31,6 +32,7 @@ function statusDotColor(status: string): string {
 }
 
 export default function AdminCalendarPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [bookings, setBookings] = useState<AdminBooking[]>([])
@@ -181,7 +183,7 @@ export default function AdminCalendarPage() {
               type="text"
               value={orderIdQuery}
               onChange={(e) => handleOrderIdQueryChange(e.target.value)}
-              placeholder="Jump to order ID…"
+              placeholder={t('Jump to order ID…')}
               className="w-full bg-white border border-slate-200 rounded-xl ps-8 pe-3 py-2.5 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#EE6C52]"
             />
           </div>
@@ -192,7 +194,7 @@ export default function AdminCalendarPage() {
               onChange={(e) => setCityFilter(e.target.value)}
               className="w-full bg-white border border-slate-200 rounded-xl ps-8 pe-3 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52] appearance-none"
             >
-              <option value="all">All cities</option>
+              <option value="all">{t('All cities')}</option>
               {cities.map((city) => (
                 <option key={city} value={city}>
                   {city}
@@ -207,7 +209,7 @@ export default function AdminCalendarPage() {
         <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50">
           {WEEKDAY_LABELS.map((label) => (
             <div key={label} className="px-2 py-2.5 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-              {label}
+              {t(label)}
             </div>
           ))}
         </div>
@@ -245,7 +247,7 @@ export default function AdminCalendarPage() {
                         </span>
                       ))}
                     </div>
-                    <p className="text-[9px] font-semibold text-slate-400">{dayBookings.length} job{dayBookings.length === 1 ? '' : 's'}</p>
+                    <p className="text-[9px] font-semibold text-slate-400">{dayBookings.length} {t(dayBookings.length === 1 ? 'job' : 'jobs')}</p>
                   </div>
                 )}
               </button>
@@ -261,7 +263,7 @@ export default function AdminCalendarPage() {
               {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
             </h3>
             <button onClick={() => setSelectedDate(null)} className="text-[11px] font-semibold text-slate-400 hover:text-slate-600 cursor-pointer">
-              Close
+              {t('Close')}
             </button>
           </div>
           <div className="space-y-2">
@@ -273,7 +275,7 @@ export default function AdminCalendarPage() {
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-800 truncate">{booking.service_name}</p>
                   <p className="text-[11px] text-slate-500 truncate">
-                    {booking.customer_name} → {booking.vendor_contact_name || booking.vendor_name || 'Unassigned'} · {booking.city || 'Unknown city'} · {booking.slot_start}–{booking.slot_end}
+                    {booking.customer_name} → {booking.vendor_contact_name || booking.vendor_name || t('Unassigned')} · {booking.city || t('Unknown city')} · {booking.slot_start}–{booking.slot_end}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -284,7 +286,7 @@ export default function AdminCalendarPage() {
                   )}
                   {booking.paused_for_customer_decision && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-                      Paused
+                      {t('Paused')}
                     </span>
                   )}
                   <StatusBadge label={booking.status.replace('_', ' ')} tone={bookingStatusTone(booking.status)} />
@@ -302,7 +304,7 @@ export default function AdminCalendarPage() {
       {selectedBooking && (
         <DetailModal
           title={selectedBooking.service_name}
-          subtitle={`${selectedBooking.customer_name} → ${selectedBooking.vendor_contact_name || selectedBooking.vendor_name || 'Unassigned'}`}
+          subtitle={`${selectedBooking.customer_name} → ${selectedBooking.vendor_contact_name || selectedBooking.vendor_name || t('Unassigned')}`}
           onClose={() => setSelectedBooking(null)}
           fields={[
             { label: 'Customer', value: selectedBooking.customer_name },
@@ -310,11 +312,11 @@ export default function AdminCalendarPage() {
               label: 'Vendor',
               value: selectedBooking.vendor_name
                 ? `${selectedBooking.vendor_contact_name || selectedBooking.vendor_name}${selectedBooking.vendor_contact_name ? ` (${selectedBooking.vendor_name})` : ''}`
-                : 'Needs vendor',
+                : t('Needs vendor'),
             },
             { label: 'City', value: [selectedBooking.city, selectedBooking.area].filter(Boolean).join(', ') || '—' },
             { label: 'Scheduled', value: `${selectedBooking.scheduled_date} · ${selectedBooking.slot_start}–${selectedBooking.slot_end}` },
-            { label: 'Amount', value: selectedBooking.total_amount != null ? `Rs. ${selectedBooking.total_amount.toLocaleString()}` : '—' },
+            { label: 'Amount', value: selectedBooking.total_amount != null ? `${t('Rs.')} ${selectedBooking.total_amount.toLocaleString()}` : '—' },
             { label: 'Status', value: <StatusBadge label={selectedBooking.status.replace('_', ' ')} tone={bookingStatusTone(selectedBooking.status)} /> },
             ...(selectedBooking.status === 'pending' && selectedBooking.vendor_response_deadline
               ? [{ label: 'Vendor response', value: <ResponseCountdown deadline={selectedBooking.vendor_response_deadline} className="text-orange-600" /> }]
@@ -326,7 +328,7 @@ export default function AdminCalendarPage() {
                     <div className="flex flex-wrap justify-end gap-1.5">
                       {selectedBooking.photos.map((url) => (
                         <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
-                          <img src={`${API_BASE}${url}`} alt="Completion" className="h-12 w-12 rounded-lg border border-slate-200 object-cover" />
+                          <img src={`${API_BASE}${url}`} alt={t('Completion')} className="h-12 w-12 rounded-lg border border-slate-200 object-cover" />
                         </a>
                       ))}
                     </div>
@@ -345,11 +347,11 @@ export default function AdminCalendarPage() {
                   }}
                   className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
                 >
-                  No vendor accepted — resolve
+                  {t('No vendor accepted — resolve')}
                 </button>
               )}
               <div>
-                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Status history</p>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('Status history')}</p>
                 <BookingTimeline bookingId={selectedBooking.id} role="admin" />
               </div>
             </div>

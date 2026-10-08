@@ -2,6 +2,7 @@
 
 import { Link } from '@/i18n/navigation'
 import { usePathname } from '@/i18n/navigation'
+import { useLanguage } from '../../lib/i18n'
 import { CalendarDays, ClipboardList, Inbox, LayoutDashboard, Mail, Package, ShieldCheck, Store, Users, X } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -16,20 +17,22 @@ const NAV_ITEMS = [
 ] as const
 
 function Brand() {
+  const { t } = useLanguage()
   return (
     <div className="flex items-center gap-3">
       <div className="w-9 h-9 rounded-xl bg-[#EE6C52] flex items-center justify-center shadow-xs shrink-0">
         <ShieldCheck className="w-4.5 h-4.5 text-white" />
       </div>
       <div className="leading-tight min-w-0">
-        <span className="font-extrabold text-base tracking-tight text-white block truncate">Asaani Say</span>
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Admin Console</span>
+        <span className="font-extrabold text-base tracking-tight text-white block truncate">{t('Asaani Say')}</span>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('Admin Console')}</span>
       </div>
     </div>
   )
 }
 
 function NavList({ pathname, onNavigate }: { pathname: string | null; onNavigate?: () => void }) {
+  const { t } = useLanguage()
   return (
     <nav className="space-y-1">
       {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
@@ -44,7 +47,7 @@ function NavList({ pathname, onNavigate }: { pathname: string | null; onNavigate
             }`}
           >
             <Icon className="w-4.5 h-4.5 shrink-0" />
-            <span>{label}</span>
+            <span>{t(label)}</span>
           </Link>
         )
       })}
@@ -53,10 +56,11 @@ function NavList({ pathname, onNavigate }: { pathname: string | null; onNavigate
 }
 
 function TrustNote() {
+  const { t } = useLanguage()
   return (
     <div className="pt-6 mt-6 border-t border-white/10 flex items-start gap-2.5 text-[11px] text-slate-400 leading-relaxed">
       <ShieldCheck className="w-4 h-4 text-[#EE6C52] shrink-0 mt-0.5" />
-      <span>Admin actions here affect every vendor and customer on the platform.</span>
+      <span>{t('Admin actions here affect every vendor and customer on the platform.')}</span>
     </div>
   )
 }

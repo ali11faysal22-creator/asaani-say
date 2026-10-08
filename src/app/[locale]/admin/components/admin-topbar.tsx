@@ -5,8 +5,10 @@ import { LogOut, Menu } from 'lucide-react'
 import { clearStoredAuth, logoutUser } from '@/app/lib/booking-api'
 import AdminNotificationPopover from './admin-notification-popover'
 import { ADMIN_PAGE_META, DEFAULT_ADMIN_PAGE_META } from './admin-page-meta'
+import { useLanguage } from '../../lib/i18n'
 
 export default function AdminTopbar({ onMenuClick }: { onMenuClick: () => void }) {
+  const { t } = useLanguage()
   const router = useRouter()
   const pathname = usePathname()
   const { title, subtitle } = (pathname && ADMIN_PAGE_META[pathname]) || DEFAULT_ADMIN_PAGE_META
@@ -28,8 +30,8 @@ export default function AdminTopbar({ onMenuClick }: { onMenuClick: () => void }
             <Menu className="w-4 h-4" />
           </button>
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-extrabold text-[#1E2337] leading-tight truncate">{title}</h1>
-            {subtitle && <p className="text-xs text-slate-500 mt-0.5 truncate">{subtitle}</p>}
+            <h1 className="text-lg sm:text-xl font-extrabold text-[#1E2337] leading-tight truncate">{t(title)}</h1>
+            {subtitle && <p className="text-xs text-slate-500 mt-0.5 truncate">{t(subtitle)}</p>}
           </div>
         </div>
 
@@ -41,7 +43,7 @@ export default function AdminTopbar({ onMenuClick }: { onMenuClick: () => void }
             className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:border-[#EE6C52] hover:text-[#EE6C52] px-3.5 py-2 rounded-lg transition shadow-2xs cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Sign Out</span>
+            <span className="hidden sm:inline">{t('Sign Out')}</span>
           </button>
         </div>
       </div>

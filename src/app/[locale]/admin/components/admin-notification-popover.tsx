@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Bell, Check, Clock } from 'lucide-react'
 import { fetchAdminNotifications, getStoredAuth, markAdminNotificationRead } from '@/app/lib/booking-api'
 import { playNotificationSound } from '@/app/lib/notification-sound'
+import { useLanguage } from '../../lib/i18n'
 
 interface NotificationItem {
   id: string
@@ -13,6 +14,7 @@ interface NotificationItem {
 }
 
 export default function AdminNotificationPopover() {
+  const { t } = useLanguage()
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const previousUnreadIds = useRef<Set<string> | null>(null)
@@ -85,35 +87,35 @@ export default function AdminNotificationPopover() {
             <div className="absolute -top-2 end-3.5 w-4 h-4 bg-white rotate-45 border-s border-t border-slate-100" />
 
             <div className="px-5 py-4 flex items-center justify-between border-b border-slate-100 relative bg-white">
-              <h3 className="text-sm font-extrabold text-[#1E2337]">Notifications</h3>
+              <h3 className="text-sm font-extrabold text-[#1E2337]">{t('Notifications')}</h3>
               <button
                 onClick={handleMarkAllAsRead}
                 className="text-[11px] font-bold text-[#EE6C52] hover:underline cursor-pointer disabled:opacity-40"
                 disabled={notifications.length === 0}
               >
-                Mark all as read
+                {t('Mark all as read')}
               </button>
             </div>
 
             <div className="max-h-105 overflow-y-auto divide-y divide-slate-50">
               {notifications.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-xs">No new notifications</div>
+                <div className="p-8 text-center text-slate-400 text-xs">{t('No new notifications')}</div>
               ) : (
                 notifications.map((item) => (
                   <div
                     key={item.id}
                     onClick={() => void handleMarkSingleAsRead(item.id)}
                     className="px-5 py-3.5 flex items-start gap-3.5 transition hover:bg-slate-50 cursor-pointer group"
-                    title="Click to mark as read"
+                    title={t('Click to mark as read')}
                   >
                     <div className="w-9 h-9 rounded-full bg-orange-100 text-[#EE6C52] flex items-center justify-center shrink-0 mt-0.5">
                       {item.unread ? <Clock className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className={`text-xs leading-snug ${item.unread ? 'font-extrabold text-[#1E2337]' : 'font-semibold text-slate-600'}`}>
-                        {item.title}
+                        {t(item.title)}
                       </h4>
-                      <span className="text-[10px] font-medium text-slate-400 mt-1 block">{item.time}</span>
+                      <span className="text-[10px] font-medium text-slate-400 mt-1 block">{item.time === 'Just now' ? t('Just now') : item.time}</span>
                     </div>
                     {item.unread && <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1.5 group-hover:bg-slate-400" />}
                   </div>

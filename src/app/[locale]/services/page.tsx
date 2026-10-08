@@ -73,7 +73,8 @@ const expertsList = [
     rating:'4.5',
     jobsCompleted:'199 Job Completed',
      bio:'Hello there, I am one of Asaani say plumbing service expert. I am ready to help you solve whatever plumbing problem in your house.',
-     image:'/assets/services/plumber-expert-thomas-schroeder.jpg',
+     image:'/assets/services/plumber-expert-thomas-schroeder-numbered.png',
+     hasNumberBadge: true,
   },
 
   {
@@ -82,7 +83,8 @@ const expertsList = [
     rating:'4.5',
     jobsCompleted:'199 Job Completed',
      bio:'Hello there, I am one of Asaani say plumbing service expert. I am ready to help you solve whatever plumbing problem in your house.',
-    image:'/assets/services/home-cleaning-kitchen.jpg',
+    image:'/assets/services/plumber-expert-timothy-brake-numbered.png',
+    hasNumberBadge: true,
   },
   {
     id: '03',
@@ -90,7 +92,8 @@ const expertsList = [
     rating: '4.5',
     jobsCompleted: '199 Job Completed',
     bio: 'Hello there, I am one of Asaani say plumbing service expert. I am ready to help you solve whatever plumbing problem in your house.',
-    image: '/assets/shared/plumbing-professional-at-work.jpg',
+    image: '/assets/services/plumber-expert-charlie-sinclair.png',
+    hasNumberBadge: false,
   },
 ]
 
@@ -102,7 +105,7 @@ const subTestimonials = [
     rating: 4.5,
     review:
       'Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.',
-    image: '/assets/services/plumber-testimonial-jerry-johnson.jpg',
+    image: '/assets/services/customer-testimonial-jerry-johnson.png',
   },
 
   {
@@ -112,9 +115,26 @@ const subTestimonials = [
     rating: 4.5,
     review:
       'Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.',
-    image: '/assets/services/leaking-tap-customer-lisa-packer.jpg',
+    image: '/assets/services/customer-testimonial-lisa-packer.png',
   },
 ]
+
+const categoryIconImages: Record<string, string> = {
+  'home-inspection': 'home-inspection-category-icon.png',
+  plumbing: 'plumber-category-icon.png',
+  electrician: 'electrician-category-icon.png',
+  'ac-services': 'ac-services-category-icon.png',
+  handyman: 'handyman-category-icon.png',
+  carpenter: 'carpenter-category-icon.png',
+  'pest-control': 'pest-control-category-icon.png',
+  geyser: 'geyser-category-icon.png',
+  painter: 'painter-category-icon.png',
+}
+const categoryIconImage = (href: string) => {
+  const slug = href.split('/').filter(Boolean).pop() ?? ''
+  const file = categoryIconImages[slug]
+  return file ? `/assets/services/icons/${file}` : null
+}
 
 const SERVICES_CATEGORY_CACHE_KEY = 'asaani_services_category_cache'
 const SERVICES_RETURN_SCROLL_KEY = 'asaani_services_return_scroll'
@@ -256,45 +276,50 @@ export default function ServicesPage(){
 
       <CustomerNavbar active="services" showLanguageSwitcher={false} />
 
-      <section className="relative w-full h-95 sm:h-112.5 bg-slate-100 flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-black/60 z-10" />
+      <section className="relative w-full h-95 sm:h-[420px] lg:h-[560px] bg-slate-100 flex items-center overflow-hidden">
+        <div className="absolute inset-0 bg-linear-to-r from-black/40 to-black/10 z-10" />
         <Image
-          src="/assets/services/carpentry-screws-wooden-wall.jpg"
-          alt="Home Maintenance Hero Background"
+          src="/assets/services/screwdriver-on-screw-hero-banner.png"
+          alt={t('Home Maintenance Hero Background')}
           fill
-          className="object-cover object-center opacity-40"
+          className="object-cover object-center"
           priority/>
-        <div className="relative z-20 max-w-5xl mx-auto px-4 text-center text-white space-y-4">
-          <h1 className="font-black leading-tight tracking-tight fs-h2">
+        <div className="relative z-20 site-container mx-auto px-6 text-start text-white space-y-4">
+          <h1 className="font-bold leading-tight tracking-tight text-[clamp(2.25rem,1.2rem+3vw,4.25rem)]">
             {t('Easier Home')} <br />
-            <span className="text-orange-500">{t('Maintenance,')}</span> <br />
+            <span className="text-[#EE6C52]">{t('Maintenance,')}</span> <br />
             {t('Every Day!!')}
           </h1>
-          <p className="text-slate-200 max-w-2xl mx-auto font-medium fs-p">
+          <p className="text-white/90 max-w-2xl font-normal fs-p">
             {t('Bringing Customers And Professionals Together For Quick, Secure, And Affordable Bookings.')}
           </p>
         </div>
       </section>
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center mb-12 space-y-2">
-          <h2 className="font-extrabold text-[#1E2342] tracking-tight fs-h2">
+      <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-[100px]">
+        <div className="text-center mb-12 md:mb-[60px] space-y-2">
+          <h2 className="font-bold text-[#0B0B0B] tracking-tight fs-h2">
             {t('Services')}
           </h2>
           <p className="font-medium text-slate-500 fs-p">
             {t('Choose From Our Wide Range Of Services')}
           </p>
-          {catalogError && <p className="text-red-500 fs-p">{catalogError}</p>}
+          {catalogError && <p className="text-red-500 fs-p">{t(catalogError)}</p>}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
           {categories.map((service) => {
             const Icon = categoryIcon(service.icon)
+            const iconImageSrc = categoryIconImage(service.href)
             return (
             <Link key={service.id} href={service.href} onClick={rememberScrollPosition} className="block">
-              <div className="bg-white hover:bg-[#e4ebfa] transition-all duration-300 rounded-2xl p-6 flex items-center gap-5 cursor-pointer shadow-sm hover:shadow-md border border-slate-100 h-full">
-                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-slate-50">
-                  <Icon className={`w-8 h-8 ${service.icon_class || 'text-[#23263B]'}`}/>
+              <div className="bg-[#EDF1FC] hover:bg-[#e1e8fa] transition-all duration-300 rounded-md px-8 py-6 md:min-h-[140px] flex items-center gap-8 cursor-pointer h-full">
+                <div className="w-16 h-16 flex items-center justify-center shrink-0">
+                  {iconImageSrc ? (
+                    <Image src={iconImageSrc} alt="" width={64} height={64} className="object-contain w-16 h-16" />
+                  ) : (
+                    <Icon className={`w-12 h-12 ${service.icon_class || 'text-[#23263B]'}`}/>
+                  )}
                 </div>
-                <h3 className="font-bold text-[#1E2342] fs-h4">
+                <h3 className="font-semibold text-[#1E2342] text-xl md:text-2xl flex-1 text-center">
                   {t(service.display_name)}
                 </h3>
               </div>
@@ -303,11 +328,11 @@ export default function ServicesPage(){
           })}
         </div>
       </section>
-      <section className="w-full bg-[#141F52] text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+      <section className="w-full bg-[#16226B] text-white py-14 md:py-[80px]">
+        <div className="site-container mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             <div className="lg:col-span-7">
-              <h2 className="font-extrabold tracking-tight leading-snug fs-h2">
+              <h2 className="font-bold tracking-tight leading-snug fs-h2">
                 {t('Fast, Friendly, and Satisfaction')} <br className="hidden sm:inline" />
                 {t('Guarantee')}
               </h2>
@@ -322,14 +347,14 @@ export default function ServicesPage(){
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
             {featuresList.map((feature, idx) => (
               <div key={idx} className="flex items-start gap-5">
-                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center shrink-0 border border-white/10">
+                <div className="w-14 h-14 flex items-center justify-center shrink-0 text-white/80 [&>svg]:w-12 [&>svg]:h-12">
                   {feature.icon}
                 </div>
                 <div className="space-y-1.5">
-                  <h3 className="font-bold text-white fs-h4">
+                  <h3 className="font-bold text-white text-xl md:text-2xl">
                     {t(feature.title)}
                   </h3>
-                  <p className="text-slate-300 leading-relaxed max-w-md fs-p">
+                  <p className="text-slate-300 leading-relaxed max-w-md text-sm md:text-base">
                     {t(feature.desc)}
                   </p>
                 </div>
@@ -339,15 +364,14 @@ export default function ServicesPage(){
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-[100px]">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-5 space-y-4">
-            <h2 className="font-extrabold text-[#1E2342] leading-tight fs-h2">
+            <h2 className="font-medium text-[#0B0B0B] leading-tight text-[clamp(2rem,1.2rem+2.2vw,3.5rem)]">
               {t('Everyone’s')} <br />
               <span className="relative inline-block">
                 {t('Booking This!')}
 
-                <span className="absolute bottom-1 start-0 w-full h-1 bg-sky-500 rounded-full"/>
               </span>
             </h2>
             <p className="text-slate-500 leading-relaxed max-w-md fs-p">
@@ -357,16 +381,16 @@ export default function ServicesPage(){
           <div className="lg:col-span-7 space-y-4">
             {trendingServices.map((service) => (
               <Link key={service.id} href={service.href} onClick={rememberScrollPosition} className="block">
-                <div className="bg-orange-500 text-white rounded-xl overflow-hidden flex items-center shadow-md border border-red-300/20 hover:opacity-95 transition">
-                  <div className="relative w-28 sm:w-48 h-32 sm:h-36 shrink-0 bg-slate-200">
+                <div className="bg-[#F4846A] text-white rounded-md overflow-hidden flex items-center p-3 gap-4 hover:opacity-95 transition">
+                  <div className="relative w-28 sm:w-48 h-32 sm:h-40 shrink-0 bg-slate-200 rounded-sm overflow-hidden">
                     <Image
                       src={service.image}
-                      alt={service.title}
+                      alt={t(service.title)}
                       fill
                       className="object-cover"/>
                   </div>
-                  <div className="p-4 sm:p-6 flex-1 space-y-2">
-                    <h3 className="font-bold tracking-tight fs-h3">
+                  <div className="py-2 pe-4 flex-1 space-y-2">
+                    <h3 className="font-semibold tracking-tight text-[clamp(1.5rem,1.1rem+1vw,2.25rem)]">
                       {t(service.title)}
                     </h3>
                     <div className="inline-flex items-center gap-1 bg-white text-slate-900 px-2 py-0.5 rounded text-sm font-bold shadow-sm">
@@ -375,10 +399,10 @@ export default function ServicesPage(){
                     </div>
                     <div className="pt-1">
                       <p className="text-white/80 line-through font-medium fs-p">
-                        {service.originalPrice}
+                        {t('Rs:')} {service.originalPrice.replace(/^Rs:\s*/, '')}
                       </p>
-                      <p className="font-extrabold fs-h4">
-                        {service.discountPrice}
+                      <p className="font-bold fs-h4">
+                        {t('Rs:')} {service.discountPrice.replace(/^Rs:\s*/, '')}
                       </p>
                     </div>
                   </div>
@@ -388,8 +412,8 @@ export default function ServicesPage(){
           </div>
         </div>
       </section>
-      <section className="w-full bg-[#EEF2FB] py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <section className="w-full bg-[#EDF1FC] py-14 md:py-[100px]">
+        <div className="site-container mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -398,7 +422,7 @@ export default function ServicesPage(){
                   {t('Plumber Expert')}
                 </span>
               </div>
-              <h2 className="font-extrabold text-[#1E2342] tracking-tight fs-h2">
+              <h2 className="font-bold text-[#1E2342] tracking-tight fs-h2">
                 {t("Meet Some Of Our")}{' '}<br />
                 {t("Plumbing Expert")}</h2>
             </div>
@@ -414,21 +438,23 @@ export default function ServicesPage(){
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {expertsList.map((expert) => (
               <div key={expert.id} className="space-y-4">
-                <div className="relative w-full aspect-3/4 bg-[#3B4058] rounded-2xl overflow-hidden shadow-md">
+                <div className="relative w-full aspect-[360/563] bg-[#3B4058] rounded-2xl overflow-hidden shadow-md">
                   <Image
                     src={expert.image}
-                    alt={expert.name}
+                    alt={t(expert.name)}
                     fill
                     className="object-cover"
                   />
-                  <div className="absolute top-0 start-0 bg-[#4A506B] text-white text-sm font-bold px-4 py-2 rounded-br-xl">
-                    {expert.id}
-                  </div>
+                  {!expert.hasNumberBadge && (
+                    <div className="absolute top-0 start-0 w-[27%] aspect-square flex items-center justify-center bg-[#4A506B] text-white text-3xl font-bold">
+                      {expert.id}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1.5 px-1">
                   <h3 className="font-bold text-[#1E2342] fs-h4">
-                    {expert.name}
+                    {t(expert.name)}
                   </h3>
                   <div className="flex items-center gap-1">
                     <div className="flex text-amber-400">
@@ -441,10 +467,10 @@ export default function ServicesPage(){
                     </span>
                   </div>
                   <p className="font-bold text-[#1E2342] fs-p">
-                    {expert.jobsCompleted}
+                    {t(expert.jobsCompleted)}
                   </p>
                   <p className="text-slate-500 leading-relaxed pt-1 fs-p">
-                    {expert.bio}
+                    {t(expert.bio)}
                   </p>
                 </div>
               </div>
@@ -453,7 +479,7 @@ export default function ServicesPage(){
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-12">
+      <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-20 space-y-12">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -461,7 +487,7 @@ export default function ServicesPage(){
               <span className="text-sm font-bold text-orange-500 uppercase tracking-wider">
                 {t("Testimonial")}</span>
             </div>
-            <h2 className="font-extrabold text-[#1E2342] tracking-tight fs-h2">
+            <h2 className="font-bold text-[#1E2342] tracking-tight fs-h2">
               {t("What They Say About Our")}{' '}<br />
               {t("Service")}</h2>
           </div>
@@ -500,8 +526,8 @@ export default function ServicesPage(){
         <div className="bg-white rounded-2xl overflow-hidden grid grid-cols-1 md:grid-cols-12 relative shadow-sm">
           <div className="md:col-span-5 relative bg-[#3B4058] min-h-65 sm:min-h-80">
             <Image
-              src="/assets/services/happy-customer-thumbs-up.jpg"
-              alt="Andrea D. Elliott"
+              src="/assets/services/customer-testimonial-andrea-elliott.png"
+              alt={t('Andrea D. Elliott')}
               fill
               className="object-cover"/>
             <div className="absolute top-0 start-0 bg-orange-500 p-3 rounded-br-2xl text-white shadow-md">
@@ -510,7 +536,7 @@ export default function ServicesPage(){
           </div>
 
           <div className="md:col-span-7 p-6 sm:p-10 flex flex-col justify-center space-y-3">
-            <h3 className="font-extrabold text-[#1E2342] fs-h3">
+            <h3 className="font-bold text-[#1E2342] fs-h3">
               {t("Andrea D. Elliott")}</h3>
 
             <div className="inline-flex items-center gap-1.5 bg-red-50 text-red-500 px-2.5 py-1 rounded-full text-sm font-semibold w-fit">
@@ -538,19 +564,19 @@ export default function ServicesPage(){
               <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-[#3B4058] rounded-2xl overflow-hidden shrink-0 shadow-sm">
                 <Image
                   src={item.image}
-                  alt={item.name}
+                  alt={t(item.name)}
                   fill
                   className="object-cover"/>
               </div>
 
               <div className="space-y-1.5 flex-1">
                 <h4 className="text-base font-bold text-[#1E2342]">
-                  {item.name}
+                  {t(item.name)}
                 </h4>
 
                 <div className="inline-flex items-center gap-1 text-red-500 text-sm font-medium">
                   <AlertCircle className="w-3 h-3" />
-                  <span>{t("Problem :")}{' '}{item.problem}</span>
+                  <span>{t("Problem :")}{' '}{t(item.problem)}</span>
                 </div>
 
                 <div className="flex items-center gap-1">
@@ -566,7 +592,7 @@ export default function ServicesPage(){
                 </div>
 
                 <p className="text-slate-500 leading-relaxed pt-1 fs-p">
-                  {item.review}
+                  {t(item.review)}
                 </p>
               </div>
             </div>

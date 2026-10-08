@@ -1,6 +1,7 @@
 'use client'
 
 import { COUNTRY_CODES } from '../lib/country-codes'
+import { useLanguage } from '../lib/i18n'
 
 export function combinePhoneNumber(dial: string, localNumber: string): string {
   const cleaned = localNumber.trim().replace(/[\s-]/g, '').replace(/^0+/, '')
@@ -30,12 +31,13 @@ export function PhoneInput({
    * fields (e.g. vendor contact vs. WhatsApp) together for autofill purposes. */
   fieldId?: string
 }) {
+  const { t } = useLanguage()
   return (
     <div className="flex w-full overflow-hidden rounded-xl border border-slate-200/90 bg-white focus-within:border-orange-500 transition">
       <select
         value={countryCode}
         onChange={(e) => onCountryCodeChange(e.target.value)}
-        aria-label="Country code"
+        aria-label={t('Country code')}
         name={`${fieldId}-dial-code`}
         autoComplete="new-password"
         data-lpignore="true"
@@ -58,7 +60,7 @@ export function PhoneInput({
         data-1p-ignore="true"
         value={localNumber}
         onChange={(e) => onLocalNumberChange(e.target.value.replace(/\D/g, '').slice(0, maxDigits))}
-        placeholder={placeholder}
+        placeholder={t(placeholder)}
         className="w-full min-w-0 px-3 py-3 text-xs text-slate-700 placeholder:text-slate-500 focus:outline-none"
       />
     </div>

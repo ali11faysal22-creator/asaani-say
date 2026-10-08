@@ -21,6 +21,7 @@ import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
 import { Pagination } from '../../components/pagination'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
+import { useLanguage } from '../../../lib/i18n'
 
 const PAGE_SIZE = 10
 
@@ -48,6 +49,7 @@ const EMPTY_CATEGORY_FORM: CategoryFormState = { name: '', display_name: '', ico
 const EMPTY_SERVICE_FORM: ServiceFormState = { category_id: '', name: '', subtitle: '', price: '', is_active: true, sort_order: '0' }
 
 export default function AdminServicesPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [categories, setCategories] = useState<CatalogCategory[]>([])
@@ -189,7 +191,7 @@ export default function AdminServicesPage() {
   }
 
   const removeCategory = async (category: CatalogCategory) => {
-    if (!window.confirm(`Delete "${category.display_name}"? This cannot be undone.`)) return
+    if (!window.confirm(`${t('Delete')} "${category.display_name}"? ${t('This cannot be undone.')}`)) return
     setError('')
     try {
       await deleteAdminCategory(category.id)
@@ -261,7 +263,7 @@ export default function AdminServicesPage() {
   }
 
   const removeService = async (category: CatalogCategory, service: CatalogService) => {
-    if (!window.confirm(`Delete "${service.name}"? This cannot be undone.`)) return
+    if (!window.confirm(`${t('Delete')} "${service.name}"? ${t('This cannot be undone.')}`)) return
     setError('')
     try {
       await deleteAdminService(service.id)
@@ -282,7 +284,7 @@ export default function AdminServicesPage() {
   }
 
   const showingCategoryForm = addingCategory || editingCategory !== null
-  const categoryFormTitle = editingCategory ? `Edit ${editingCategory.display_name}` : 'Add category'
+  const categoryFormTitle = editingCategory ? `${t('Edit')} ${editingCategory.display_name}` : t('Add category')
 
   return (
     <div className="space-y-4">
@@ -294,7 +296,7 @@ export default function AdminServicesPage() {
               viewMode === 'categories' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            <LayoutGrid className="w-3.5 h-3.5" /> Categories
+            <LayoutGrid className="w-3.5 h-3.5" /> {t('Categories')}
           </button>
           <button
             onClick={() => setViewMode('all-services')}
@@ -302,18 +304,18 @@ export default function AdminServicesPage() {
               viewMode === 'all-services' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            <List className="w-3.5 h-3.5" /> All services
+            <List className="w-3.5 h-3.5" /> {t('All services')}
           </button>
         </div>
         <button
           onClick={openAddCategory}
           className="inline-flex items-center gap-1.5 rounded-xl bg-[#EE6C52] px-4 py-2 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
         >
-          <Plus className="w-3.5 h-3.5" /> Add category
+          <Plus className="w-3.5 h-3.5" /> {t('Add category')}
         </button>
       </div>
 
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{error}</p>}
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
 
       {viewMode === 'categories' && (
       <div className="space-y-3">
@@ -329,7 +331,7 @@ export default function AdminServicesPage() {
                   {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
                   <div className="min-w-0">
                     <p className="text-sm font-extrabold text-slate-900 truncate">{category.display_name}</p>
-                    <p className="text-[11px] text-slate-400">{category.services.length} service{category.services.length === 1 ? '' : 's'}</p>
+                    <p className="text-[11px] text-slate-400">{category.services.length} {t(category.services.length === 1 ? 'service' : 'services')}</p>
                   </div>
                 </button>
                 <div className="flex items-center gap-2 shrink-0">
@@ -343,15 +345,15 @@ export default function AdminServicesPage() {
               {isOpen && (
                 <div className="border-t border-slate-100">
                   {category.services.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-xs text-slate-400">No services in this category yet.</p>
+                    <p className="px-4 py-6 text-center text-xs text-slate-400">{t('No services in this category yet.')}</p>
                   ) : (
                     <table className="w-full text-start text-xs">
                       <thead className="bg-slate-50 text-slate-500 uppercase tracking-wide">
                         <tr>
-                          <th className="px-4 py-2.5 font-bold">Service</th>
-                          <th className="px-4 py-2.5 font-bold">Price</th>
-                          <th className="px-4 py-2.5 font-bold">Status</th>
-                          <th className="px-4 py-2.5 font-bold text-end">Actions</th>
+                          <th className="px-4 py-2.5 font-bold">{t('Service')}</th>
+                          <th className="px-4 py-2.5 font-bold">{t('Price')}</th>
+                          <th className="px-4 py-2.5 font-bold">{t('Status')}</th>
+                          <th className="px-4 py-2.5 font-bold text-end">{t('Actions')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -383,7 +385,7 @@ export default function AdminServicesPage() {
         })}
         {categories.length === 0 && (
           <div className="rounded-2xl border border-slate-200/80 bg-white p-10 text-center text-xs text-slate-400">
-            No categories yet. Add one to get started.
+            {t('No categories yet. Add one to get started.')}
           </div>
         )}
         <Pagination page={currentCategoryPage} pageCount={categoryPageCount} onPageChange={setCategoryPage} />
@@ -398,7 +400,7 @@ export default function AdminServicesPage() {
               setSearch(value)
               setServicePage(1)
             }}
-            placeholder="Search services…"
+            placeholder={t('Search services…')}
             resultCount={filteredServiceRows.length}
             totalCount={allServiceRows.length}
           />
@@ -406,11 +408,11 @@ export default function AdminServicesPage() {
             <table className="w-full text-start text-xs">
               <thead className="bg-slate-50 text-slate-500 uppercase tracking-wide">
                 <tr>
-                  <th className="px-4 py-3 font-bold">Service</th>
-                  <th className="px-4 py-3 font-bold">Category</th>
-                  <th className="px-4 py-3 font-bold">Price</th>
-                  <th className="px-4 py-3 font-bold">Status</th>
-                  <th className="px-4 py-3 font-bold text-end">Actions</th>
+                  <th className="px-4 py-3 font-bold">{t('Service')}</th>
+                  <th className="px-4 py-3 font-bold">{t('Category')}</th>
+                  <th className="px-4 py-3 font-bold">{t('Price')}</th>
+                  <th className="px-4 py-3 font-bold">{t('Status')}</th>
+                  <th className="px-4 py-3 font-bold text-end">{t('Actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -418,7 +420,7 @@ export default function AdminServicesPage() {
                   <tr key={service.id} className="hover:bg-slate-50/80 transition">
                     <td className="px-4 py-3 font-semibold text-slate-800">{service.name}</td>
                     <td className="px-4 py-3 text-slate-500">{category.display_name}</td>
-                    <td className="px-4 py-3 text-slate-500">{service.price != null ? `Rs. ${service.price.toLocaleString()}` : '—'}</td>
+                    <td className="px-4 py-3 text-slate-500">{service.price != null ? `${t('Rs.')} ${service.price.toLocaleString()}` : '—'}</td>
                     <td className="px-4 py-3">
                       <StatusBadge
                         label={service.is_active ? 'Active' : 'Inactive'}
@@ -436,7 +438,7 @@ export default function AdminServicesPage() {
                 {filteredServiceRows.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
-                      {allServiceRows.length === 0 ? 'No services yet.' : 'No services match your search.'}
+                      {allServiceRows.length === 0 ? t('No services yet.') : t('No services match your search.')}
                     </td>
                   </tr>
                 )}
@@ -458,29 +460,29 @@ export default function AdminServicesPage() {
           footer={
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500">Name</label>
+                <label className="text-[11px] font-bold text-slate-500">{t('Name')}</label>
                 <input
                   value={categoryForm.name}
                   onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g. Solar Panel Installation"
+                  placeholder={t('e.g. Solar Panel Installation')}
                   className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52]"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500">Display name (optional)</label>
+                <label className="text-[11px] font-bold text-slate-500">{t('Display name (optional)')}</label>
                 <input
                   value={categoryForm.display_name}
                   onChange={(e) => setCategoryForm((prev) => ({ ...prev, display_name: e.target.value }))}
-                  placeholder="Shown to customers — defaults to Name"
+                  placeholder={t('Shown to customers — defaults to Name')}
                   className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52]"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500">Tagline (optional)</label>
+                <label className="text-[11px] font-bold text-slate-500">{t('Tagline (optional)')}</label>
                 <input
                   value={categoryForm.tagline}
                   onChange={(e) => setCategoryForm((prev) => ({ ...prev, tagline: e.target.value }))}
-                  placeholder="Short description shown on the category page"
+                  placeholder={t('Short description shown on the category page')}
                   className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52]"
                 />
               </div>
@@ -491,14 +493,14 @@ export default function AdminServicesPage() {
                   onChange={(e) => setCategoryForm((prev) => ({ ...prev, is_active: e.target.checked }))}
                   className="w-3.5 h-3.5 accent-[#EE6C52]"
                 />
-                Active (visible to customers)
+                {t('Active (visible to customers)')}
               </label>
               <button
                 onClick={saveCategory}
                 disabled={!categoryForm.name.trim() || savingCategory}
                 className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 disabled:opacity-50 cursor-pointer"
               >
-                {savingCategory ? 'Saving…' : editingCategory ? 'Save changes' : 'Create category'}
+                {savingCategory ? t('Saving…') : editingCategory ? t('Save changes') : t('Create category')}
               </button>
             </div>
           }
@@ -507,22 +509,22 @@ export default function AdminServicesPage() {
 
       {editingService && (
         <DetailModal
-          title={editingService.service ? `Edit ${editingService.service.name}` : `Add service to ${editingService.category.display_name}`}
+          title={editingService.service ? `${t('Edit')} ${editingService.service.name}` : `${t('Add service to')} ${editingService.category.display_name}`}
           onClose={() => setEditingService(null)}
           fields={[]}
           footer={
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500">Name</label>
+                <label className="text-[11px] font-bold text-slate-500">{t('Name')}</label>
                 <input
                   value={serviceForm.name}
                   onChange={(e) => setServiceForm((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g. Pipe Repair"
+                  placeholder={t('e.g. Pipe Repair')}
                   className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-700 focus:outline-none focus:border-[#EE6C52]"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500">Subtitle (optional)</label>
+                <label className="text-[11px] font-bold text-slate-500">{t('Subtitle (optional)')}</label>
                 <input
                   value={serviceForm.subtitle}
                   onChange={(e) => setServiceForm((prev) => ({ ...prev, subtitle: e.target.value }))}
@@ -530,7 +532,7 @@ export default function AdminServicesPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-500">Fixed market price (Rs., optional)</label>
+                <label className="text-[11px] font-bold text-slate-500">{t('Fixed market price (Rs., optional)')}</label>
                 <input
                   type="number"
                   min={0}
@@ -546,14 +548,14 @@ export default function AdminServicesPage() {
                   onChange={(e) => setServiceForm((prev) => ({ ...prev, is_active: e.target.checked }))}
                   className="w-3.5 h-3.5 accent-[#EE6C52]"
                 />
-                Active (visible to customers)
+                {t('Active (visible to customers)')}
               </label>
               <button
                 onClick={saveService}
                 disabled={!serviceForm.name.trim() || savingService}
                 className="w-full rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 disabled:opacity-50 cursor-pointer"
               >
-                {savingService ? 'Saving…' : editingService.service ? 'Save changes' : 'Add service'}
+                {savingService ? t('Saving…') : editingService.service ? t('Save changes') : t('Add service')}
               </button>
             </div>
           }

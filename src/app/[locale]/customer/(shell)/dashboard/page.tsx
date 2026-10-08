@@ -22,7 +22,7 @@ const statusLabel = (status: string, t: (text: string) => string) =>
   t(status === 'accepted' ? 'Confirmed' : status === 'on_the_way' ? 'Vendor on the way' : status === 'in_progress' ? 'Vendor arrived' : status === 'completed' ? 'Completed' : status === 'rejected' ? 'Vendor declined' : 'Waiting for vendor')
 
 export default function CustomerDashboardPage() {
-  const { t } = useLanguage()
+  const { language, t } = useLanguage()
   const router = useRouter()
   const [orders, setOrders] = useState<BookingResult[]>([])
   const [notifications, setNotifications] = useState<CustomerNotification[]>([])
@@ -158,9 +158,9 @@ export default function CustomerDashboardPage() {
                   {item.is_read ? <Check className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className={`text-xs leading-snug ${item.is_read ? 'font-semibold text-slate-600' : 'font-extrabold text-slate-900'}`}>{item.body}</p>
+                  <p className={`text-xs leading-snug ${item.is_read ? 'font-semibold text-slate-600' : 'font-extrabold text-slate-900'}`}>{t(item.body)}</p>
                   <p className="mt-1 text-[10px] text-slate-400">
-                    {(item.created_at || item.createdAt) ? new Date(item.created_at || item.createdAt || '').toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', hour12: true }) : t('Just now')}
+                    {(item.created_at || item.createdAt) ? new Date(item.created_at || item.createdAt || '').toLocaleString(language === 'ur' ? 'ur-PK' : undefined, { dateStyle: 'medium', timeStyle: 'short', hour12: true }) : t('Just now')}
                   </p>
                 </div>
                 {!item.is_read && <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1.5" />}

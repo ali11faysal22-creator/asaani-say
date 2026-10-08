@@ -9,8 +9,10 @@ import { TableToolbar } from '../../components/table-toolbar'
 import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
+import { useLanguage } from '../../../lib/i18n'
 
 export default function AdminCustomersPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -79,7 +81,7 @@ export default function AdminCustomersPage() {
       <TableToolbar
         search={search}
         onSearchChange={setSearch}
-        placeholder="Search customers…"
+        placeholder={t('Search customers…')}
         resultCount={filtered.length}
         totalCount={customers.length}
         onRefresh={handleRefresh}
@@ -90,11 +92,11 @@ export default function AdminCustomersPage() {
         <table className="w-full text-start text-xs">
           <thead className="bg-slate-50 text-slate-500 uppercase tracking-wide">
             <tr>
-              <th className="px-4 py-3 font-bold">Customer</th>
-              <th className="px-4 py-3 font-bold">Contact</th>
-              <th className="px-4 py-3 font-bold">Address</th>
-              <th className="px-4 py-3 font-bold">Joined</th>
-              <th className="px-4 py-3 font-bold text-end">Actions</th>
+              <th className="px-4 py-3 font-bold">{t('Customer')}</th>
+              <th className="px-4 py-3 font-bold">{t('Contact')}</th>
+              <th className="px-4 py-3 font-bold">{t('Address')}</th>
+              <th className="px-4 py-3 font-bold">{t('Joined')}</th>
+              <th className="px-4 py-3 font-bold text-end">{t('Actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -122,7 +124,7 @@ export default function AdminCustomersPage() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
-                  {customers.length === 0 ? 'No customers yet.' : 'No customers match your search.'}
+                  {customers.length === 0 ? t('No customers yet.') : t('No customers match your search.')}
                 </td>
               </tr>
             )}
@@ -133,7 +135,7 @@ export default function AdminCustomersPage() {
       {selectedCustomer && (
         <DetailModal
           title={selectedCustomer.full_name}
-          subtitle="Customer"
+          subtitle={t('Customer')}
           onClose={() => setSelectedCustomer(null)}
           fields={[
             { label: 'Email', value: selectedCustomer.email },

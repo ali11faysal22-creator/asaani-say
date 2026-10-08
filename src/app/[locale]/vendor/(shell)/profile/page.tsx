@@ -156,19 +156,19 @@ export default function VendorProfilePage() {
     const auth = getStoredAuth('vendor')
     if (!file || !auth?.profile_id) return
     try {
-      setToast({ show: true, message: 'Uploading profile picture...', type: 'saving' })
+      setToast({ show: true, message: t('Uploading profile picture...'), type: 'saving' })
       const updatedVendor = await uploadVendorProfileImage(auth.profile_id, file)
       const imageUrl = updatedVendor.profile_image_url
         ? updatedVendor.profile_image_url.startsWith('/') ? `${API_BASE}${updatedVendor.profile_image_url}` : updatedVendor.profile_image_url
         : '/assets/shared/home-service-worker.png'
       setAvatar(imageUrl)
-      setToast({ show: true, message: 'Profile picture saved successfully!', type: 'success' })
+      setToast({ show: true, message: t('Profile picture saved successfully!'), type: 'success' })
     } catch (error) {
-      setToast({ show: true, message: error instanceof Error ? error.message : 'Unable to upload profile picture', type: 'success' })
+      setToast({ show: true, message: error instanceof Error ? t(error.message) : t('Unable to upload profile picture'), type: 'success' })
     }
   }
   const handleSaveChanges = async () => {
-    setToast({ show: true, message: 'Saving profile details...', type: 'saving' })
+    setToast({ show: true, message: t('Saving profile details...'), type: 'saving' })
     try {
       const auth = getStoredAuth('vendor')
       if (!auth?.profile_id) throw new Error('Vendor session expired')
@@ -191,16 +191,16 @@ export default function VendorProfilePage() {
       const updatedMemberSince = new Date(updated.member_since).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
       setProfile((prev) => ({ ...prev, totalCompletedJobs: updated.completed_jobs, memberSince: updatedMemberSince }))
       setSavedProfile(JSON.stringify({ ...profile, totalCompletedJobs: updated.completed_jobs, memberSince: updatedMemberSince }))
-      setToast({ show: true, message: 'Profile saved successfully!', type: 'success' })
+      setToast({ show: true, message: t('Profile saved successfully!'), type: 'success' })
       setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000)
     } catch (error) {
-      setToast({ show: true, message: error instanceof Error ? error.message : 'Unable to save profile', type: 'success' })
+      setToast({ show: true, message: error instanceof Error ? t(error.message) : t('Unable to save profile'), type: 'success' })
     }
   }
   const handleAddServiceArea = () => {
     if (!newAreaInput.trim()) return
     if (profile.serviceAreas.includes(newAreaInput.trim())) {
-      alert('This area is already added!')
+      alert(t('This area is already added!'))
       return
     }
     setProfile((prev) => ({ ...prev, serviceAreas: [...prev.serviceAreas, newAreaInput.trim()] }))
@@ -257,7 +257,7 @@ export default function VendorProfilePage() {
               <div className="relative">
                 <img
                   src={avatar}
-                  alt="Profile Avatar"
+                  alt={t('Profile Avatar')}
                   className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md ring-2 ring-slate-100"
                 />
                 <button
@@ -280,7 +280,7 @@ export default function VendorProfilePage() {
               <div>
                 <div className="flex items-center gap-2.5 justify-center sm:justify-start flex-wrap">
                   <h2 className="text-xl font-extrabold text-[#2C2F45]">
-                    {profile.businessName || 'Business Name'}
+                    {profile.businessName || t('Business Name')}
                   </h2>
                   <span className="text-[10px] font-bold text-[#EE6C52] bg-orange-50 border border-orange-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                     {t("VERIFIED VENDOR")}</span>
@@ -304,7 +304,7 @@ export default function VendorProfilePage() {
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
                   {t("Member Since")}</span>
                 <span className="text-xs font-extrabold text-slate-700">
-                  {profile.memberSince}
+                  {t(profile.memberSince)}
                 </span>
               </div>
             </div>
@@ -320,7 +320,7 @@ export default function VendorProfilePage() {
                   {t("Business Name")}</label>
                 <input
                   type="text"
-                  placeholder="Enter your business name..."
+                  placeholder={t('Enter your business name...')}
                   value={profile.businessName}
                   onChange={(e) => setProfile({ ...profile, businessName: e.target.value })}
                   className="w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none"
@@ -333,7 +333,7 @@ export default function VendorProfilePage() {
                 <input
                   type="email"
                   required
-                  placeholder="Enter your email address..."
+                  placeholder={t('Enter your email address...')}
                   value={profile.email}
                   onChange={(e) => setProfile({ ...profile, email: e.target.value })}
                   className="w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none"
@@ -349,7 +349,7 @@ export default function VendorProfilePage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. +92 300 1234567"
+                  placeholder={t('e.g. +92 300 1234567')}
                   value={profile.phone}
                   onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                   className="w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none"
@@ -386,7 +386,7 @@ export default function VendorProfilePage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. 5+ Years"
+                  placeholder={t('e.g. 5+ Years')}
                   value={profile.experienceYears}
                   onChange={(e) => setProfile({ ...profile, experienceYears: e.target.value })}
                   className="w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl px-4 py-2.5 text-xs font-semibold transition shadow-2xs focus:outline-none"
@@ -435,7 +435,7 @@ export default function VendorProfilePage() {
                       <div className="flex items-center gap-2">
                         <Check className="w-3.5 h-3.5 text-[#EE6C52] stroke-3" />
                         <span className="text-xs font-extrabold text-[#2C2F45]">
-                          {item.day}
+                          {t(item.day)}
                         </span>
                       </div>
 
@@ -447,7 +447,7 @@ export default function VendorProfilePage() {
                               className="inline-flex items-center gap-1 bg-orange-50 text-[#EE6C52] text-[11px] font-bold px-2.5 py-1 rounded-md border border-orange-200"
                             >
                               <Clock className="w-3 h-3 text-[#EE6C52]" />
-                              <span>{slot}</span>
+                              <span>{t(slot)}</span>
                             </span>
                           ))
                         ) : (
@@ -470,7 +470,7 @@ export default function VendorProfilePage() {
                             key={day}
                             className="bg-white text-slate-800 text-[11px] font-extrabold px-3 py-1 rounded-lg border border-slate-200"
                           >
-                            {day}
+                            {t(day)}
                           </span>
                         ))
                       ) : (
@@ -491,7 +491,7 @@ export default function VendorProfilePage() {
                             className="bg-white text-[#EE6C52] text-[11px] font-extrabold px-3 py-1 rounded-lg border border-orange-200 flex items-center gap-1"
                           >
                             <Clock className="w-3 h-3" />
-                            <span>{slot}</span>
+                            <span>{t(slot)}</span>
                           </span>
                         ))
                       ) : (
@@ -510,7 +510,7 @@ export default function VendorProfilePage() {
                 {t("Service Areas")}</label>
 
               <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="text-xs font-bold text-slate-600">{t("Postal Code:")}{' '}{profile.postalCode || 'Not set'}</span>
+                <span className="text-xs font-bold text-slate-600">{t("Postal Code:")}{' '}{profile.postalCode || t('Not set')}</span>
                 {profile.serviceAreas.map((area) => (
                   <span
                     key={area}
@@ -533,7 +533,7 @@ export default function VendorProfilePage() {
                     <input
                       type="text"
                       autoFocus
-                      placeholder="e.g. DHA Phase 5..."
+                      placeholder={t('e.g. DHA Phase 5...')}
                       value={newAreaInput}
                       onChange={(e) => setNewAreaInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleAddServiceArea()}
@@ -579,7 +579,7 @@ export default function VendorProfilePage() {
                 maxLength={250}
                 value={profile.bio}
                 onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                placeholder="Write a short description about your services..."
+                placeholder={t('Write a short description about your services...')}
                 className="w-full bg-white border border-slate-200 focus:border-[#EE6C52] text-slate-900 rounded-xl p-4 text-xs leading-relaxed transition shadow-2xs resize-none focus:outline-none"
               />
             </div>
@@ -603,7 +603,7 @@ export default function VendorProfilePage() {
                         onChange={() => toggleContactPref(option)}
                         className="w-4 h-4 accent-[#EE6C52] rounded cursor-pointer"
                       />
-                      <span>{option}</span>
+                      <span>{t(option)}</span>
                     </label>
                   )
                 })}

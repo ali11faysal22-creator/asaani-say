@@ -428,7 +428,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
       <CustomerNavbar active="services" showLanguageSwitcher={false} />
 
       
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-[#1E2342]">
             {t('Select Services from')} {t(category?.name || 'Catalog')}
@@ -448,7 +448,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
               >
                 <div className="relative w-20 h-20 bg-slate-200 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
                   {item.image_url ? (
-                    <Image src={item.image_url} alt={item.name} fill className="object-cover" />
+                    <Image src={item.image_url} alt={t(item.name)} fill className="object-cover" />
                   ) : (
                     <Icon className={`w-8 h-8 ${category?.icon_class || 'text-slate-400'}`} />
                   )}
@@ -457,8 +457,8 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                 <div className="flex-1 min-w-0 space-y-1">
                   <h3 className="text-sm font-extrabold text-[#1E2342] truncate">{t(item.name)}</h3>
                   <p className="text-[11px] text-slate-500 truncate">{item.subtitle ? t(item.subtitle) : ''}</p>
-                  <p className="text-sm font-black text-orange-600">
-                    {item.price != null ? `Rs. ${item.price.toLocaleString()}` : t(item.price_label || 'Price unavailable')}
+                  <p className="text-sm font-semibold text-orange-600">
+                    {item.price != null ? `${t('Rs.')} ${item.price.toLocaleString()}` : t(item.price_label || 'Price unavailable')}
                   </p>
                   <div className="flex items-center justify-between pt-1">
                     <div className="flex items-center gap-1">
@@ -533,7 +533,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                             : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
                         }`}
                       >
-                        <p className="font-bold text-slate-900">{addr.label}</p>
+                        <p className="font-bold text-slate-900">{t(addr.label)}</p>
                         <p className="text-[10px] text-slate-500 line-clamp-2">{addr.line}</p>
                       </div>
                     ))}
@@ -543,25 +543,25 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                     onClick={() => setShowNewAddressForm((value) => !value)}
                     className="text-xs font-bold text-orange-600 hover:text-orange-700"
                   >
-                    {showNewAddressForm ? 'Cancel new address' : '+ Add a new address'}
+                    {showNewAddressForm ? t('Cancel new address') : t('+ Add a new address')}
                   </button>
                   {showNewAddressForm && (
                     <div className="space-y-2 rounded-xl border border-orange-100 bg-orange-50/40 p-3">
                       <input
                         value={newAddressLine}
                         onChange={(event) => setNewAddressLine(event.target.value)}
-                        placeholder="House 22, Street 5, Gulberg, Lahore"
+                        placeholder={t('House 22, Street 5, Gulberg, Lahore')}
                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-500"
                       />
                       <input
                         value={newAddressArea}
                         onChange={(event) => setNewAddressArea(event.target.value)}
-                        placeholder="Area name, e.g. Gulberg"
+                        placeholder={t('Area name, e.g. Gulberg')}
                         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-orange-500"
                       />
                       <LocationPicker
-                        label="Confirm this address on the map"
-                        hint="This pin is what we match you to the nearest, best-rated vendor with — drag it onto your exact spot."
+                        label={t('Confirm this address on the map')}
+                        hint={t('This pin is what we match you to the nearest, best-rated vendor with — drag it onto your exact spot.')}
                         latitude={newAddressLat}
                         longitude={newAddressLng}
                         onAddressResolved={({ address, area }) => {
@@ -579,7 +579,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                         onClick={() => void handleAddAddress()}
                         className="rounded-lg bg-orange-500 px-4 py-2 text-xs font-bold text-white disabled:bg-slate-300"
                       >
-                        {savingAddress ? 'Saving address...' : 'Save & use this address'}
+                        {savingAddress ? t('Saving address...') : t('Save & use this address')}
                       </button>
                     </div>
                   )}
@@ -657,14 +657,14 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                   )}
                 </div>
 
-                {bookingError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{bookingError}</p>}
+                {bookingError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(bookingError)}</p>}
 
                 <button
                   disabled={!selectedDate || !selectedSlot || isSubmitting}
                   onClick={() => void handleConfirmBooking()}
                   className="w-full bg-[#EE6C52] hover:bg-orange-600 disabled:bg-slate-300 text-white font-extrabold text-sm py-3.5 rounded-xl transition shadow-md mt-4 cursor-pointer"
                 >
-                  <span className="inline-flex items-center justify-center gap-2">{isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}{isSubmitting ? 'Confirming booking...' : 'Confirm booking'}</span>
+                  <span className="inline-flex items-center justify-center gap-2">{isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}{isSubmitting ? t('Confirming booking...') : t('Confirm booking')}</span>
                 </button>
               </>
             ) : (

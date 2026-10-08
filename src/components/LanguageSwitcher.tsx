@@ -4,11 +4,13 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { ChevronDown, Globe2 } from 'lucide-react'
 import { useLocale } from 'next-intl'
 import { usePathname, useRouter } from '@/i18n/navigation'
+import { useLanguage } from '@/app/lib/i18n'
 
 type LocaleOption = 'en' | 'ur'
 
 export default function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const locale = useLocale()
+  const { t } = useLanguage()
   const pathname = usePathname()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -53,7 +55,7 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
       <button
         ref={triggerRef}
         type="button"
-        aria-label="Language"
+        aria-label={t('Language')}
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-controls="language-switcher-options"
@@ -69,7 +71,7 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
         <div
           id="language-switcher-options"
           role="menu"
-          aria-label="Choose language"
+          aria-label={t('Choose language')}
           onKeyDown={(event) => {
             const options = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')]
             const currentIndex = options.indexOf(document.activeElement as HTMLButtonElement)

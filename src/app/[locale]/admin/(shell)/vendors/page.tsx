@@ -10,8 +10,10 @@ import { TableToolbar } from '../../components/table-toolbar'
 import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
+import { useLanguage } from '../../../lib/i18n'
 
 export default function AdminVendorsPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -108,27 +110,27 @@ export default function AdminVendorsPage() {
       <TableToolbar
         search={search}
         onSearchChange={setSearch}
-        placeholder="Search vendors…"
+        placeholder={t('Search vendors…')}
         resultCount={filtered.length}
         totalCount={vendors.length}
         onRefresh={handleRefresh}
         refreshing={refreshing}
       />
 
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{error}</p>}
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
 
       <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
         <table className="w-full text-start text-xs">
           <thead className="bg-slate-50 text-slate-500 uppercase tracking-wide">
             <tr>
-              <th className="px-4 py-3 font-bold">Vendor</th>
-              <th className="px-4 py-3 font-bold">Contact</th>
-              <th className="px-4 py-3 font-bold">Location</th>
-              <th className="px-4 py-3 font-bold">Rating</th>
-              <th className="px-4 py-3 font-bold">Missed requests</th>
-              <th className="px-4 py-3 font-bold">Status</th>
-              <th className="px-4 py-3 font-bold">Verified</th>
-              <th className="px-4 py-3 font-bold text-end">Actions</th>
+              <th className="px-4 py-3 font-bold">{t('Vendor')}</th>
+              <th className="px-4 py-3 font-bold">{t('Contact')}</th>
+              <th className="px-4 py-3 font-bold">{t('Location')}</th>
+              <th className="px-4 py-3 font-bold">{t('Rating')}</th>
+              <th className="px-4 py-3 font-bold">{t('Missed requests')}</th>
+              <th className="px-4 py-3 font-bold">{t('Status')}</th>
+              <th className="px-4 py-3 font-bold">{t('Verified')}</th>
+              <th className="px-4 py-3 font-bold text-end">{t('Actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -155,7 +157,7 @@ export default function AdminVendorsPage() {
                 </td>
                 <td className="px-4 py-3">
                   {vendor.missed_response_count >= 5 ? (
-                    <StatusBadge label={`${vendor.missed_response_count} missed`} tone="critical" />
+                    <StatusBadge label={`${vendor.missed_response_count} ${t('missed')}`} tone="critical" />
                   ) : (
                     <span className="text-slate-400">{vendor.missed_response_count}</span>
                   )}
@@ -187,7 +189,7 @@ export default function AdminVendorsPage() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
-                  {vendors.length === 0 ? 'No vendors yet.' : 'No vendors match your search.'}
+                  {vendors.length === 0 ? t('No vendors yet.') : t('No vendors match your search.')}
                 </td>
               </tr>
             )}
@@ -204,11 +206,11 @@ export default function AdminVendorsPage() {
             { label: 'Email', value: selectedVendor.email },
             { label: 'Phone', value: selectedVendor.phone },
             { label: 'Location', value: [selectedVendor.city, selectedVendor.area].filter(Boolean).join(', ') || '—' },
-            { label: 'Rating', value: `${selectedVendor.average_rating.toFixed(1)} (${selectedVendor.review_count} reviews)` },
-            { label: 'Missed requests', value: `${selectedVendor.missed_response_count} times didn't respond in time` },
+            { label: 'Rating', value: `${selectedVendor.average_rating.toFixed(1)} (${selectedVendor.review_count} ${t('reviews')})` },
+            { label: 'Missed requests', value: `${selectedVendor.missed_response_count} ${t("times didn't respond in time")}` },
             { label: 'Status', value: <StatusBadge label={selectedVendor.status} tone={vendorStatusTone(selectedVendor.status)} /> },
             { label: 'Verified', value: <StatusBadge label={selectedVendor.is_verified ? 'Verified' : 'Unverified'} tone={selectedVendor.is_verified ? 'good' : 'warning'} /> },
-            { label: 'Online now', value: selectedVendor.is_online ? 'Yes' : 'No' },
+            { label: 'Online now', value: selectedVendor.is_online ? t('Yes') : t('No') },
             { label: 'Joined', value: new Date(selectedVendor.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' }) },
           ]}
           footer={
@@ -217,13 +219,13 @@ export default function AdminVendorsPage() {
                 onClick={() => toggleVerified(selectedVendor)}
                 className="flex-1 rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
               >
-                {selectedVendor.is_verified ? 'Revoke verification' : 'Verify vendor'}
+                {selectedVendor.is_verified ? t('Revoke verification') : t('Verify vendor')}
               </button>
               <button
                 onClick={() => toggleSuspended(selectedVendor)}
                 className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 cursor-pointer"
               >
-                {selectedVendor.status === 'suspended' ? 'Reactivate' : 'Suspend'}
+                {selectedVendor.status === 'suspended' ? t('Reactivate') : t('Suspend')}
               </button>
             </div>
           }

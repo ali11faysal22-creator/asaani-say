@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic'
 import { useRef, useState } from 'react'
 import { Crosshair, MapPin } from 'lucide-react'
+import { useLanguage } from '../lib/i18n'
 
 const LocationMap = dynamic(
   () => import('./location-map').then((mod) => mod.LocationMap),
@@ -29,6 +30,7 @@ export function LocationPicker({
   onAddressResolved?: (location: { address: string; area: string }) => void
   onRadiusChange?: (km: number) => void
 }) {
+  const { t } = useLanguage()
   const [locating, setLocating] = useState(false)
   const [recenterKey, setRecenterKey] = useState(0)
   const [locateError, setLocateError] = useState('')
@@ -89,17 +91,17 @@ export function LocationPicker({
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') return
-        setAddressError('Could not find an address for this location. Please enter it manually.')
+        setAddressError(t('Could not find an address for this location. Please enter it manually.'))
       })
   }
 
   const useCurrentLocation = () => {
     if (typeof window !== 'undefined' && !window.isSecureContext) {
-      setLocateError('Location needs a secure (HTTPS) connection. Please open the site over HTTPS.')
+      setLocateError(t('Location needs a secure (HTTPS) connection. Please open the site over HTTPS.'))
       return
     }
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setLocateError('Location is not supported on this device/browser.')
+      setLocateError(t('Location is not supported on this device/browser.'))
       return
     }
     setLocating(true)
@@ -112,11 +114,11 @@ export function LocationPicker({
       },
       (error) => {
         const messages: Record<number, string> = {
-          1: 'Location permission was denied. Allow location access in your browser or app settings.',
-          2: 'Your current location is unavailable. Please try again or drag the pin.',
-          3: 'Finding your location took too long. Please try again.',
+          1: t('Location permission was denied. Allow location access in your browser or app settings.'),
+          2: t('Your current location is unavailable. Please try again or drag the pin.'),
+          3: t('Finding your location took too long. Please try again.'),
         }
-        setLocateError(messages[error.code] || 'Could not get your location. Please drag the pin instead.')
+        setLocateError(messages[error.code] || t('Could not get your location. Please drag the pin instead.'))
         setLocating(false)
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
@@ -127,7 +129,7 @@ export function LocationPicker({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-          <MapPin className="h-3.5 w-3.5 text-orange-500" /> {label}
+          <MapPin className="h-3.5 w-3.5 text-orange-500" /> {t(label)}
         </p>
         <button
           type="button"
@@ -135,10 +137,10 @@ export function LocationPicker({
           disabled={locating}
           className="inline-flex items-center gap-1.5 text-[11px] font-bold text-orange-600 transition hover:text-orange-700 disabled:opacity-50"
         >
-          <Crosshair className="h-3.5 w-3.5" /> {locating ? 'Locating…' : 'Use my current location'}
+          <Crosshair className="h-3.5 w-3.5" /> {locating ? t('Locating…') : t('Use my current location')}
         </button>
       </div>
-      <p className="text-[11px] text-slate-400">{hint}</p>
+      <p className="text-[11px] text-slate-400">{t(hint)}</p>
       {locateError && <p className="text-[11px] font-semibold text-red-600">{locateError}</p>}
       {addressError && <p className="text-[11px] font-semibold text-red-600">{addressError}</p>}
 
@@ -149,8 +151,8 @@ export function LocationPicker({
       {radiusKm != null && onRadiusChange && (
         <div>
           <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-slate-700">Service radius</span>
-            <span className="font-bold text-orange-600">{radiusKm} km</span>
+            <span className="font-bold text-slate-700">{t('Service radius')}</span>
+            <span className="font-bold text-orange-600">{radiusKm} {t('km')}</span>
           </div>
           <input
             type="range"
@@ -162,8 +164,8 @@ export function LocationPicker({
             className="mt-1.5 w-full accent-orange-500"
           />
           <div className="flex justify-between text-[10px] text-slate-400">
-            <span>2 km</span>
-            <span>30 km</span>
+            <span>2 {t('km')}</span>
+            <span>30 {t('km')}</span>
           </div>
         </div>
       )}

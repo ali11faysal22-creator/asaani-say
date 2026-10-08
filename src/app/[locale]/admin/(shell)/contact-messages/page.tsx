@@ -15,8 +15,10 @@ import { TableToolbar } from '../../components/table-toolbar'
 import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
+import { useLanguage } from '../../../lib/i18n'
 
 export default function AdminContactMessagesPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -103,7 +105,7 @@ export default function AdminContactMessagesPage() {
       <TableToolbar
         search={search}
         onSearchChange={setSearch}
-        placeholder="Search messages…"
+        placeholder={t('Search messages…')}
         resultCount={filtered.length}
         totalCount={messages.length}
         onRefresh={handleRefresh}
@@ -112,7 +114,7 @@ export default function AdminContactMessagesPage() {
 
       {unreadCount > 0 && (
         <p className="text-xs font-semibold text-[#EE6C52]">
-          {unreadCount} unread message{unreadCount === 1 ? '' : 's'}
+          {unreadCount} {t(unreadCount === 1 ? 'unread message' : 'unread messages')}
         </p>
       )}
 
@@ -120,11 +122,11 @@ export default function AdminContactMessagesPage() {
         <table className="w-full text-start text-xs">
           <thead className="bg-slate-50 text-slate-500 uppercase tracking-wide">
             <tr>
-              <th className="px-4 py-3 font-bold">From</th>
-              <th className="px-4 py-3 font-bold">Subject</th>
-              <th className="px-4 py-3 font-bold">Received</th>
-              <th className="px-4 py-3 font-bold">Status</th>
-              <th className="px-4 py-3 font-bold text-end">Actions</th>
+              <th className="px-4 py-3 font-bold">{t('From')}</th>
+              <th className="px-4 py-3 font-bold">{t('Subject')}</th>
+              <th className="px-4 py-3 font-bold">{t('Received')}</th>
+              <th className="px-4 py-3 font-bold">{t('Status')}</th>
+              <th className="px-4 py-3 font-bold text-end">{t('Actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -156,7 +158,7 @@ export default function AdminContactMessagesPage() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
-                  {messages.length === 0 ? 'No contact messages yet.' : 'No messages match your search.'}
+                  {messages.length === 0 ? t('No contact messages yet.') : t('No messages match your search.')}
                 </td>
               </tr>
             )}
@@ -182,7 +184,7 @@ export default function AdminContactMessagesPage() {
                 href={`mailto:${selectedMessage.email}?subject=${encodeURIComponent(`Re: ${selectedMessage.subject}`)}`}
                 className="block w-full text-center rounded-xl bg-[#EE6C52] py-2.5 text-xs font-bold text-white transition hover:bg-orange-600 cursor-pointer"
               >
-                Reply by email
+                {t('Reply by email')}
               </a>
             </div>
           }

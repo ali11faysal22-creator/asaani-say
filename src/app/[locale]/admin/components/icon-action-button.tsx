@@ -1,5 +1,6 @@
 'use client'
 
+import { useLanguage } from '../../lib/i18n'
 export function IconActionButton({
   icon: Icon,
   label,
@@ -11,12 +12,14 @@ export function IconActionButton({
   onClick: () => void
   tone?: 'default' | 'danger'
 }) {
+  const { t } = useLanguage()
+  const text = t(label)
   return (
     <button
       type="button"
       onClick={onClick}
-      title={label}
-      aria-label={label}
+      title={text}
+      aria-label={text}
       className={`w-8 h-8 inline-flex items-center justify-center rounded-lg border transition cursor-pointer ${
         tone === 'danger'
           ? 'border-red-200 text-red-500 hover:bg-red-50'
