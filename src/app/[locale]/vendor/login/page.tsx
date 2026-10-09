@@ -13,6 +13,8 @@ import {
   Eye,
   EyeOff,
   Wrench,
+  Hand,
+  Sparkles,
   ShieldCheck,
   ArrowLeft,
   ChevronDown,
@@ -554,10 +556,10 @@ export default function VendorLoginPage() {
 
   return (
     <div className="min-h-screen w-full bg-[#C7CBD1] font-sans overflow-hidden">
-      <div className="min-h-[calc(100vh-40px)] w-full bg-white grid grid-cols-1 md:grid-cols-12 overflow-hidden">
+      <div className="min-h-[calc(100vh-40px)] w-full bg-white grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
         
         <div
-          className="md:col-span-4 bg-[#3B3E56] text-white p-6 md:p-10 flex flex-col justify-between relative"
+          className="hidden lg:flex lg:col-span-4 bg-[#3B3E56] text-white p-10 flex-col justify-between relative"
           style={{ minHeight: '35rem' }}
         >
           <Link href="/" aria-label={t('Go to home page')} className="flex items-center gap-2 w-fit">
@@ -588,8 +590,12 @@ export default function VendorLoginPage() {
         </div>
 
         
-        <div className="md:col-span-8 bg-white p-6 md:p-12 flex flex-col justify-between min-h-screen overflow-y-auto">
-          <div className="flex justify-end">
+        <div className="lg:col-span-8 bg-white p-6 md:p-12 flex flex-col justify-between min-h-screen overflow-y-auto">
+          <div className="flex items-center justify-between lg:justify-end">
+            <Link href="/" aria-label={t('Go to home page')} className="flex items-center gap-2 lg:hidden">
+              <div className="relative"><Hand size={28} strokeWidth={2} className="text-black" /><Sparkles size={14} strokeWidth={2} className="text-orange-500 absolute -top-1 -end-1" /></div>
+              <div className="flex flex-col leading-tight"><span className="font-extrabold text-xl tracking-tight text-orange-500">{t('Asaani')}</span><span className="font-bold text-lg tracking-tight -mt-1.5 text-orange-500">{t('Say')}</span></div>
+            </Link>
             <LanguageSwitcher compact />
           </div>
           <div className="w-full max-w-xl mx-auto my-auto py-4">

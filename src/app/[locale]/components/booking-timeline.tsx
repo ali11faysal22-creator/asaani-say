@@ -49,6 +49,10 @@ function localDateKey(iso: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+function hasActiveFiltersFor(role: string, actorFilter: string, dateFilter: string): boolean {
+  return role === 'admin' && (actorFilter !== 'all' || dateFilter !== '')
+}
+
 const FETCHERS = {
   admin: fetchAdminBookingHistory,
   vendor: fetchVendorBookingHistory,
@@ -74,13 +78,17 @@ export function BookingTimeline({ bookingId, role }: { bookingId: string; role: 
     return () => { active = false }
   }, [bookingId, role])
 
+  // Customers only see the vendor's own job history — no filters, no dispatch/admin noise.
+  const showControls = role === 'admin'
+
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
+      if (role === 'customer') return event.actor === 'vendor'
       if (actorFilter !== 'all' && event.actor !== actorFilter) return false
       if (dateFilter && localDateKey(event.created_at) !== dateFilter) return false
       return true
     })
-  }, [events, actorFilter, dateFilter])
+  }, [events, role, actorFilter, dateFilter])
 
   if (loading) {
     return (
@@ -92,7 +100,7 @@ export function BookingTimeline({ bookingId, role }: { bookingId: string; role: 
   if (error) {
     return <p className="text-xs font-semibold text-red-600">{t(error)}</p>
   }
-  if (events.length === 0) {
+  if (filteredEvents.length === 0 && !hasActiveFiltersFor(role, actorFilter, dateFilter)) {
     return <p className="text-xs text-slate-400">{t('No history yet.')}</p>
   }
 
@@ -100,7 +108,7 @@ export function BookingTimeline({ bookingId, role }: { bookingId: string; role: 
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+      {showControls && <div className="flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 text-[11px] font-bold">
           {ACTOR_FILTERS.map((option) => (
             <button
@@ -125,7 +133,7 @@ export function BookingTimeline({ bookingId, role }: { bookingId: string; role: 
             {t('Clear filters')}
           </button>
         )}
-      </div>
+      </div>}
 
       {filteredEvents.length === 0 ? (
         <p className="text-xs text-slate-400">{t('No history entries match these filters.')}</p>

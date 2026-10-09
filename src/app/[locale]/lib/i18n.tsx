@@ -60,10 +60,10 @@ function translateNotificationText(text: string, translate: (text: string) => st
   const atMost = text.match(/^(.+?) must be at most (\d+(?:\.\d+)?)\.$/)
   if (atMost) return `${translate(atMost[1])} زیادہ سے زیادہ ${atMost[2]} ہو سکتا ہے۔`
 
-  const vendorRequest = text.match(/^You have a new (.+?) request for (.+?)\. Booking ID: ([\w-]+)\. Please accept or reject within (\d+) minutes\.$/)
+  const vendorRequest = text.match(/^You have a new (.+?) request for (.+?)\. Booking ID: ([\w-]+)\. Please accept or reject within (\d+) (minutes|seconds)\.$/)
   if (vendorRequest) {
-    const [, service, slot, bookingId, minutes] = vendorRequest
-    return `${translate(service)} کے لیے نئی درخواست موصول ہوئی ہے۔ وقت: ${formatNotificationSlot(slot)}۔ بکنگ نمبر: ${bookingId}۔ براہِ کرم ${minutes} منٹ کے اندر اسے قبول یا مسترد کریں۔`
+    const [, service, slot, bookingId, amount, unit] = vendorRequest
+    return `${translate(service)} کے لیے نئی درخواست موصول ہوئی ہے۔ وقت: ${formatNotificationSlot(slot)}۔ بکنگ نمبر: ${bookingId}۔ براہِ کرم ${amount} ${unit === 'seconds' ? 'سیکنڈ' : 'منٹ'} کے اندر اسے قبول یا مسترد کریں۔`
   }
 
   const cancelledByCustomer = text.match(/^(.+?) cancelled the (.+?) booking for (.+?) \(Booking ID: ([\w-]+)\)\.(?: No action is needed\.)?$/)

@@ -15,6 +15,7 @@ import {
   CreditCard,
   CheckCheck,
   ChevronRight,
+  Star,
   X
 } from 'lucide-react'
 import {
@@ -31,7 +32,6 @@ import {
   type VendorBookingAction,
 } from '@/app/lib/booking-api'
 import { ResponseCountdown } from '@/app/components/response-countdown'
-import { BookingTimeline } from '@/app/components/booking-timeline'
 import { useLanguage } from '@/app/lib/i18n'
 
 function formatNotificationTimestamp(value: string, language: 'en' | 'ur'): string {
@@ -54,9 +54,18 @@ function translateDate(value: string, language: 'en' | 'ur'): string {
   })
 }
 
+function isCustomerFeedbackNotification(item: { title?: string; message?: string; body?: string }): boolean {
+  const text = `${item.title ?? ''} ${item.message ?? ''} ${item.body ?? ''}`.toLowerCase()
+  return /you received a .*star rating|customer review|customer feedback|feedback from customer|review from customer|rated you/i.test(text)
+}
+
+function customerFeedbackLabel(language: string): string {
+  return language === 'ur' ? 'گاہک کی رائے' : 'Customer Feedback'
+}
+
 export interface NotificationItem {
   id: string
-  type: 'booking_request' | 'booking_confirmed' | 'booking_cancelled' | 'payment'
+  type: 'booking_request' | 'booking_confirmed' | 'booking_cancelled' | 'payment' | 'customer_feedback'
   title: string
   message: string
   timestamp: string
@@ -137,6 +146,7 @@ export default function NotificationsPage() {
           const booking = bookingId ? bookingsById.get(bookingId) : undefined
           const service = requestMatch?.[2] || booking?.service_name || undefined
           const isDeclinedNotice = row.title.toLowerCase().includes('declined')
+          const isReviewNotification = isCustomerFeedbackNotification({ title: row.title, message: row.body })
           const trackedStatuses = new Set([
             'accepted',
             'on_the_way',
@@ -157,7 +167,13 @@ export default function NotificationsPage() {
               : 'pending'
           return {
             id: row.id,
-            type: isDeclinedNotice || isCancelled ? 'booking_cancelled' : row.type === 'booking' ? 'booking_request' : 'booking_confirmed',
+            type: isReviewNotification
+              ? 'customer_feedback'
+              : isDeclinedNotice || isCancelled
+                ? 'booking_cancelled'
+                : row.type === 'booking'
+                  ? 'booking_request'
+                  : 'booking_confirmed',
             title: row.title,
             message: row.body,
             timestamp: row.created_at || 'Just now',
@@ -407,6 +423,7 @@ export default function NotificationsPage() {
                     >
                       <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200/60 flex items-center justify-center shrink-0 mt-0.5">
                         {item.type === 'booking_request' && <Wrench className="w-4 h-4 text-[#EE6C52]" />}
+                        {item.type === 'customer_feedback' && <Star className="w-4 h-4 text-amber-500" />}
                         {item.type === 'booking_confirmed' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
                         {item.type === 'booking_cancelled' && <XCircle className="w-4 h-4 text-rose-600" />}
                         {item.type === 'payment' && <CreditCard className="w-4 h-4 text-emerald-600" />}
@@ -416,7 +433,7 @@ export default function NotificationsPage() {
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
                             <h3 className={`text-xs ${!item.isRead ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>
-                              {t(item.title)}
+                              {item.type === 'customer_feedback' ? customerFeedbackLabel(language) : t(item.title)}
                             </h3>
                             {!item.isRead && (
                               <span className="w-2 h-2 rounded-full bg-[#EE6C52] shrink-0" />
@@ -453,222 +470,226 @@ export default function NotificationsPage() {
             
             <div className="min-w-0 lg:col-span-5">
               {selectedNotif ? (
-                <div className="min-w-0 break-words bg-white rounded-2xl border border-slate-200/80 p-6 space-y-5 shadow-xs sticky top-4">
-                  {actionError && (
-                    <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(actionError)}</p>
-                  )}
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                    <span className="text-xs font-bold text-[#EE6C52] bg-[#fff0eb] px-2.5 py-1 rounded-lg">
-                      {t(selectedNotif.type.replace('_', ' ').toUpperCase())}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-400">{formatNotificationTimestamp(selectedNotif.createdAt, language)}</span>
-                      <button
-                        onClick={e => handleDelete(selectedNotif.id, e)}
-                        className="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer"
-                        title={t('Delete')}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
+                (() => {
+                  const notificationBadge = isCustomerFeedbackNotification(selectedNotif)
+                    ? customerFeedbackLabel(language)
+                    : t(selectedNotif.type.replace('_', ' ').toUpperCase())
+                  const showBookingDecisionButtons = !isCustomerFeedbackNotification(selectedNotif) && (selectedNotif.type === 'booking_request' || selectedNotif.bookingStatus === 'cancelled')
 
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">{t(selectedNotif.title)}</h3>
-                    <p className="text-xs text-slate-600 mt-2 leading-relaxed bg-[#f8f9fc] p-3 rounded-xl border border-slate-100">
-                      {t(selectedNotif.message)}
-                    </p>
-                  </div>
-
-                  {selectedNotif.customerName && (
-                    <div className="bg-white border border-slate-200/80 rounded-xl p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-900">{t(selectedNotif.service || '')}</span>
-                        {selectedNotif.bookingStatus === 'cancelled' ? (
-                          <span className="text-xs font-bold bg-rose-50 text-rose-600 px-2.5 py-0.5 rounded-full">
-                            {t('CANCELLED')}
-                          </span>
-                        ) : (
-                          <span className="text-xs font-bold bg-[#e6f7ef] text-[#10b981] px-2.5 py-0.5 rounded-full">
-                            {t('ACTIVE')}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="space-y-2 text-xs pt-1">
-                        <div className="flex items-center justify-between text-slate-600">
-                          <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-slate-400" /> {t('Customer')}</span>
-                          <span className="font-semibold text-slate-800">{selectedNotif.customerName}</span>
-                        </div>
-                        {selectedNotif.customerPhone && (
-                          <div className="flex items-center justify-between text-slate-600">
-                            <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-400" /> {t('Contact')}</span>
-                            <span className="font-medium text-[#EE6C52]">{selectedNotif.customerPhone}</span>
-                          </div>
-                        )}
-                        {selectedNotif.location && (
-                          <div className="flex items-center justify-between text-slate-600">
-                            <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {t('Location')}</span>
-                            <span className="font-medium text-slate-700">{selectedNotif.location}</span>
-                          </div>
-                        )}
-                        {selectedNotif.date && (
-                          <div className="flex items-center justify-between text-slate-600">
-                            <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-slate-400" /> {t('Date & Time')}</span>
-                            <span className="font-medium text-slate-800" dir="ltr">{selectedNotif.date ? translateDate(selectedNotif.date, language) : ''} @ {selectedNotif.time}</span>
-                          </div>
-                        )}
-                        {selectedNotif.amount && (
-                          <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-slate-800">
-                            <span className="font-semibold">{t('Estimated Price')}</span>
-                            <span className="font-bold text-[#EE6C52]">{selectedNotif.amount}</span>
-                          </div>
-                        )}
-                        {selectedNotif.booking && (
-                          <div className="flex items-center justify-between text-slate-600">
-                            <span className="font-semibold">{t('Payment')}</span>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                                selectedNotif.booking.payment_received_at
-                                  ? 'bg-emerald-100 text-emerald-700'
-                                  : selectedNotif.booking.payment_requested_at
-                                    ? 'bg-amber-100 text-amber-700'
-                                    : 'bg-slate-100 text-slate-500'
-                              }`}
-                            >
-                              {selectedNotif.booking.payment_received_at
-                                ? t('Paid')
-                                : selectedNotif.booking.payment_requested_at
-                                  ? t('Requested')
-                                  : t('Not yet')}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedNotif.booking && (
-                    <div className="rounded-xl border border-slate-100 bg-white p-4 text-xs">
-                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('Job history')}</p>
-                      <BookingTimeline bookingId={selectedNotif.booking.id} role="vendor" />
-                    </div>
-                  )}
-
-                  
-                  {(selectedNotif.type === 'booking_request' || selectedNotif.bookingStatus === 'cancelled') && (
-                    <div className="pt-2">
-                      {selectedNotif.bookingStatus === 'pending' ? (
-                        <div className="space-y-2">
-                          {selectedNotif.booking?.vendor_response_deadline && (
-                            <p className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-50 py-2 text-[11px] font-bold text-orange-700">
-                              <ResponseCountdown deadline={selectedNotif.booking.vendor_response_deadline} />
-                            </p>
-                          )}
-                          <div className="flex items-center gap-3">
+                  return (
+                    <div className="min-w-0 break-words bg-white rounded-2xl border border-slate-200/80 p-6 space-y-5 shadow-xs sticky top-4">
+                      {actionError && (
+                        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(actionError)}</p>
+                      )}
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <span className="text-xs font-bold text-[#EE6C52] bg-[#fff0eb] px-2.5 py-1 rounded-lg">
+                          {notificationBadge}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-400">{formatNotificationTimestamp(selectedNotif.createdAt, language)}</span>
                           <button
-                            disabled={actionInProgress}
-                            onClick={() => handleBookingAction(selectedNotif.id, 'accepted')}
-                            className="flex-1 py-2.5 bg-[#EE6C52] hover:bg-orange-600 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer text-center"
+                            onClick={e => handleDelete(selectedNotif.id, e)}
+                            className="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                            title={t('Delete')}
                           >
-                            {t("Accept Booking")}</button>
-                          <button
-                            disabled={actionInProgress}
-                            onClick={() => handleBookingAction(selectedNotif.id, 'declined')}
-                            className="flex-1 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 disabled:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer text-center"
-                          >
-                            {t('Decline')}
+                            <Trash2 className="w-4 h-4" />
                           </button>
-                          </div>
                         </div>
-                      ) : (
-                        <div className="p-3 bg-slate-100 rounded-xl text-center text-xs font-bold text-slate-700">
-                          {t("STATUS:")}{' '}{selectedNotif.bookingStatus?.toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {selectedNotif.booking && ['accepted', 'on_the_way', 'reached', 'in_progress', 'paused', 'work_completed', 'payment_requested'].includes(selectedNotif.booking.status) && (
-                    <div className="mt-4 border-t border-slate-100 pt-4">
-                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('Customer tracking')}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedNotif.booking.status === 'accepted' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('on_the_way')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Mark on the way')}</button>}
-                        {selectedNotif.booking.status === 'on_the_way' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('reached')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Mark reached')}</button>}
-                        {selectedNotif.booking.status === 'reached' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('work_started')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Start work')}</button>}
-                        {selectedNotif.booking.status === 'in_progress' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('pause')} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 disabled:opacity-50">{t('Pause work')}</button>}
-                        {selectedNotif.booking.status === 'paused' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('resume')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Resume work')}</button>}
-                        {(selectedNotif.booking.status === 'in_progress' || selectedNotif.booking.status === 'paused') && !showCompletionUpload && (
-                          <button type="button" disabled={actionInProgress} onClick={() => setShowCompletionUpload(true)} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Mark work complete')}</button>
-                        )}
-                        {selectedNotif.booking.status === 'work_completed' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('request_payment')} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Request payment')}</button>}
-                        {selectedNotif.booking.status === 'payment_requested' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('payment_received')} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Payment received')}</button>}
-                        {['accepted', 'on_the_way', 'reached'].includes(selectedNotif.booking.status) && !showCannotStartForm && (
-                          <button type="button" disabled={actionInProgress} onClick={() => setShowCannotStartForm(true)} className="rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] font-bold text-rose-600 disabled:opacity-50">{t('Cannot start job')}</button>
-                        )}
                       </div>
-                      {showCannotStartForm && (
-                        <div className="mt-3 space-y-2 rounded-xl border border-rose-200 bg-rose-50/50 p-3">
-                          <p className="text-[11px] font-bold text-rose-700">{t("Why can't you start this job?")}</p>
-                          <textarea
-                            value={cannotStartReason}
-                            onChange={(event) => { setCannotStartReason(event.target.value); setReasonError('') }}
-                            placeholder={t('e.g. Customer not reachable, wrong address, out of scope…')}
-                            rows={2}
-                            maxLength={500}
-                            className={`w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] text-slate-700 focus:outline-none focus:border-rose-400 ${errorBorder(reasonError)}`}
-                          />
-                          <FieldError message={reasonError} />
-                          <div className="flex gap-2">
-                            <button type="button" disabled={actionInProgress} onClick={() => { if (!cannotStartReason.trim()) { setReasonError('Please tell us why you cannot start this job.'); return } void handleTrackingStatus('cannot_start', cannotStartReason.trim()) }} className="rounded-lg bg-rose-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">
-                              {actionInProgress ? t('Submitting…') : t('Confirm — find another vendor')}
-                            </button>
-                            <button type="button" disabled={actionInProgress} onClick={() => { setShowCannotStartForm(false); setCannotStartReason('') }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600">
-                              {t('Cancel')}
-                            </button>
+
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900">
+                          {isCustomerFeedbackNotification(selectedNotif) ? customerFeedbackLabel(language) : t(selectedNotif.title)}
+                        </h3>
+                        <p className="text-xs text-slate-600 mt-2 leading-relaxed bg-[#f8f9fc] p-3 rounded-xl border border-slate-100">
+                          {t(selectedNotif.message)}
+                        </p>
+                      </div>
+
+                      {selectedNotif.customerName && (
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-900">{t(selectedNotif.service || '')}</span>
+                            {selectedNotif.bookingStatus === 'cancelled' ? (
+                              <span className="text-xs font-bold bg-rose-50 text-rose-600 px-2.5 py-0.5 rounded-full">
+                                {t('CANCELLED')}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-bold bg-[#e6f7ef] text-[#10b981] px-2.5 py-0.5 rounded-full">
+                                {t('ACTIVE')}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="space-y-2 text-xs pt-1">
+                            <div className="flex items-center justify-between text-slate-600">
+                              <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-slate-400" /> {t('Customer')}</span>
+                              <span className="font-semibold text-slate-800">{selectedNotif.customerName}</span>
+                            </div>
+                            {selectedNotif.customerPhone && (
+                              <div className="flex items-center justify-between text-slate-600">
+                                <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-400" /> {t('Contact')}</span>
+                                <span className="font-medium text-[#EE6C52]">{selectedNotif.customerPhone}</span>
+                              </div>
+                            )}
+                            {selectedNotif.location && (
+                              <div className="flex items-center justify-between text-slate-600">
+                                <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {t('Location')}</span>
+                                <span className="font-medium text-slate-700">{selectedNotif.location}</span>
+                              </div>
+                            )}
+                            {selectedNotif.date && (
+                              <div className="flex items-center justify-between text-slate-600">
+                                <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-slate-400" /> {t('Date & Time')}</span>
+                                <span className="font-medium text-slate-800" dir="ltr">{selectedNotif.date ? translateDate(selectedNotif.date, language) : ''} @ {selectedNotif.time}</span>
+                              </div>
+                            )}
+                            {selectedNotif.amount && (
+                              <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-slate-800">
+                                <span className="font-semibold">{t('Estimated Price')}</span>
+                                <span className="font-bold text-[#EE6C52]">{selectedNotif.amount}</span>
+                              </div>
+                            )}
+                            {selectedNotif.booking && (
+                              <div className="flex items-center justify-between text-slate-600">
+                                <span className="font-semibold">{t('Payment')}</span>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                    selectedNotif.booking.payment_received_at
+                                      ? 'bg-emerald-100 text-emerald-700'
+                                      : selectedNotif.booking.payment_requested_at
+                                        ? 'bg-amber-100 text-amber-700'
+                                        : 'bg-slate-100 text-slate-500'
+                                  }`}
+                                >
+                                  {selectedNotif.booking.payment_received_at
+                                    ? t('Paid')
+                                    : selectedNotif.booking.payment_requested_at
+                                      ? t('Requested')
+                                      : t('Not yet')}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
-                      {(selectedNotif.booking.status === 'in_progress' || selectedNotif.booking.status === 'paused') && showCompletionUpload && (
-                        <div className="mt-3 space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3">
-                          <p className="text-[11px] font-bold text-emerald-700">{t('Add photos of the completed job (optional)')}</p>
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            multiple
-                            onChange={(event) => { setCompletionPhotos(Array.from(event.target.files || [])); setPhotoError('') }}
-                            className="block w-full text-[11px] text-slate-600 file:me-2 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-white"
-                          />
-                          <FieldError message={photoError} />
-                          {completionPhotos.length > 0 && (
-                            <p className="text-[10px] text-slate-500">
-                              {completionPhotos.length} {t(completionPhotos.length === 1 ? 'photo' : 'photos')} {t('selected')}
-                            </p>
+
+                      {showBookingDecisionButtons && (
+                        <div className="pt-2">
+                          {selectedNotif.bookingStatus === 'pending' ? (
+                            <div className="space-y-2">
+                              {selectedNotif.booking?.vendor_response_deadline && (
+                                <p className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-50 py-2 text-[11px] font-bold text-orange-700">
+                                  <ResponseCountdown deadline={selectedNotif.booking.vendor_response_deadline} />
+                                </p>
+                              )}
+                              <div className="flex items-center gap-3">
+                                <button
+                                  disabled={actionInProgress}
+                                  onClick={() => handleBookingAction(selectedNotif.id, 'accepted')}
+                                  className="flex-1 py-2.5 bg-[#EE6C52] hover:bg-orange-600 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer text-center"
+                                >
+                                  {t("Accept Booking")}
+                                </button>
+                                <button
+                                  disabled={actionInProgress}
+                                  onClick={() => handleBookingAction(selectedNotif.id, 'declined')}
+                                  className="flex-1 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 disabled:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer text-center"
+                                >
+                                  {t('Decline')}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-3 bg-slate-100 rounded-xl text-center text-xs font-bold text-slate-700">
+                              {t("STATUS:")}{' '}{selectedNotif.bookingStatus?.toUpperCase()}
+                            </div>
                           )}
-                          <div className="flex gap-2">
-                            <button type="button" disabled={actionInProgress} onClick={() => void handleCompleteBooking()} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">
-                              {actionInProgress ? t('Completing…') : t('Confirm completion')}
-                            </button>
-                            <button type="button" disabled={actionInProgress} onClick={() => { setShowCompletionUpload(false); setCompletionPhotos([]) }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600">
-                              {t('Cancel')}
-                            </button>
+                        </div>
+                      )}
+                      {selectedNotif.booking && ['accepted', 'on_the_way', 'reached', 'in_progress', 'paused', 'work_completed', 'payment_requested'].includes(selectedNotif.booking.status) && (
+                        <div className="mt-4 border-t border-slate-100 pt-4">
+                          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('Customer tracking')}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedNotif.booking.status === 'accepted' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('on_the_way')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Mark on the way')}</button>}
+                            {selectedNotif.booking.status === 'on_the_way' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('reached')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Mark reached')}</button>}
+                            {selectedNotif.booking.status === 'reached' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('work_started')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Start work')}</button>}
+                            {selectedNotif.booking.status === 'in_progress' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('pause')} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 disabled:opacity-50">{t('Pause work')}</button>}
+                            {selectedNotif.booking.status === 'paused' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('resume')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Resume work')}</button>}
+                            {(selectedNotif.booking.status === 'in_progress' || selectedNotif.booking.status === 'paused') && !showCompletionUpload && (
+                              <button type="button" disabled={actionInProgress} onClick={() => setShowCompletionUpload(true)} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Mark work complete')}</button>
+                            )}
+                            {selectedNotif.booking.status === 'work_completed' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('request_payment')} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Request payment')}</button>}
+                            {selectedNotif.booking.status === 'payment_requested' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('payment_received')} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Payment received')}</button>}
+                            {['accepted', 'on_the_way', 'reached'].includes(selectedNotif.booking.status) && !showCannotStartForm && (
+                              <button type="button" disabled={actionInProgress} onClick={() => setShowCannotStartForm(true)} className="rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] font-bold text-rose-600 disabled:opacity-50">{t('Cannot start job')}</button>
+                            )}
+                          </div>
+                          {showCannotStartForm && (
+                            <div className="mt-3 space-y-2 rounded-xl border border-rose-200 bg-rose-50/50 p-3">
+                              <p className="text-[11px] font-bold text-rose-700">{t("Why can't you start this job?")}</p>
+                              <textarea
+                                value={cannotStartReason}
+                                onChange={(event) => { setCannotStartReason(event.target.value); setReasonError('') }}
+                                placeholder={t('e.g. Customer not reachable, wrong address, out of scope…')}
+                                rows={2}
+                                maxLength={500}
+                                className={`w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] text-slate-700 focus:outline-none focus:border-rose-400 ${errorBorder(reasonError)}`}
+                              />
+                              <FieldError message={reasonError} />
+                              <div className="flex gap-2">
+                                <button type="button" disabled={actionInProgress} onClick={() => { if (!cannotStartReason.trim()) { setReasonError('Please tell us why you cannot start this job.'); return } void handleTrackingStatus('cannot_start', cannotStartReason.trim()) }} className="rounded-lg bg-rose-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">
+                                  {actionInProgress ? t('Submitting…') : t('Confirm — find another vendor')}
+                                </button>
+                                <button type="button" disabled={actionInProgress} onClick={() => { setShowCannotStartForm(false); setCannotStartReason('') }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600">
+                                  {t('Cancel')}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          {(selectedNotif.booking.status === 'in_progress' || selectedNotif.booking.status === 'paused') && showCompletionUpload && (
+                            <div className="mt-3 space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3">
+                              <p className="text-[11px] font-bold text-emerald-700">{t('Add photos of the completed job (optional)')}</p>
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                multiple
+                                onChange={(event) => { setCompletionPhotos(Array.from(event.target.files || [])); setPhotoError('') }}
+                                className="block w-full text-[11px] text-slate-600 file:me-2 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-white"
+                              />
+                              <FieldError message={photoError} />
+                              {completionPhotos.length > 0 && (
+                                <p className="text-[10px] text-slate-500">
+                                  {completionPhotos.length} {t(completionPhotos.length === 1 ? 'photo' : 'photos')} {t('selected')}
+                                </p>
+                              )}
+                              <div className="flex gap-2">
+                                <button type="button" disabled={actionInProgress} onClick={() => void handleCompleteBooking()} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">
+                                  {actionInProgress ? t('Completing…') : t('Confirm completion')}
+                                </button>
+                                <button type="button" disabled={actionInProgress} onClick={() => { setShowCompletionUpload(false); setCompletionPhotos([]) }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600">
+                                  {t('Cancel')}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {selectedNotif.booking && selectedNotif.booking.status === 'completed' && selectedNotif.booking.photos.length > 0 && (
+                        <div className="mt-4 border-t border-slate-100 pt-4">
+                          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('Completion photos')}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedNotif.booking.photos.map((url) => (
+                              <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
+                                <img src={`${API_BASE}${url}`} alt={t('Completion photos')} className="h-16 w-16 rounded-lg object-cover border border-slate-200" />
+                              </a>
+                            ))}
                           </div>
                         </div>
                       )}
                     </div>
-                  )}
-                  {selectedNotif.booking && selectedNotif.booking.status === 'completed' && selectedNotif.booking.photos.length > 0 && (
-                    <div className="mt-4 border-t border-slate-100 pt-4">
-                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('Completion photos')}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedNotif.booking.photos.map((url) => (
-                          <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
-                            <img src={`${API_BASE}${url}`} alt={t('Completion photos')} className="h-16 w-16 rounded-lg object-cover border border-slate-200" />
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  )
+                })()
               ) : (
                 <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-400 space-y-2 shadow-xs">
                   <Bell className="w-8 h-8 text-slate-300 mx-auto" />

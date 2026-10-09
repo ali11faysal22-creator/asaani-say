@@ -43,7 +43,13 @@ export default function CustomerDecisionPrompt() {
       try {
         const bookings = await fetchCustomerBookings(auth.profile_id)
         const dismissed = getDismissed()
-        const next = bookings.find((item) => item.paused_for_customer_decision && !dismissed.includes(item.id))
+        // Only the newest stalled order is ever offered — older ones the customer already moved
+        // past (or abandoned) shouldn't chain one popup after another once this one is handled.
+        const stalled = bookings
+          .filter((item) => item.paused_for_customer_decision && item.status === 'unassigned')
+          .sort((first, second) => new Date(second.created_at).getTime() - new Date(first.created_at).getTime())
+        const newest = stalled[0]
+        const next = newest && !dismissed.includes(newest.id) ? newest : undefined
         if (active) setBooking((current) => (current?.id === next?.id ? current : next || null))
       } catch {
       }
@@ -83,6 +89,7 @@ export default function CustomerDecisionPrompt() {
     setError('')
     try {
       await cancelCustomerBooking(booking.id)
+      dismiss(booking.id)
       setBooking(null)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t('Could not cancel this order.'))

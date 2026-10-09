@@ -226,10 +226,6 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
           <Link href="/customer/orders" className="text-xs font-bold text-orange-600">{t("Back to orders")}</Link>
         </div>
         {decisionBanner}
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="mb-3 text-xs font-bold text-slate-700">{t("Order history")}</p>
-          <BookingTimeline bookingId={booking.id} role="customer" />
-        </div>
       </div>
     )
   }
@@ -435,9 +431,9 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
           </div>
         </div>
 
-        {/* Order history */}
+        {/* Vendor job history */}
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="mb-3 text-xs font-bold text-slate-700">{t("Order history")}</p>
+          <p className="mb-3 text-xs font-bold text-slate-700">{t("Job history")}</p>
           <BookingTimeline bookingId={booking.id} role="customer" />
         </div>
 

@@ -5,7 +5,6 @@ import { useRouter } from '@/i18n/navigation'
 import { Search, Eye, MapPin, Phone, ShoppingCart, X } from 'lucide-react'
 import { fetchVendorBookings, getStoredAuth, type BookingResult } from '@/app/lib/booking-api'
 import { ResponseCountdown } from '@/app/components/response-countdown'
-import { BookingTimeline } from '@/app/components/booking-timeline'
 import { DateFilter } from '@/app/components/date-filter'
 import { VendorBookingActionPanel } from '../../components/booking-action-panel'
 import { useLanguage } from '@/app/lib/i18n'
@@ -315,11 +314,6 @@ export default function OrderHistoryPage() {
                   </div>
                 )
               })()}
-            </div>
-
-            <div className="rounded-xl border border-slate-100 bg-white p-4 text-xs">
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t("Job history")}</p>
-              <BookingTimeline bookingId={selectedOrder.id} role="vendor" />
             </div>
 
             <VendorBookingActionPanel
