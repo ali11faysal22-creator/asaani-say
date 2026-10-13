@@ -1,4 +1,14 @@
-import ServiceCategoryView from '../../components/service-category-view'
+import type { Metadata } from 'next'
+import ServiceCategoryPage, { categoryMetadata } from '../../components/service-category-page'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>
+}): Promise<Metadata> {
+  const { locale, slug } = await params
+  return categoryMetadata(locale, slug)
+}
 
 export default async function ServiceSlugPage({
   params,
@@ -6,5 +16,5 @@ export default async function ServiceSlugPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  return <ServiceCategoryView slug={slug} />
+  return <ServiceCategoryPage slug={slug} />
 }

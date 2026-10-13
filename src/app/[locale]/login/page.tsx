@@ -44,12 +44,8 @@ export default function GetStartedPage(){
             </div>
           </div>
 
-          <Link href="/vendor/login" className="mt-5">
-            <button className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-md">
-              <span>{t('Enter Vendor Portal')}</span>
-              <ArrowRight className="w-4 h-4"/>
-            </button>
-          </Link>
+          <Link href="/vendor/login" className="mt-5 w-full bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-md"><span>{t('Enter Vendor Portal')}</span>
+              <ArrowRight className="w-4 h-4"/></Link>
         </div>
         <div className="bg-[#2D334A]/60 border-2 border-transparent hover:border-[#EE6C52] rounded-2xl p-4 flex flex-col justify-between transition-all hover:-translate-y-1 shadow-lg w-full max-w-107.5">
           <div className="space-y-3">
@@ -68,12 +64,8 @@ export default function GetStartedPage(){
             </div>
           </div>
 
-          <Link href="/customer/login" className="mt-5">
-            <button className="w-full bg-[#3D4566] hover:bg-[#495278] text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition">
-              <span>{t('Login / Signup')}</span>
-              <ArrowRight className="w-4 h-4"/>
-            </button>
-          </Link>
+          <Link href="/customer/login" className="mt-5 w-full bg-[#3D4566] hover:bg-[#495278] text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition"><span>{t('Login / Signup')}</span>
+              <ArrowRight className="w-4 h-4"/></Link>
         </div>
 
       </div>

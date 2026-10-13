@@ -1,6 +1,7 @@
 'use client'
 
 import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError'
+import Modal from '@/components/Modal'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from '@/i18n/navigation'
@@ -15,11 +16,10 @@ import {
   ArrowRight,
   Check,
   UserCheck,
-  Phone,
   Navigation,
   Loader2
 } from 'lucide-react'
-import { API_BASE, createCustomerAddress, fetchAddresses, fetchCategory, fetchDemoCustomer, formatSlotLabel, getAccessToken, getCurrentUser, getStoredAuth, readError, updateCustomerAddress, type ApiAddress, type CatalogCategory, type CatalogService, type DateRow } from '../lib/booking-api'
+import { createCustomerAddress, fetchAddresses, fetchAvailability, fetchAvailableSlots, fetchCategory, fetchDemoCustomer, formatSlotLabel, getAccessToken, getCurrentUser, getStoredAuth, placeBooking, updateCustomerAddress, type ApiAddress, type BookingResult, type CatalogCategory, type CatalogService, type DateRow, type SlotRow } from '../lib/booking-api'
 import { categoryIcon } from '../lib/category-icons'
 import { LocationPicker } from './location-picker'
 import CustomerNavbar from './customer-navbar'
@@ -31,49 +31,15 @@ import { PENDING_SERVICE_BOOKING_KEY, readPendingServiceBooking } from '../lib/s
 
 const PENDING_SERVICE_ADDRESS_KEY = 'asaani_pending_service_address'
 
-interface AddressItem {
-  id: string
-  label: string
-  line: string
-  city?: string | null
-  area?: string | null
-  latitude: number
-  longitude: number
-  is_default: boolean
-}
-
-interface AssignedVendor {
-  id: string
-  business_name: string
-  first_name: string
-  last_name: string
-  contact_number: string
-  average_rating: number
-  review_count: number
-  distance_km: number
-}
-
-interface BookingResponse {
-  id: string
-  status: string
-  created_at: string
-  service_name: string
-  date: string
-  slot_start: string
-  slot_end: string
-  customer_name: string
-  customer_phone?: string | null
-  address: AddressItem
-  vendor: AssignedVendor | null
-}
-
-export default function ServiceCategoryView({ slug }: { slug: string }) {
+export default function ServiceCategoryView({ slug, initialCategory = null }: { slug: string; initialCategory?: CatalogCategory | null }) {
   const { language, t } = useLanguage()
   const router = useRouter()
-  const [category, setCategory] = useState<CatalogCategory | null>(null)
+  const [category, setCategory] = useState<CatalogCategory | null>(initialCategory)
+  const [categoryError, setCategoryError] = useState(false)
+  const [brokenImages, setBrokenImages] = useState<Set<string>>(() => new Set())
   const [selectedServices, setSelectedServices] = useState<CatalogService[]>([])
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false)
-  const [addresses, setAddresses] = useState<AddressItem[]>([])
+  const [addresses, setAddresses] = useState<ApiAddress[]>([])
   const [selectedAddress, setSelectedAddress] = useState<string>('')
   const [customerId, setCustomerId] = useState<string>('')
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
@@ -82,19 +48,21 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   const [newAddressLat, setNewAddressLat] = useState(31.5204)
   const [newAddressLng, setNewAddressLng] = useState(74.3587)
   const [savingAddress, setSavingAddress] = useState(false)
-  const [availableDates, setAvailableDates] = useState<{ date: string; available: boolean; vendor_count: number }[]>([])
+  const [availableDates, setAvailableDates] = useState<DateRow[]>([])
   const [selectedDate, setSelectedDate] = useState<string>('')
-  const [slots, setSlots] = useState<{ start: string; end: string; available: boolean; vendor_count: number }[]>([])
+  const [slots, setSlots] = useState<SlotRow[]>([])
   const [selectedSlot, setSelectedSlot] = useState<{ start: string; end: string } | null>(null)
-  
+
   const [loadingDates, setLoadingDates] = useState(false)
   const [loadingSlots, setLoadingSlots] = useState(false)
+  const [availabilityError, setAvailabilityError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [bookingData, setBookingData] = useState<BookingResponse | null>(null)
+  const [bookingData, setBookingData] = useState<BookingResult | null>(null)
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
   const [bookingError, setBookingError] = useState('')
   const [addressErrors, setAddressErrors] = useState<Record<string, string>>({})
   const resumedBookingRef = useRef<{ date?: string; slot?: { start: string; end: string } } | null>(null)
+  const slotsRequestRef = useRef<AbortController | null>(null)
 
   const Icon = categoryIcon(category?.icon)
 
@@ -102,29 +70,42 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
     setSelectedDate(dateStr)
     setSelectedSlot(null)
     setLoadingSlots(true)
+    setAvailabilityError('')
 
-    const serviceId = selectedServices[0]?.id || ''
-    const serviceName = selectedServices[0]?.name || ''
+    // A newer date click supersedes any slot request still in flight.
+    slotsRequestRef.current?.abort()
+    const controller = new AbortController()
+    slotsRequestRef.current = controller
 
-    fetch(`${API_BASE}/api/availability/slots?address_id=${selectedAddress}&date=${dateStr}&service_id=${serviceId}&service=${encodeURIComponent(serviceName)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        const availableSlots = data.slots || []
+    fetchAvailableSlots(selectedAddress, dateStr, {
+      serviceId: selectedServices[0]?.id,
+      service: selectedServices[0]?.name,
+      signal: controller.signal,
+    })
+      .then((availableSlots) => {
         setSlots(availableSlots)
         const restoredSlot = preferredSlot
-          ? availableSlots.find((slot: { start: string; end: string; available: boolean }) =>
+          ? availableSlots.find((slot) =>
               slot.start === preferredSlot.start && slot.end === preferredSlot.end && slot.available)
           : undefined
         if (restoredSlot) setSelectedSlot({ start: restoredSlot.start, end: restoredSlot.end })
         setLoadingSlots(false)
       })
-      .catch(() => {
+      .catch((error) => {
+        if (controller.signal.aborted) return
+        setSlots([])
+        setAvailabilityError(messageOf(error, 'Could not load time slots. Please try again.'))
         setLoadingSlots(false)
       })
   }, [selectedAddress, selectedServices])
   useEffect(() => {
-    fetchCategory(slug).then(setCategory).catch(() => {})
-  }, [slug])
+    if (initialCategory?.slug === slug) return
+    let active = true
+    fetchCategory(slug)
+      .then((fresh) => { if (active) { setCategory(fresh); setCategoryError(false) } })
+      .catch(() => { if (active) setCategoryError(true) })
+    return () => { active = false }
+  }, [slug, initialCategory])
   useEffect(() => {
     if (!category || getStoredAuth('customer')?.role !== 'customer') return
 
@@ -224,36 +205,44 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
     loadCustomer()
   }, [])
   useEffect(() => {
-    if (isSlotModalOpen && selectedAddress) {
-      queueMicrotask(() => setLoadingDates(true))
-      const serviceId = selectedServices[0]?.id || ''
-      const serviceName = selectedServices[0]?.name || ''
+    if (!isSlotModalOpen || !selectedAddress) return
+    const controller = new AbortController()
+    queueMicrotask(() => {
+      setLoadingDates(true)
+      setAvailabilityError('')
+    })
 
-      fetch(`${API_BASE}/api/availability/dates?address_id=${selectedAddress}&service_id=${serviceId}&service=${encodeURIComponent(serviceName)}&days=30`)
-        .then((res) => res.json())
-        .then((data) => {
-          const fetchedDates = data.dates || []
-          setAvailableDates(fetchedDates)
-          setLoadingDates(false)
-          const resumedBooking = resumedBookingRef.current
-          const resumedDate = resumedBooking?.date
-          const resumedSlot = resumedBooking?.slot
-          resumedBookingRef.current = null
-          const validDate = (resumedDate && fetchedDates.find((date: DateRow) =>
-            date.date === resumedDate && date.available))
-            || fetchedDates.find((date: DateRow) => date.available)
-            || fetchedDates[0]
-          if (validDate) {
-            handleDateSelect(
-              validDate.date,
-              resumedDate === validDate.date ? resumedSlot : undefined,
-            )
-          }
-        })
-        .catch(() => {
-          setLoadingDates(false)
-        })
-    }
+    fetchAvailability(selectedAddress, {
+      serviceId: selectedServices[0]?.id,
+      service: selectedServices[0]?.name,
+      days: 30,
+      signal: controller.signal,
+    })
+      .then(({ dates: fetchedDates }) => {
+        setAvailableDates(fetchedDates)
+        setLoadingDates(false)
+        const resumedBooking = resumedBookingRef.current
+        const resumedDate = resumedBooking?.date
+        const resumedSlot = resumedBooking?.slot
+        resumedBookingRef.current = null
+        const validDate = (resumedDate && fetchedDates.find((date) =>
+          date.date === resumedDate && date.available))
+          || fetchedDates.find((date) => date.available)
+          || fetchedDates[0]
+        if (validDate) {
+          handleDateSelect(
+            validDate.date,
+            resumedDate === validDate.date ? resumedSlot : undefined,
+          )
+        }
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return
+        setAvailableDates([])
+        setAvailabilityError(messageOf(error, 'Could not load availability. Please try again.'))
+        setLoadingDates(false)
+      })
+    return () => controller.abort()
   }, [isSlotModalOpen, selectedAddress, selectedServices, handleDateSelect])
   const toggleSelectService = (service: CatalogService) => {
     if (selectedServices.some((s) => s.id === service.id)) {
@@ -354,70 +343,62 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
     setBookingError('')
 
     try {
-      const payload = {
+      // The first pick is the main service; the rest travel with it so one order carries
+      // everything the customer selected. The server prices the whole order itself.
+      const [mainService, ...extraServices] = selectedServices
+      const result = await placeBooking({
         customer_id: customerId,
-        service_id: selectedServices[0].id,
-        service: selectedServices[0].name,
+        service_id: mainService.id,
+        service: mainService.name,
+        extra_service_ids: extraServices.map((service) => service.id),
         address_id: selectedAddress,
         date: selectedDate,
         slot_start: selectedSlot.start,
         slot_end: selectedSlot.end,
-        notes: 'Please assign a vendor',
-        total_amount: totalPrice || undefined,
-      }
-      const token = getAccessToken('customer')
-      const res = await fetch(`${API_BASE}/api/bookings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(payload),
       })
-      if (res.ok) {
-        const result: BookingResponse = await res.json()
-        setBookingData(result)
-        const address = addresses.find((item) => item.id === selectedAddress)
-        localStorage.setItem('asaani_latest_order', JSON.stringify({
-          orderId: result.id,
-          items: selectedServices.map((service) => ({
-            id: service.id,
-            title: service.name,
-            numericPrice: service.price || 0,
-            quantity: 1,
-          })),
-          bookingDetails: {
-            fullName: result.customer_name,
-            phone: result.customer_phone || '',
-            email: getStoredAuth('customer')?.email || '',
-            address: result.address?.line || address?.line || '',
-          },
-          selectedDate,
-          selectedTimeSlot: `${selectedSlot.start} - ${selectedSlot.end}`,
-          subtotal: totalPrice,
-          visitingCharges: 0,
-          totalAmount: totalPrice,
-          status: 'Pending vendor acceptance',
-          createdAt: result.created_at,
-        }))
-        window.dispatchEvent(new Event('asaani-order-changed'))
-        const notification = {
-          id: `booking-${result.id}`,
-          message: 'Your service request has been submitted. We are waiting for vendor acceptance and will update you shortly.',
-          type: 'app',
-          createdAt: new Date().toISOString(),
-          isRead: false,
-        }
-        const existingNotifications = JSON.parse(localStorage.getItem('asaani_user_notifications') || '[]')
-        localStorage.setItem('asaani_user_notifications', JSON.stringify([notification, ...existingNotifications]))
-        router.push('/order-confirmation')
-      } else {
-        const { message } = await readError(res)
-        setBookingError(message)
+      setBookingData(result)
+      const address = addresses.find((item) => item.id === selectedAddress)
+      const confirmedTotal = result.total_amount ?? totalPrice
+      localStorage.setItem('asaani_latest_order', JSON.stringify({
+        orderId: result.id,
+        items: selectedServices.map((service) => ({
+          id: service.id,
+          title: service.name,
+          numericPrice: service.price || 0,
+          quantity: 1,
+        })),
+        bookingDetails: {
+          fullName: result.customer_name,
+          phone: result.customer_phone || '',
+          email: getStoredAuth('customer')?.email || '',
+          address: result.address?.line || address?.line || '',
+        },
+        selectedDate,
+        selectedTimeSlot: `${formatSlotLabel(selectedSlot.start)} - ${formatSlotLabel(selectedSlot.end)}`,
+        subtotal: confirmedTotal,
+        visitingCharges: 0,
+        totalAmount: confirmedTotal,
+        status: result.status,
+        createdAt: result.created_at,
+      }))
+      window.dispatchEvent(new Event('asaani-order-changed'))
+      const notification = {
+        id: `booking-${result.id}`,
+        message: 'Your service request has been submitted. We are waiting for vendor acceptance and will update you shortly.',
+        type: 'app',
+        createdAt: new Date().toISOString(),
+        isRead: false,
       }
+      const existingNotifications = JSON.parse(localStorage.getItem('asaani_user_notifications') || '[]')
+      localStorage.setItem('asaani_user_notifications', JSON.stringify([notification, ...existingNotifications]))
+      router.push('/order-confirmation')
     } catch (error) {
-      console.error(error)
-      setBookingError('Unable to reach the server. Please check your internet connection and try again.')
+      if ((error as { status?: number }).status === 401) {
+        saveBookingDraftForLogin()
+        setShowAuthPrompt(true)
+      } else {
+        setBookingError(messageOf(error, 'Unable to reach the server. Please check your internet connection and try again.'))
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -432,18 +413,24 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
       <CustomerNavbar active="services" />
       <BreadcrumbBar labels={category ? { [`/services/${slug}`]: t(category.name) } : undefined} />
 
-      
       <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-[#1E2342]">
+          <h1 className="text-2xl font-bold text-[#1E2342]">
             {t('Select Services from')} {t(category?.name || 'Catalog')}
-          </h2>
+          </h1>
           <p className="text-xs text-slate-500 mt-1">{t('Select one or more services to proceed')}</p>
         </div>
+
+        {categoryError && !category && (
+          <p role="alert" className="mx-auto mb-6 max-w-md rounded-lg bg-red-50 px-3 py-2 text-center text-xs font-semibold text-red-600">
+            {t('Could not load the services. Please refresh the page.')}
+          </p>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {(category?.services || []).map((item) => {
             const isSelected = selectedServices.some((s) => s.id === item.id)
+            const showPhoto = Boolean(item.image_url) && !brokenImages.has(item.id)
             return (
               <div
                 key={item.id}
@@ -452,26 +439,37 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                 }`}
               >
                 <div className="relative w-20 h-20 bg-slate-200 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
-                  {item.image_url ? (
-                    <Image src={item.image_url} alt={t(item.name)} fill className="object-cover" />
+                  {showPhoto ? (
+                    <Image
+                      src={item.image_url as string}
+                      alt={t(item.name)}
+                      fill
+                      sizes="80px"
+                      unoptimized={/^https?:\/\//.test(item.image_url as string)}
+                      onError={() => setBrokenImages((current) => new Set(current).add(item.id))}
+                      className="object-cover"
+                    />
                   ) : (
                     <Icon className={`w-8 h-8 ${category?.icon_class || 'text-slate-400'}`} />
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0 space-y-1">
-                  <h3 className="text-sm font-extrabold text-[#1E2342] truncate">{t(item.name)}</h3>
+                  <h2 className="text-sm font-extrabold text-[#1E2342] truncate">{t(item.name)}</h2>
                   <p className="text-[11px] text-slate-500 truncate">{item.subtitle ? t(item.subtitle) : ''}</p>
                   <p className="text-sm font-semibold text-orange-600">
                     {item.price != null ? `${t('Rs.')} ${item.price.toLocaleString()}` : t(item.price_label || 'Price unavailable')}
                   </p>
                   <div className="flex items-center justify-between pt-1">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span className="text-xs font-bold text-slate-700">{item.rating || '4.9'}</span>
-                    </div>
+                    {item.rating ? (
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" aria-hidden="true" />
+                        <span className="text-xs font-bold text-slate-700">{item.rating}</span>
+                      </div>
+                    ) : <span />}
                     <button
                       type="button"
+                      aria-pressed={isSelected}
                       onClick={() => toggleSelectService(item)}
                       className={`shrink-0 whitespace-nowrap text-[10px] sm:text-[11px] font-bold px-2 sm:px-3 py-1 rounded flex items-center gap-1 transition cursor-pointer ${
                         isSelected ? 'bg-emerald-600 text-white' : 'bg-[#EE6C52] text-white hover:bg-orange-600'
@@ -488,10 +486,10 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
         </div>
       </section>
 
-      
       {selectedServices.length > 0 && (
         <div className="fixed bottom-6 end-6 z-40">
           <button
+            type="button"
             onClick={() => setIsSlotModalOpen(true)}
             className="bg-[#EE6C52] hover:bg-orange-600 text-white font-extrabold text-sm px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-3 transition-all transform hover:scale-105 border-2 border-white cursor-pointer"
           >
@@ -501,11 +499,19 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
         </div>
       )}
 
-      
       {isSlotModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-6 max-h-[90vh] overflow-y-auto relative">
+        <Modal
+          onClose={() => {
+            setIsSlotModalOpen(false)
+            setBookingData(null)
+          }}
+          labelledBy="slot-modal-title"
+          overlayClassName="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
+          panelClassName="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-6 max-h-[90vh] overflow-y-auto relative"
+        >
             <button
+              type="button"
+              aria-label={t('Close')}
               onClick={() => {
                 setIsSlotModalOpen(false)
                 setBookingData(null)
@@ -518,21 +524,23 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
             {!bookingData ? (
               <>
                 <div className="space-y-1">
-                  <h3 className="text-lg font-extrabold text-slate-900">{t('Select Date & Time Slot')}</h3>
-                  <p className="text-xs text-slate-500">{t('Auto-assigning top rated vendor within 10 km radius')}</p>
+                  <h2 id="slot-modal-title" className="text-lg font-extrabold text-slate-900">{t('Select Date & Time Slot')}</h2>
+                  <p className="text-xs text-slate-500">{t('Your request goes to the best-rated vendor near you. If they cannot take it, we offer it to the next one.')}</p>
                 </div>
 
-                
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-orange-500" /> {t('Delivery Address')}
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <p id="slot-address-label" className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-orange-500" aria-hidden="true" /> {t('Delivery Address')}
+                  </p>
+                  <div role="radiogroup" aria-labelledby="slot-address-label" className="grid grid-cols-2 gap-3">
                     {addresses.map((addr) => (
-                      <div
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={selectedAddress === addr.id}
                         key={addr.id}
                         onClick={() => setSelectedAddress(addr.id)}
-                        className={`p-3 rounded-xl border cursor-pointer text-xs space-y-1 transition ${
+                        className={`p-3 rounded-xl border cursor-pointer text-xs text-start space-y-1 transition ${
                           selectedAddress === addr.id
                             ? 'border-orange-500 bg-orange-50/40 ring-1 ring-orange-500'
                             : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
@@ -540,7 +548,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                       >
                         <p className="font-bold text-slate-900">{t(addr.label)}</p>
                         <p className="text-[10px] text-slate-500 line-clamp-2">{addr.line}</p>
-                      </div>
+                      </button>
                     ))}
                   </div>
                   <button
@@ -592,46 +600,57 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                   )}
                 </div>
 
-                
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4 text-orange-500" /> {t('Available Dates')}
-                  </label>
+                  <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-orange-500" aria-hidden="true" /> {t('Available Dates')}
+                  </p>
                   {loadingDates ? (
-                    <div className="flex items-center gap-2 py-3 text-xs font-semibold text-slate-400"><Loader2 className="h-4 w-4 animate-spin text-orange-500" /> {t("Checking availability...")}</div>
+                    <div role="status" className="flex items-center gap-2 py-3 text-xs font-semibold text-slate-400"><Loader2 className="h-4 w-4 animate-spin text-orange-500" /> {t("Checking availability...")}</div>
                   ) : (
-                    <div className="flex gap-2 overflow-x-auto pb-3 pt-1 scrollbar-thin">
-                      {availableDates.map((item) => {
-                        const d = new Date(item.date)
-                        const isSelected = selectedDate === item.date
-                        return (
-                          <button
-                            key={item.date}
-                            disabled={false}
-                            onClick={() => handleDateSelect(item.date)}
-                            className={`min-w-17 h-17 shrink-0 rounded-2xl flex flex-col items-center justify-center border text-xs transition cursor-pointer relative ${
-                              isSelected
-                                ? 'bg-[#3A3E59] text-white border-[#3A3E59] shadow-md scale-105'
-                                : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
-                            }`}
-                          >
-                            <span className="text-[10px] font-medium">{d.toLocaleDateString(language === 'ur' ? 'ur-PK' : 'en-US', { weekday: 'short' })}</span>
-                            <span className="text-base font-extrabold">{d.getDate()}</span>
-                            {item.available && (
-                              <span className="text-[9px] text-emerald-500 font-semibold">{item.vendor_count} {t("free")}</span>
-                            )}
-                          </button>
-                        )
-                      })}
-                    </div>
+                    <>
+                      <div className="flex gap-2 overflow-x-auto pb-3 pt-1 scrollbar-thin">
+                        {availableDates.map((item) => {
+                          const d = new Date(`${item.date}T00:00:00`)
+                          const isSelected = selectedDate === item.date
+                          return (
+                            <button
+                              type="button"
+                              key={item.date}
+                              aria-pressed={isSelected}
+                              onClick={() => handleDateSelect(item.date)}
+                              className={`min-w-17 h-17 shrink-0 rounded-2xl flex flex-col items-center justify-center border text-xs transition cursor-pointer relative ${
+                                isSelected
+                                  ? 'bg-[#3A3E59] text-white border-[#3A3E59] shadow-md scale-105'
+                                  : item.available
+                                    ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
+                                    : 'bg-white hover:bg-slate-50 border-dashed border-slate-300 text-slate-400'
+                              }`}
+                            >
+                              <span className="text-[10px] font-medium">{d.toLocaleDateString(language === 'ur' ? 'ur-PK' : 'en-US', { weekday: 'short' })}</span>
+                              <span className="text-base font-extrabold">{d.getDate()}</span>
+                              {item.available && (
+                                <span className={`text-[9px] font-semibold ${isSelected ? 'text-emerald-300' : 'text-emerald-600'}`}>{item.vendor_count} {t("free")}</span>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {availableDates.length > 0 && !availableDates.some((item) => item.available) && (
+                        <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                          {t('No vendor is free near this address yet. You can still place the request - we keep searching and will notify you.')}
+                        </p>
+                      )}
+                      {availabilityError && (
+                        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(availabilityError)}</p>
+                      )}
+                    </>
                   )}
                 </div>
 
-                
                 <div className="space-y-2 pt-1">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-orange-500" /> {t('Time Slots')}
-                  </label>
+                  <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-orange-500" aria-hidden="true" /> {t('Time Slots')}
+                  </p>
                   {loadingSlots ? (
                     <div className="flex items-center gap-2 py-3 text-xs font-semibold text-slate-400"><Loader2 className="h-4 w-4 animate-spin text-orange-500" /> {t("Loading one-hour slots...")}</div>
                   ) : (
@@ -645,15 +664,20 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                           && slotHour * 60 + slotMinute <= now.getHours() * 60 + now.getMinutes()
                         return (
                           <button
+                            type="button"
                             key={idx}
                             disabled={isPastToday}
+                            aria-pressed={isSelected}
+                            title={!slot.available && !isPastToday ? t('No vendor is free in this slot yet - we will keep searching') : undefined}
                             onClick={() => setSelectedSlot(slot)}
                             className={`py-2.5 px-2 rounded-xl border text-[11px] font-bold transition flex flex-col items-center justify-center cursor-pointer ${
                               isSelected
                                 ? 'bg-[#EE6C52] text-white border-[#EE6C52] shadow-sm'
-                                : !isPastToday
+                                : isPastToday
+                                ? 'bg-slate-100 border-slate-100 text-slate-300 cursor-not-allowed opacity-50'
+                                : slot.available
                                 ? 'bg-white border-slate-200 text-slate-700 hover:border-orange-500 hover:bg-orange-50/20'
-                                : 'bg-slate-100 border-slate-100 text-slate-300 cursor-not-allowed opacity-50'
+                                : 'bg-white border-dashed border-slate-300 text-slate-400 hover:border-orange-400'
                             }`}
                           >
                             <span>{formatSlotLabel(slot.start)} - {formatSlotLabel(slot.end)}</span>
@@ -664,9 +688,16 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                   )}
                 </div>
 
-                {bookingError && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(bookingError)}</p>}
+                {selectedSlot && slots.find((slot) => slot.start === selectedSlot.start && !slot.available) && (
+                  <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                    {t('No vendor is free in this slot yet - we will keep searching')}
+                  </p>
+                )}
+
+                {bookingError && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(bookingError)}</p>}
 
                 <button
+                  type="button"
                   disabled={!selectedDate || !selectedSlot || isSubmitting}
                   onClick={() => void handleConfirmBooking()}
                   className="w-full bg-[#EE6C52] hover:bg-orange-600 disabled:bg-slate-300 text-white font-extrabold text-sm py-3.5 rounded-xl transition shadow-md mt-4 cursor-pointer"
@@ -675,14 +706,13 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                 </button>
               </>
             ) : (
-              
               <div className="py-4 space-y-5">
                 <div className="text-center space-y-1">
                   <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
-                  <h3 className="text-xl font-extrabold text-slate-900">{t('Booking Confirmed!')}</h3>
-                  <p className="text-xs text-slate-500">{t('Our team is reviewing your request and will assign a vendor shortly')}</p>
+                  <h2 id="slot-modal-title" className="text-xl font-extrabold text-slate-900">{t('Request received!')}</h2>
+                  <p className="text-xs text-slate-500">{t('The vendor has to accept it before the booking is confirmed. We will notify you.')}</p>
                 </div>
 
                 {bookingData.vendor ? (
@@ -692,19 +722,18 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                       <UserCheck className="w-6 h-6" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-extrabold text-slate-900 truncate">
+                      <p className="text-sm font-extrabold text-slate-900 truncate">
                         {bookingData.vendor.business_name}
-                      </h4>
-                      <p className="text-xs text-slate-500 truncate">
-                        {bookingData.vendor.first_name} {bookingData.vendor.last_name}
                       </p>
+                      <p className="text-xs text-slate-500">{t('Waiting for this vendor to accept')}</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-200/80 text-center">
+                  {/* The vendor's phone number stays hidden until they accept the job. */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/80 text-center">
                     <div className="bg-white p-2 rounded-xl border border-slate-100">
                       <div className="flex items-center justify-center gap-1 text-amber-500 font-extrabold text-xs">
-                        <Star className="w-3.5 h-3.5 fill-amber-400" />
+                        <Star className="w-3.5 h-3.5 fill-amber-400" aria-hidden="true" />
                         {bookingData.vendor.average_rating}
                       </div>
                       <p className="text-[10px] text-slate-400 mt-0.5">{t("Rating")}</p>
@@ -712,16 +741,9 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
 
                     <div className="bg-white p-2 rounded-xl border border-slate-100">
                       <div className="flex items-center justify-center gap-1 text-slate-700 font-extrabold text-xs">
-                        <Navigation className="w-3.5 h-3.5 text-blue-500" />
+                        <Navigation className="w-3.5 h-3.5 text-blue-500" aria-hidden="true" />
                         {bookingData.vendor.distance_km} {t("km")}</div>
                       <p className="text-[10px] text-slate-400 mt-0.5">{t("Distance")}</p>
-                    </div>
-
-                    <div className="bg-white p-2 rounded-xl border border-slate-100">
-                      <div className="flex items-center justify-center gap-1 text-slate-700 font-extrabold text-xs">
-                        <Phone className="w-3.5 h-3.5 text-emerald-500" />
-                        {t("Call")}</div>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{bookingData.vendor.contact_number}</p>
                     </div>
                   </div>
                 </div>
@@ -735,6 +757,7 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                 )}
 
                 <button
+                  type="button"
                   onClick={() => {
                     setBookingData(null)
                     setIsSlotModalOpen(false)
@@ -745,17 +768,21 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
                   {t("Close & Done")}</button>
               </div>
             )}
-          </div>
-        </div>
+        </Modal>
       )}
       {showAuthPrompt && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl">
+        <Modal
+          onClose={() => setShowAuthPrompt(false)}
+          labelledBy="auth-prompt-title"
+          overlayClassName="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
+          panelClassName="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl"
+        >
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600"><UserCheck className="h-6 w-6" /></div>
-            <h3 className="text-lg font-extrabold text-slate-900">{t("Login or create an account")}</h3>
-            <p className="mt-2 text-xs leading-relaxed text-slate-500">{t("Please login or sign up before confirming your service request. Your account will be saved securely in our database.")}</p>
+            <h2 id="auth-prompt-title" className="text-lg font-extrabold text-slate-900">{t("Login or create an account")}</h2>
+            <p className="mt-2 text-xs leading-relaxed text-slate-500">{t("Please sign in or create an account to send your request. We keep your selected services and time, so you can pick up right where you left off.")}</p>
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
+                type="button"
                 onClick={() => {
                   saveBookingDraftForLogin()
                   setShowAuthPrompt(false)
@@ -765,10 +792,9 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
               >
                 {t('Login / Signup')}
               </button>
-              <button onClick={() => setShowAuthPrompt(false)} className="rounded-xl border border-slate-200 px-3 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50">{t('Go back')}</button>
+              <button type="button" onClick={() => setShowAuthPrompt(false)} className="rounded-xl border border-slate-200 px-3 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50">{t('Go back')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
       <PublicFooter />
     </div>

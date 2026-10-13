@@ -21,7 +21,7 @@ export default function AboutUsPage() {
       <BreadcrumbBar />
 
       
-      <main>
+      <div>
         
         
         <section className="site-container mx-auto px-6 py-12 md:py-[100px]">
@@ -48,11 +48,7 @@ export default function AboutUsPage() {
 
             <div className="md:col-span-6">
               <div className="relative rounded-xl overflow-hidden">
-                <img
-                  src="/assets/about-us/about-us-hero.png"
-                  alt={t("Technician helping customer")}
-                  className="w-full h-64 sm:h-80 lg:h-[500px] object-cover"
-                />
+                <Image src="/assets/about-us/about-us-hero.png" alt={t("Technician helping customer")} width={1200} height={1000} priority sizes="(min-width: 768px) 50vw, 100vw" className="w-full h-64 sm:h-80 lg:h-[500px] object-cover" />
               </div>
             </div>
 
@@ -102,7 +98,7 @@ export default function AboutUsPage() {
             ].map((value, idx) => {
               return (
                 <div key={idx} className="bg-white rounded-xl p-6 shadow-[0_2px_12px_rgba(45,51,74,0.06)] space-y-3 hover:shadow-md transition">
-                  <img src="/assets/about-us/icons/value-checkmark-icon.png" alt="" aria-hidden="true" className="w-12 h-12" />
+                  <Image src="/assets/about-us/icons/value-checkmark-icon.png" alt="" aria-hidden="true" width={48} height={48} className="w-12 h-12" />
                   <h3 className="text-lg md:text-xl font-bold text-[#2D334A] leading-snug">{t(value.title)}</h3>
                   <p className="text-slate-600 leading-relaxed text-sm">{t(value.desc)}</p>
                 </div>
@@ -193,11 +189,7 @@ export default function AboutUsPage() {
             ].map((tech) => (
               <div key={tech.id} className="bg-white rounded-xl shadow-sm space-y-4 p-3 pb-6">
                 <div className="relative aspect-399/420 w-full bg-white rounded-lg overflow-hidden">
-                  <img
-                    src={tech.img}
-                    alt={t(tech.name)}
-                    className="w-full h-full object-cover"
-                  />
+                  <Image src={tech.img} alt={t(tech.name)} fill sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" className="object-cover" />
                 </div>
                 <div className="px-5 space-y-1.5">
                   <h3 className="fs-h4 font-bold text-slate-900">{t(tech.name)}</h3>
@@ -233,7 +225,7 @@ export default function AboutUsPage() {
           </div>
         </section>
 
-      </main>
+      </div>
 
       
       <PublicFooter />

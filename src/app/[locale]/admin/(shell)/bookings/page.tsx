@@ -1,11 +1,14 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from '@/i18n/navigation'
 import { Eye, Wrench } from 'lucide-react'
 import {
   API_BASE,
+  bookingServiceLabel,
   fetchAdminBookings,
+  formatSlotLabel,
   getCurrentUser,
   type AdminBooking,
 } from '@/app/lib/booking-api'
@@ -38,6 +41,9 @@ function bucketForStatus(status: string): FilterKey {
   if (status === 'rejected' || status === 'cancelled') return 'cancelled'
   return 'active'
 }
+
+const statusText = (status: string) => status.replace(/_/g, ' ')
+const slotText = (booking: AdminBooking) => `${formatSlotLabel(booking.slot_start)} - ${formatSlotLabel(booking.slot_end)}`
 
 function paymentInfo(booking: AdminBooking): { label: string; className: string } {
   if (booking.payment_received_at) return { label: 'Paid', className: 'bg-emerald-100 text-emerald-700' }
@@ -114,7 +120,7 @@ export default function AdminBookingsPage() {
         b.id.toLowerCase().includes(q) ||
         b.customer_name.toLowerCase().includes(q) ||
         (b.vendor_name || '').toLowerCase().includes(q) ||
-        b.service_name.toLowerCase().includes(q) ||
+        bookingServiceLabel(b).toLowerCase().includes(q) ||
         (b.city || '').toLowerCase().includes(q)
       )
     })
@@ -184,11 +190,11 @@ export default function AdminBookingsPage() {
                     <span className="font-semibold text-amber-600">{t('Needs vendor')}</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-slate-500">{booking.service_name}</td>
+                <td className="px-4 py-3 text-slate-500">{bookingServiceLabel(booking)}</td>
                 <td className="px-4 py-3 text-slate-500">{booking.city || '—'}</td>
                 <td className="px-4 py-3 text-slate-500">
                   {booking.scheduled_date}
-                  <span className="text-slate-400"> · {booking.slot_start}–{booking.slot_end}</span>
+                  <span className="text-slate-400"> · {slotText(booking)}</span>
                 </td>
                 <td className="px-4 py-3 text-slate-500">{booking.total_amount != null ? `${t('Rs.')} ${booking.total_amount.toLocaleString()}` : '—'}</td>
                 <td className="px-4 py-3">
@@ -197,7 +203,7 @@ export default function AdminBookingsPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <StatusBadge label={booking.status.replace('_', ' ')} tone={bookingStatusTone(booking.status)} />
+                  <StatusBadge label={statusText(booking.status)} tone={bookingStatusTone(booking.status)} />
                   {booking.admin_hold && (
                     <span className="ms-1.5 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{t('On hold')}</span>
                   )}
@@ -235,10 +241,11 @@ export default function AdminBookingsPage() {
 
       {selectedBooking && (
         <DetailModal
-          title={selectedBooking.service_name}
+          title={bookingServiceLabel(selectedBooking)}
           subtitle={`${selectedBooking.customer_name} → ${selectedBooking.vendor_contact_name || selectedBooking.vendor_name || t('Unassigned')}`}
           onClose={() => setSelectedBooking(null)}
           fields={[
+            { label: 'Booking ID', value: <span dir="ltr" className="break-all font-mono text-[11px]">{selectedBooking.id}</span> },
             { label: 'Customer', value: selectedBooking.customer_name },
             {
               label: 'Vendor',
@@ -246,9 +253,9 @@ export default function AdminBookingsPage() {
                 ? `${selectedBooking.vendor_contact_name || selectedBooking.vendor_name}${selectedBooking.vendor_contact_name ? ` (${selectedBooking.vendor_name})` : ''}`
                 : t('Needs vendor'),
             },
-            { label: 'Service', value: selectedBooking.service_name },
+            { label: 'Service', value: bookingServiceLabel(selectedBooking) },
             { label: 'City', value: [selectedBooking.city, selectedBooking.area].filter(Boolean).join(', ') || '—' },
-            { label: 'Scheduled', value: `${selectedBooking.scheduled_date} · ${selectedBooking.slot_start}–${selectedBooking.slot_end}` },
+            { label: 'Scheduled', value: `${selectedBooking.scheduled_date} · ${slotText(selectedBooking)}` },
             { label: 'Amount', value: selectedBooking.total_amount != null ? `${t('Rs.')} ${selectedBooking.total_amount.toLocaleString()}` : '—' },
             {
               label: 'Payment',
@@ -258,7 +265,20 @@ export default function AdminBookingsPage() {
                 </span>
               ),
             },
-            { label: 'Status', value: <StatusBadge label={selectedBooking.status.replace('_', ' ')} tone={bookingStatusTone(selectedBooking.status)} /> },
+            { label: 'Status', value: <StatusBadge label={statusText(selectedBooking.status)} tone={bookingStatusTone(selectedBooking.status)} /> },
+            ...(selectedBooking.admin_hold ? [{ label: 'Auto-retry', value: t('On hold') }] : []),
+            ...(selectedBooking.vendor_miss_count > 0
+              ? [{ label: 'Vendors that did not respond', value: String(selectedBooking.vendor_miss_count) }]
+              : []),
+            ...(selectedBooking.paused_for_customer_decision
+              ? [{ label: 'Search', value: t('Paused — waiting for customer') }]
+              : []),
+            ...(selectedBooking.cannot_start_reason
+              ? [{ label: 'Vendor could not start', value: selectedBooking.cannot_start_reason }]
+              : []),
+            ...(selectedBooking.rating != null
+              ? [{ label: 'Customer rating', value: `${selectedBooking.rating} / 5` }]
+              : []),
             ...(selectedBooking.status === 'pending' && selectedBooking.vendor_response_deadline
               ? [{ label: 'Vendor response', value: <ResponseCountdown deadline={selectedBooking.vendor_response_deadline} className="text-orange-600" /> }]
               : []),
@@ -270,7 +290,7 @@ export default function AdminBookingsPage() {
                     <div className="flex flex-wrap justify-end gap-1.5">
                       {selectedBooking.photos.map((url) => (
                         <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
-                          <img src={`${API_BASE}${url}`} alt={t('Completion')} className="h-12 w-12 rounded-lg border border-slate-200 object-cover" />
+                          <Image src={`${API_BASE}${url}`} alt={t('Completion')} width={48} height={48} unoptimized className="h-12 w-12 rounded-lg border border-slate-200 object-cover" />
                         </a>
                       ))}
                     </div>

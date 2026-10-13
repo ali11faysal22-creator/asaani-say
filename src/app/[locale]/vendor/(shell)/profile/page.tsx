@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import React, { useState, useRef, useEffect } from 'react'
 import { Link } from '@/i18n/navigation'
 import { useRouter } from '@/i18n/navigation'
@@ -276,11 +277,7 @@ export default function VendorProfilePage() {
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row items-center gap-6 justify-between">
             <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-start">
               <div className="relative">
-                <img
-                  src={avatar}
-                  alt={t('Profile Avatar')}
-                  className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md ring-2 ring-slate-100"
-                />
+                <Image src={avatar} alt={t('Profile Avatar')} width={80} height={80} unoptimized className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md ring-2 ring-slate-100" />
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}

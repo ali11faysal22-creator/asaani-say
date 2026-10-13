@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from '@/i18n/navigation'
 import { X } from 'lucide-react'
-import { cancelCustomerBooking, fetchCustomerBookings, getStoredAuth, resumeCustomerBookingSearch, type BookingResult } from '@/app/lib/booking-api'
+import { bookingServiceLabel, cancelCustomerBooking, fetchCustomerBookings, getStoredAuth, resumeCustomerBookingSearch, type BookingResult } from '@/app/lib/booking-api'
+import { startPolling } from '@/app/lib/polling'
 import { BookingRescheduleForm } from './booking-reschedule-form'
+import Modal from '@/components/Modal'
 import { useLanguage } from '@/app/lib/i18n'
 
 const DISMISSED_KEY = 'asaani_dismissed_decision_prompts'
@@ -43,7 +45,7 @@ export default function CustomerDecisionPrompt() {
       try {
         const bookings = await fetchCustomerBookings(auth.profile_id)
         const dismissed = getDismissed()
-        // Only the newest stalled order is ever offered — older ones the customer already moved
+        // Only the newest stalled order is ever offered - older ones the customer already moved
         // past (or abandoned) shouldn't chain one popup after another once this one is handled.
         const stalled = bookings
           .filter((item) => item.paused_for_customer_decision && item.status === 'unassigned')
@@ -54,11 +56,10 @@ export default function CustomerDecisionPrompt() {
       } catch {
       }
     }
-    void load()
-    const timer = window.setInterval(() => void load(), 10000)
+    const stop = startPolling(load, 10000)
     return () => {
       active = false
-      window.clearInterval(timer)
+      stop()
     }
   }, [pathname])
 
@@ -99,8 +100,12 @@ export default function CustomerDecisionPrompt() {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true">
-      <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+    <Modal
+      onClose={close}
+      labelledBy="decision-prompt-title"
+      overlayClassName="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 p-4"
+      panelClassName="relative w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+    >
         <button
           type="button"
           onClick={close}
@@ -113,11 +118,11 @@ export default function CustomerDecisionPrompt() {
         {mode === 'prompt' ? (
           <>
             <p className="text-[11px] font-bold uppercase tracking-wide text-orange-500">{t("Need your input")}</p>
-            <p className="mt-1 text-sm font-extrabold text-slate-900">{t(booking.service_name)}</p>
+            <h2 id="decision-prompt-title" className="mt-1 text-sm font-extrabold text-slate-900">{bookingServiceLabel(booking, t)}</h2>
             <p className="mt-2 text-xs leading-relaxed text-slate-500">
-              {booking.vendor_miss_count} {t("nearby vendors haven't responded, so we've paused the search. You can resume searching, pick a different date/time, or cancel the order.")}</p>
+              {t("No vendor has accepted this order yet, so we paused the search.")} {t("You can resume searching, pick a different date/time, or cancel.")}</p>
 
-            {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
+            {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
 
             <div className="mt-4 space-y-2">
               <button
@@ -145,7 +150,7 @@ export default function CustomerDecisionPrompt() {
         ) : mode === 'reschedule' ? (
           <>
             <p className="text-[11px] font-bold uppercase tracking-wide text-orange-500">{t("Pick a different time")}</p>
-            <p className="mt-1 text-sm font-extrabold text-slate-900">{t(booking.service_name)}</p>
+            <h2 id="decision-prompt-title" className="mt-1 text-sm font-extrabold text-slate-900">{bookingServiceLabel(booking, t)}</h2>
 
             <div className="mt-4">
               <BookingRescheduleForm booking={booking} onRescheduled={() => { setBooking(null); setMode('prompt') }} />
@@ -161,10 +166,10 @@ export default function CustomerDecisionPrompt() {
         ) : (
           <>
             <p className="text-[11px] font-bold uppercase tracking-wide text-red-500">{t("Cancel this order?")}</p>
-            <p className="mt-1 text-sm font-extrabold text-slate-900">{t(booking.service_name)}</p>
+            <h2 id="decision-prompt-title" className="mt-1 text-sm font-extrabold text-slate-900">{bookingServiceLabel(booking, t)}</h2>
             <p className="mt-2 text-xs leading-relaxed text-slate-500">{t("This cannot be undone — you'll need to place a new order if you change your mind.")}</p>
 
-            {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
+            {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
 
             <div className="mt-4 space-y-2">
               <button
@@ -185,7 +190,6 @@ export default function CustomerDecisionPrompt() {
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   )
 }

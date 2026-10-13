@@ -23,6 +23,7 @@ import { Pagination } from '../../components/pagination'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
 import { useLanguage } from '../../../lib/i18n'
 import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError'
+import ConfirmDialog from '@/components/ConfirmDialog'
 
 const PAGE_SIZE = 10
 
@@ -64,6 +65,8 @@ export default function AdminServicesPage() {
 
   const [editingCategory, setEditingCategory] = useState<CatalogCategory | null>(null)
   const [categoryForm, setCategoryForm] = useState<CategoryFormState>(EMPTY_CATEGORY_FORM)
+  const [pendingDelete, setPendingDelete] = useState<{ category: CatalogCategory; service?: CatalogService } | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [addingCategory, setAddingCategory] = useState(false)
   const [savingCategory, setSavingCategory] = useState(false)
 
@@ -199,15 +202,22 @@ export default function AdminServicesPage() {
     }
   }
 
-  const removeCategory = async (category: CatalogCategory) => {
-    if (!window.confirm(`${t('Delete')} "${category.display_name}"? ${t('This cannot be undone.')}`)) return
+  const removeCategory = (category: CatalogCategory) => {
     setError('')
+    setPendingDelete({ category })
+  }
+
+  const performRemoveCategory = async (category: CatalogCategory) => {
+    setDeleting(true)
     setFormErrors({})
     try {
       await deleteAdminCategory(category.id)
       setCategories((prev) => prev.filter((c) => c.id !== category.id))
+      setPendingDelete(null)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not delete category.')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -283,17 +293,24 @@ export default function AdminServicesPage() {
     }
   }
 
-  const removeService = async (category: CatalogCategory, service: CatalogService) => {
-    if (!window.confirm(`${t('Delete')} "${service.name}"? ${t('This cannot be undone.')}`)) return
+  const removeService = (category: CatalogCategory, service: CatalogService) => {
     setError('')
+    setPendingDelete({ category, service })
+  }
+
+  const performRemoveService = async (category: CatalogCategory, service: CatalogService) => {
+    setDeleting(true)
     setFormErrors({})
     try {
       await deleteAdminService(service.id)
       setCategories((prev) =>
         prev.map((c) => (c.id === category.id ? { ...c, services: c.services.filter((s) => s.id !== service.id) } : c))
       )
+      setPendingDelete(null)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not delete service.')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -593,6 +610,24 @@ export default function AdminServicesPage() {
               </button>
             </div>
           }
+        />
+      )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title={`${t('Delete')} "${pendingDelete.service ? pendingDelete.service.name : pendingDelete.category.display_name}"?`}
+          message={pendingDelete.service
+            ? t('This service will disappear from the customer catalog. This cannot be undone.')
+            : t('The category and all of its services will disappear from the customer catalog. This cannot be undone.')}
+          tone="danger"
+          confirmLabel={t('Delete')}
+          busy={deleting}
+          busyLabel={t('Deleting…')}
+          error={error || undefined}
+          onConfirm={() => void (pendingDelete.service
+            ? performRemoveService(pendingDelete.category, pendingDelete.service)
+            : performRemoveCategory(pendingDelete.category))}
+          onCancel={() => { setPendingDelete(null); setError('') }}
         />
       )}
     </div>

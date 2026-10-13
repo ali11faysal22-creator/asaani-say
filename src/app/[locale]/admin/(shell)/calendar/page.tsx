@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from '@/i18n/navigation'
 import { ChevronLeft, ChevronRight, Eye, MapPin, Search, Wrench } from 'lucide-react'
@@ -328,7 +329,7 @@ export default function AdminCalendarPage() {
                     <div className="flex flex-wrap justify-end gap-1.5">
                       {selectedBooking.photos.map((url) => (
                         <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
-                          <img src={`${API_BASE}${url}`} alt={t('Completion')} className="h-12 w-12 rounded-lg border border-slate-200 object-cover" />
+                          <Image src={`${API_BASE}${url}`} alt={t('Completion')} width={48} height={48} unoptimized className="h-12 w-12 rounded-lg border border-slate-200 object-cover" />
                         </a>
                       ))}
                     </div>

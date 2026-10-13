@@ -600,7 +600,10 @@ export default function CartAndCheckoutPage() {
 
   const [checkoutErrors, setCheckoutErrors] = useState<Record<string, string>>({})
 
+  const [placingOrder, setPlacingOrder] = useState(false)
+
   const handlePlaceOrder = async (requestedVendorId?: string) => {
+    if (placingOrder) return
     setCheckoutErrors({})
     const problems: Record<string, string> = {}
     if (cartItems.length === 0) problems.general = 'Your cart is empty! Please add some services to your cart first..'
@@ -616,10 +619,12 @@ export default function CartAndCheckoutPage() {
       return
     }
 
+    setPlacingOrder(true)
     try {
       const auth = await getCurrentUser('customer')
       if (auth.role !== 'customer' || !auth.profile_id) {
         setCheckoutErrors({ general: 'Please sign in as a customer before placing an order.' })
+        setPlacingOrder(false)
         return
       }
 
@@ -628,6 +633,7 @@ export default function CartAndCheckoutPage() {
 
       if (!billingDetails.address.trim()) {
         setCheckoutErrors({ address: 'Address is required.' })
+        setPlacingOrder(false)
         return
       }
 
@@ -699,6 +705,7 @@ export default function CartAndCheckoutPage() {
       setCheckoutErrors(Object.keys(apiFieldErrors).length
         ? { ...apiFieldErrors, general: 'Please correct the highlighted fields.' }
         : { general: messageOf(error, 'Unable to place booking') })
+      setPlacingOrder(false)
       window.setTimeout(() => document.querySelector('main [role="alert"], [role="alert"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
     }
   }
@@ -814,7 +821,7 @@ export default function CartAndCheckoutPage() {
             
             <div className="space-y-2">
               <h3 className="text-xl font-extrabold text-slate-900">
-                {t("Order Confirmed!")}</h3>
+                {t("Request received!")}</h3>
               <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
                 {t("Thanks for choosing")}{' '}<span className="font-extrabold text-[#EE6C52]">{t("Asaani Say")}</span>{t("! Your order")}{' '}<span className="font-extrabold text-slate-900">#{confirmedOrderInfo?.orderId}</span> {t("for")}{' '}<span className="font-extrabold text-slate-900">{confirmedOrderInfo?.serviceName}</span> {t("is confirmed.")}</p>
             </div>
@@ -822,7 +829,7 @@ export default function CartAndCheckoutPage() {
             
             <div className="pt-3 border-t border-slate-100 flex items-center justify-center gap-2 text-xs font-bold text-slate-500">
               <Loader2 className="w-4 h-4 text-[#EE6C52] animate-spin" />
-              <span>{t("Redirecting to receipt in 5 seconds...")}</span>
+              <span>{t("Taking you to your order summary…")}</span>
             </div>
 
           </div>
@@ -853,11 +860,7 @@ export default function CartAndCheckoutPage() {
 
         <div className="flex items-center gap-2">
           <LanguageSwitcher compact />
-        <Link href="/login">
-          <button className="hidden md:inline-flex items-center gap-2 bg-[#3A3E59] hover:bg-[#2C2F45] text-white px-5 py-2.5 rounded-lg text-sm font-medium transition shadow-xs cursor-pointer">
-            <span>{t("Get Started")}</span>
-          </button>
-        </Link>
+        <Link href="/login" className="hidden md:inline-flex items-center gap-2 bg-[#3A3E59] hover:bg-[#2C2F45] text-white px-5 py-2.5 rounded-lg text-sm font-medium transition shadow-xs"><span>{t("Get Started")}</span></Link>
         </div>
       </header>
       <BreadcrumbBar />
@@ -873,7 +876,7 @@ export default function CartAndCheckoutPage() {
       </section>
 
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           
@@ -904,10 +907,7 @@ export default function CartAndCheckoutPage() {
                   </div>
                   <p className="text-xs text-slate-500 font-medium">
                    {t("Your cart is empty. Explore our Services to get started.")}</p>
-                  <Link href="/services">
-                    <button className="mt-2 bg-[#EE6C52] hover:bg-orange-600 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition cursor-pointer">
-                      {t("Browse Services")}</button>
-                  </Link>
+                  <Link href="/services" className="inline-block text-center mt-2 bg-[#EE6C52] hover:bg-orange-600 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition">{t("Browse Services")}</Link>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1233,16 +1233,15 @@ export default function CartAndCheckoutPage() {
 
               
               <div className="space-y-2.5 pt-2">
-                <button 
+                <button
+                  type="button"
+                  disabled={placingOrder}
                   onClick={() => { void handlePlaceOrder() }}
-                  className="w-full bg-[#EE6C52] hover:bg-orange-600 text-white font-extrabold text-xs py-3.5 rounded-xl transition shadow-xs cursor-pointer"
+                  className="w-full bg-[#EE6C52] hover:bg-orange-600 disabled:opacity-60 text-white font-extrabold text-xs py-3.5 rounded-xl transition shadow-xs cursor-pointer"
                 >
-                  {t("Continue")}</button>
+                  {placingOrder ? t("Placing your request…") : t("Continue")}</button>
 
-                <Link href="/services" className="block w-full">
-                  <button className="w-full bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs py-3.5 rounded-xl border border-slate-300 transition cursor-pointer">
-                    {t("Add More Services")}</button>
-                </Link>
+                <Link href="/services" className="block w-full bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs py-3.5 rounded-xl border border-slate-300 transition">{t("Add More Services")}</Link>
               </div>
 
             </div>
@@ -1250,7 +1249,7 @@ export default function CartAndCheckoutPage() {
           </div>
 
         </div>
-      </main>
+      </div>
 
       
       <PublicFooter />

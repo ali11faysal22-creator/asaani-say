@@ -93,7 +93,7 @@ function renderStars(rating: number): React.ReactNode {
     name: 'Andrea D. Elliott',
     problem: 'Problem : Dripping Faucets',
     rating: 4.5,
-    text: 'Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.',
+    text: 'Super professional service from Asaani Say. Everything was on time and the problem was fixed completely. Reliable and affordable service with a friendly support team.',
     image: '/assets/home/customer-fixing-bathroom-faucet.png',
   },
   small: [
@@ -101,14 +101,14 @@ function renderStars(rating: number): React.ReactNode {
       name: 'Jerry T. Johnson',
       problem: 'Problem : Running Toilets',
       rating: 4.5,
-      text: 'Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.',
+      text: 'Super professional service from Asaani Say. Everything was on time and the problem was fixed completely. Reliable and affordable service with a friendly support team.',
       image: '/assets/home/customer-testimonial-jerry-johnson.jpg',
     },
     {
       name: 'Lisa C. Packer',
       problem: 'Problem : Water Heater Problems',
       rating: 4.5,
-      text: 'Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.',
+      text: 'Super professional service from Asaani Say. Everything was on time and the problem was fixed completely. Reliable and affordable service with a friendly support team.',
       image: '/assets/home/customer-testimonial-lisa-packer.jpg',
     },
   ],
@@ -227,7 +227,7 @@ export default function HeroSection() {
                {
                icon: iconImage('home-inspection-service-icon.png', 56),
                 title: 'Home Inspection',
-                desc: 'Are You Having Issues With Your Faucets And Sinks? Common Problems Can Include Leaky Faucets, Low Water Pressure, Clogged Drains, Hot Water Issues, Loose Faucet Handles, And More.',
+                desc: 'A Thorough Check Of Plumbing, Electrical Fittings And Structure By Trained Inspectors, So Problems Are Found Before They Get Expensive.',
                 href: '/services/home-inspection',
              },
              {
@@ -251,14 +251,14 @@ export default function HeroSection() {
      {
       icon: iconImage('cleaning-service-icon.png', 56),
       title: 'Cleaning Services',
-      desc: 'Are You Having Issues With Your Faucets And Sinks? Common Problems Can Include Leaky Faucets, Low Water Pressure, Clogged Drains, Hot Water Issues, Loose Faucet Handles, And More.',
+      desc: 'Deep Cleaning For Kitchens, Bathrooms And Living Spaces, Done By Trained And Verified Professionals At Your Doorstep.',
       href: '/services',
      },
 
      {
       icon: iconImage('solar-panel-installation-service-icon.png', 56),
       title: 'Solar Panel Installation',
-      desc: 'Servicely Offers Flexible Solutions For Installation, Removal And Repair Of Your AC Units At Competitive Prices In All Pakistani Cities.',
+      desc: 'Asaani Say Offers Flexible Solutions For Installation, Removal And Repair Of Your Solar Panels At Competitive Prices In All Pakistani Cities.',
       href: '/services',
      },
   ]

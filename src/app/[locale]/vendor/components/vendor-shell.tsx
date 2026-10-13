@@ -19,9 +19,9 @@ export default function VendorShell({ children }: { children: ReactNode }) {
       <div className="flex-1 min-w-0 flex flex-col">
         <VendorTopbar onMenuClick={() => setMobileNavOpen(true)} />
 
-        <main className="min-w-0 flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="min-w-0 flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className={`min-w-0 ${contentClassName || 'w-full'} space-y-6`}><Breadcrumbs />{children}</div>
-        </main>
+        </div>
       </div>
     </div>
   )

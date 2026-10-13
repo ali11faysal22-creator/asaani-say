@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { usePathname } from '@/i18n/navigation'
 import { Timer, X } from 'lucide-react'
 import { useLanguage } from '../lib/i18n'
-import { fetchCustomerBookings, getStoredAuth, type BookingResult } from '../lib/booking-api'
+import { fetchBooking, getStoredAuth, type BookingResult } from '../lib/booking-api'
+import { startPolling } from '../lib/polling'
 
 const REQUEST_TIMEOUT_SECONDS = 180
 
@@ -56,8 +57,7 @@ export default function CustomerRequestMonitor() {
       }
 
       try {
-        const bookings = await fetchCustomerBookings(auth.profile_id)
-        const current = bookings.find((item) => item.id === storedOrder.orderId) || null
+        const current = await fetchBooking(storedOrder.orderId)
         if (!active) return
         setOrder(storedOrder)
         setBooking(current)
@@ -69,8 +69,7 @@ export default function CustomerRequestMonitor() {
       }
     }
 
-    void load()
-    const refreshTimer = window.setInterval(() => void load(), 5000)
+    const stopPolling = startPolling(load, 5000)
     const storageListener = () => {
       setDismissed(false)
       void load()
@@ -80,7 +79,7 @@ export default function CustomerRequestMonitor() {
     window.addEventListener('asaani-auth-changed', storageListener)
     return () => {
       active = false
-      window.clearInterval(refreshTimer)
+      stopPolling()
       window.removeEventListener('storage', storageListener)
       window.removeEventListener('asaani-order-changed', storageListener)
       window.removeEventListener('asaani-auth-changed', storageListener)

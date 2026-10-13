@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { Link } from '@/i18n/navigation'
 import { useEffect, useState } from 'react'
 import { Bell, Check, Clock } from 'lucide-react'
@@ -138,7 +139,7 @@ export default function NotificationPopover() {
                           className="px-5 py-3.5 flex items-start gap-3.5 transition hover:bg-slate-50 group"
                         >
                           {item.visual.kind === 'avatar' ? (
-                            <img src={item.visual.src} alt="" className="w-9 h-9 rounded-full object-cover shrink-0 mt-0.5 bg-slate-100" />
+                            <Image src={item.visual.src} alt="" width={36} height={36} unoptimized className="w-9 h-9 rounded-full object-cover shrink-0 mt-0.5 bg-slate-100" />
                           ) : item.visual.kind === 'check' ? (
                             <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                               <Check className="w-4 h-4" strokeWidth={3} />

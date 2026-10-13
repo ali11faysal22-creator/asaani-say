@@ -105,7 +105,7 @@ const subTestimonials = [
     problem: 'Running Toilets',
     rating: 4.5,
     review:
-      'Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.',
+      'Super professional service from Asaani Say. Everything was on time and the problem was fixed completely. Reliable and affordable service with a friendly support team.',
     image: '/assets/services/customer-testimonial-jerry-johnson.png',
   },
 
@@ -115,7 +115,7 @@ const subTestimonials = [
     problem: 'Water Heater Problems',
     rating: 4.5,
     review:
-      'Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.',
+      'Super professional service from Asaani Say. Everything was on time and the problem was fixed completely. Reliable and affordable service with a friendly support team.',
     image: '/assets/services/customer-testimonial-lisa-packer.png',
   },
 ]
@@ -556,7 +556,7 @@ export default function ServicesPage(){
             </div>
 
             <p className="text-slate-600 leading-relaxed max-w-lg fs-p">
-              {t("Super professional service from Ploombr. Everything was on-time and totaly fixed the problem. Realible and affdorable service with friendly support team.")}</p>
+              {t("Super professional service from Asaani Say. Everything was on time and the problem was fixed completely. Reliable and affordable service with a friendly support team.")}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">

@@ -3,17 +3,9 @@
 import { useCallback } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { usePathname, useRouter } from '@/i18n/navigation'
+import { phraseKey } from './phrase-key'
 
 export type Language = 'en' | 'ur'
-
-function phraseKey(text: string): string {
-  let hash = 2166136261
-  for (let index = 0; index < text.length; index += 1) {
-    hash ^= text.charCodeAt(index)
-    hash = Math.imul(hash, 16777619)
-  }
-  return `p_${(hash >>> 0).toString(36)}`
-}
 
 function formatNotificationDate(value: string): string {
   const date = new Date(`${value}T00:00:00`)

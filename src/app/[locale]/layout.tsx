@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import "./globals.css";
 import CustomerRequestMonitor from './components/customer-request-monitor';
+import { SITE_NAME, SITE_URL, getTranslator } from './lib/seo';
 const poppins = Poppins({
   variable: "--font-poppins",
   subsets: ["latin"],
@@ -18,30 +19,19 @@ const notoNastaliqUrdu = Noto_Nastaliq_Urdu({
   weight: "400",
 })
 
-// Same hashing as phraseKey() in ./lib/i18n (which is a client module).
-function phraseKey(text: string): string {
-  let hash = 2166136261
-  for (let index = 0; index < text.length; index += 1) {
-    hash ^= text.charCodeAt(index)
-    hash = Math.imul(hash, 16777619)
-  }
-  return `p_${(hash >>> 0).toString(36)}`
-}
-
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ locale: string }>
 }): Promise<Metadata> {
   const { locale } = await params
-  const title = 'Asaani Say - Home Services'
-  const description = 'Book home services quickly and easily.'
-  if (!hasLocale(routing.locales, locale) || locale === 'en') return { title, description, other: { google: 'notranslate' } }
-  const messages = (await getMessages({ locale })) as { Common?: Record<string, string> }
-  const common = messages.Common ?? {}
+  const t = await getTranslator(hasLocale(routing.locales, locale) ? locale : routing.defaultLocale)
   return {
-    title: common[phraseKey(title)] ?? title,
-    description: common[phraseKey(description)] ?? description,
+    metadataBase: new URL(SITE_URL),
+    applicationName: SITE_NAME,
+    // Pages that set their own title get "<title> | Asaani Say"; the rest fall back to the default.
+    title: { default: t('Asaani Say - Home Services'), template: `%s | ${SITE_NAME}` },
+    description: t('Book home services quickly and easily.'),
     other: { google: 'notranslate' },
   }
 }
@@ -61,6 +51,7 @@ export default async function RootLayout({
   if (!hasLocale(routing.locales, locale)) notFound()
   setRequestLocale(locale)
   const messages = await getMessages()
+  const t = await getTranslator(locale)
 
   return (
     <html
@@ -70,9 +61,15 @@ export default async function RootLayout({
       className={`${poppins.variable} ${notoNastaliqUrdu.variable} h-full antialiased`}
     >
       <body className={`min-h-full flex flex-col ${locale === 'ur' ? notoNastaliqUrdu.className : poppins.className}`}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-[300] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[#EE6C52] focus:shadow-lg"
+        >
+          {t('Skip to main content')}
+        </a>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <CustomerRequestMonitor />
-          <main className="flex-1">{children}</main>
+          <main id="main-content" className="flex-1">{children}</main>
         </NextIntlClientProvider>
       </body>
     </html>

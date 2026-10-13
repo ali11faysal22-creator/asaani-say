@@ -1,12 +1,12 @@
+import type { Metadata } from 'next'
+import ServiceCategoryPage, { categoryMetadata } from '../../components/service-category-page'
 
+// Same page as /services/[slug]; kept as a fixed route so the URL keeps working.
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params
+  return categoryMetadata(locale, 'handyman')
+}
 
-
-
-
-
-
-'use client'
-import ServiceCategoryView from '../../components/service-category-view'
 export default function Page() {
-  return <ServiceCategoryView slug="handyman" />
+  return <ServiceCategoryPage slug="handyman" />
 }

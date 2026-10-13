@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useMemo, useState, useSyncExternalStore } from 'react'
 import { ChevronRight, Home, MoreHorizontal } from 'lucide-react'
 import { Link, usePathname } from '@/i18n/navigation'
 import { useLanguage } from '@/app/lib/i18n'
@@ -95,15 +95,14 @@ type BreadcrumbsProps = {
   className?: string
 }
 
+const subscribeNever = () => () => {}
+
 export default function Breadcrumbs({ items, labels, showHome = true, collapseAfter = 4, className = '' }: BreadcrumbsProps) {
   const { t } = useLanguage()
   const pathname = usePathname()
   const [expanded, setExpanded] = useState(false)
-  const [origin, setOrigin] = useState('')
-
-  useEffect(() => {
-    setOrigin(window.location.origin)
-  }, [])
+  // '' on the server and during hydration, the real origin afterwards - without a setState-in-effect.
+  const origin = useSyncExternalStore(subscribeNever, () => window.location.origin, () => '')
 
   const trail = useMemo<BreadcrumbItem[]>(() => {
     const derived = items ?? buildBreadcrumbs(pathname, labels)
@@ -179,7 +178,7 @@ export default function Breadcrumbs({ items, labels, showHome = true, collapseAf
           )
         })}
       </ol>
-      {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />}
+      {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />}
     </nav>
   )
 }

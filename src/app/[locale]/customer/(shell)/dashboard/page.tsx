@@ -4,7 +4,7 @@ import { Link } from '@/i18n/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from '@/i18n/navigation'
 import { Bell, CalendarClock, Check, CheckCircle2, ClipboardList, Clock3, Navigation, XCircle } from 'lucide-react'
-import { fetchCustomerBookings, fetchCustomerNotifications, formatSlotLabel, getCurrentUser, markCustomerNotificationRead, type BookingResult, type CustomerNotification } from '@/app/lib/booking-api'
+import { bookingServiceLabel, fetchCustomerBookings, fetchCustomerNotifications, formatSlotLabel, getCurrentUser, markCustomerNotificationRead, type BookingResult, type CustomerNotification } from '@/app/lib/booking-api'
 import { CHART_BLUE, STATUS_CRITICAL, STATUS_GOOD, STATUS_WARNING } from '@/app/components/charts/palette'
 import { StatTile } from '@/app/components/charts/stat-tile'
 import { StatusStackedBar } from '@/app/components/charts/status-stacked-bar'
@@ -193,7 +193,7 @@ export default function CustomerDashboardPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-[11px] text-slate-400">{t('Order #')} {order.id}</p>
-                    <p className="mt-0.5 font-extrabold text-slate-900">{t(order.service_name)}</p>
+                    <p className="mt-0.5 font-extrabold text-slate-900">{bookingServiceLabel(order, t)}</p>
                     <p className="mt-1 text-xs text-slate-500">
                       {order.date} · {formatSlotLabel(order.slot_start)} - {formatSlotLabel(order.slot_end)}
                     </p>

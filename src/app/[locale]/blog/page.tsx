@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Link } from '@/i18n/navigation'
 import Image from 'next/image';
 import CustomerNavbar from '../components/customer-navbar'
 import { BreadcrumbBar } from '@/components/Breadcrumbs';
@@ -117,7 +116,7 @@ export default function BlogPage() {
       </section>
 
       
-      <main className="site-container mx-auto px-4 sm:px-6 py-12 md:py-[70px] space-y-16 md:space-y-[72px]">
+      <div className="site-container mx-auto px-4 sm:px-6 py-12 md:py-[70px] space-y-16 md:space-y-[72px]">
         
         
         <section className="space-y-6">
@@ -129,11 +128,7 @@ export default function BlogPage() {
 
           <div className="bg-[#EDF1FC] rounded-2xl p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
             <div className="lg:col-span-7 relative h-64 sm:h-80 lg:h-auto min-h-75 rounded-xl overflow-hidden">
-              <img 
-                src={featuredPost.image} 
-                alt={t(featuredPost.title)}
-                className="w-full h-full object-cover"
-              />
+              <Image src={featuredPost.image} alt={t(featuredPost.title)} fill sizes="(min-width: 1024px) 58vw, 100vw" className="object-cover" />
             </div>
             
             <div className="lg:col-span-5 py-2 lg:pe-2 flex flex-col justify-between space-y-6">
@@ -156,11 +151,7 @@ export default function BlogPage() {
 
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
-                  <img 
-                    src={featuredPost.avatar} 
-                    alt={t(featuredPost.author)} 
-                    className="w-12 h-12 object-contain"
-                  />
+                  <Image src={featuredPost.avatar} alt={t(featuredPost.author)} width={48} height={48} className="w-12 h-12 object-contain" />
                   <div>
                     <p className="font-bold text-slate-900 fs-p">{t(featuredPost.author)}</p>
                     <p className="text-slate-400 fs-p" dir="ltr">{formatBlogDate(featuredPost.date)}</p>
@@ -191,11 +182,7 @@ export default function BlogPage() {
               >
                 <div>
                   <div className="relative h-48 lg:h-[220px] overflow-hidden rounded-lg">
-                    <img 
-                      src={article.image} 
-                      alt={t(article.title)}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    />
+                    <Image src={article.image} alt={t(article.title)} fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-cover group-hover:scale-105 transition duration-300" />
                   </div>
 
                   <div className="pt-4 px-1 space-y-3">
@@ -217,11 +204,7 @@ export default function BlogPage() {
                 </div>
 
                 <div className="px-1 pb-2 pt-3 flex items-center gap-3 border-t border-slate-100 mt-3">
-                  <img 
-                    src={article.avatar} 
-                    alt={t(article.author)} 
-                    className="w-7 h-7 rounded-full object-cover"
-                  />
+                  <Image src={article.avatar} alt={t(article.author)} width={28} height={28} className="w-7 h-7 rounded-full object-cover" />
                   <div>
                     <p className="font-bold text-slate-800 text-sm">{t(article.author)}</p>
                     <p className="text-slate-400 text-xs" dir="ltr">{formatBlogDate(article.date)}</p>
@@ -255,7 +238,7 @@ export default function BlogPage() {
           </nav>
         </section>
 
-      </main>
+      </div>
 
       
       <section className="bg-[#7E839B] text-white py-14 md:py-[80px] px-6 text-center">

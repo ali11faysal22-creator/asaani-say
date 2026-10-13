@@ -1,7 +1,8 @@
 'use client'
 
 import { X } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
+import Modal from '@/components/Modal'
 import { useLanguage } from '../../lib/i18n'
 
 export type DetailField = { label: string; value: ReactNode }
@@ -20,10 +21,14 @@ export function DetailModal({
   footer?: ReactNode
 }) {
   const { t } = useLanguage()
+  const titleId = useId()
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4" role="dialog" aria-modal="true">
-      <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
+    <Modal
+      onClose={onClose}
+      labelledBy={titleId}
+      overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4"
+      panelClassName="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
+    >
         <button
           type="button"
           onClick={onClose}
@@ -34,23 +39,22 @@ export function DetailModal({
         </button>
 
         <div className="pe-8">
-          <h2 className="text-base font-extrabold text-slate-900">{title}</h2>
+          <h2 id={titleId} className="text-base font-extrabold text-slate-900">{title}</h2>
           {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
         </div>
 
         {fields.length > 0 && (
-          <div className="mt-5 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs">
+          <dl className="mt-5 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs">
             {fields.map((field) => (
               <div key={field.label} className="flex items-start justify-between gap-4">
-                <span className="text-slate-500 shrink-0">{t(field.label)}</span>
-                <span className="text-end font-semibold text-slate-800">{field.value}</span>
+                <dt className="text-slate-500 shrink-0">{t(field.label)}</dt>
+                <dd className="text-end font-semibold text-slate-800">{field.value}</dd>
               </div>
             ))}
-          </div>
+          </dl>
         )}
 
         {footer && <div className="mt-5">{footer}</div>}
-      </div>
-    </div>
+    </Modal>
   )
 }

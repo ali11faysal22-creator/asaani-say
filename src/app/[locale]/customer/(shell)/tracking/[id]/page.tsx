@@ -1,6 +1,7 @@
 'use client'
 
 import { Link } from '@/i18n/navigation'
+import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from '@/i18n/navigation'
 import {
@@ -18,8 +19,10 @@ import {
   Star,
   Truck,
   Wrench,
+  XCircle,
 } from 'lucide-react'
-import { API_BASE, cancelCustomerBooking, fetchCustomerBookings, formatSlotLabel, getCurrentUser, resumeCustomerBookingSearch, type BookingResult } from '@/app/lib/booking-api'
+import { API_BASE, ApiError, bookingServiceLabel, cancelCustomerBooking, fetchBooking, formatSlotLabel, getCurrentUser, resumeCustomerBookingSearch, type BookingResult } from '@/app/lib/booking-api'
+import { startPolling } from '@/app/lib/polling'
 import { InitialsAvatar } from '@/app/components/initials-avatar'
 import { ResponseCountdown } from '@/app/components/response-countdown'
 import { VendorRatingForm } from '@/app/customer/components/vendor-rating-form'
@@ -48,7 +51,13 @@ const statusRank: Record<string, number> = {
 }
 
 
+// Once a vendor has accepted, the customer may see and call them; before that, only their name.
+const VENDOR_CONTACT_STATUSES = ['accepted', 'on_the_way', 'reached', 'in_progress', 'paused', 'work_completed', 'payment_requested', 'completed']
+
 const HERO_COPY: Record<string, { title: string; icon: typeof Truck }> = {
+  unassigned: { title: 'Finding the best vendor for you', icon: Clock3 },
+  rejected: { title: 'Vendor declined - finding another', icon: AlertTriangle },
+  cancelled: { title: 'Order cancelled', icon: XCircle },
   pending: { title: 'Waiting for vendor to accept', icon: Clock3 },
   accepted: { title: 'Vendor confirmed your order', icon: CheckCircle2 },
   on_the_way: { title: 'Vendor is on the way', icon: Truck },
@@ -81,28 +90,40 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
   useEffect(() => {
     if (!bookingId) return
     let active = true
+    let signedIn = false
     const load = async () => {
-      const auth = await getCurrentUser('customer').catch(() => null)
-      if (!auth || auth.role !== 'customer') {
-        router.push('/customer/login')
-        return
+      if (!signedIn) {
+        const auth = await getCurrentUser('customer').catch(() => null)
+        if (!auth || auth.role !== 'customer') {
+          router.push('/customer/login')
+          return
+        }
+        signedIn = true
       }
-      if (!auth.profile_id) return
-      const rows = await fetchCustomerBookings(auth.profile_id).catch(() => [])
-      const current = rows.find((item) => item.id === bookingId) || null
-      if (active) { setBooking(current); setLoading(false); setLastUpdated(new Date()) }
+      try {
+        const current = await fetchBooking(bookingId)
+        if (active) { setBooking(current); setLoading(false); setLastUpdated(new Date()) }
+      } catch (error) {
+        if (!active) return
+        const status = error instanceof ApiError ? error.status : undefined
+        if (status === 401) { router.push('/customer/login'); return }
+        // Not found / not yours: say so. Anything else is a hiccup - keep showing the last known state.
+        if (status === 403 || status === 404) setBooking(null)
+        setLoading(false)
+      }
     }
-    void load()
-    const timer = window.setInterval(() => void load(), 5000)
-    return () => { active = false; window.clearInterval(timer) }
+    const stop = startPolling(load, 5000)
+    return () => { active = false; stop() }
   }, [bookingId, router])
 
-  const currentRank = statusRank[booking?.status || 'accepted'] ?? 0
-  const progressPercent = Math.min(100, Math.round((currentRank / (statusSteps.length - 1)) * 100))
+  // -1 = the vendor has not accepted yet, so no timeline step is done.
+  const currentRank = booking ? (statusRank[booking.status] ?? -1) : -1
+  const progressPercent = Math.max(0, Math.min(100, Math.round((currentRank / (statusSteps.length - 1)) * 100)))
   const eta = useMemo(() => {
     if (!booking) return ''
+    if (booking.status === 'cancelled') return t('This order was cancelled.')
     if (booking.status === 'completed' || booking.status === 'in_progress' || booking.status === 'paused') return t('At your address')
-    if (booking.status === 'on_the_way') return t('Arriving in approximately 20 minutes')
+    if (booking.status === 'on_the_way') return t('Your vendor is on the way to your address')
     return `${t('Scheduled for')} ${formatSlotLabel(booking.slot_start)} - ${formatSlotLabel(booking.slot_end)}`
   }, [booking, t])
 
@@ -187,8 +208,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 shrink-0 text-orange-500" />
             <div className="text-xs text-orange-800">
-              <p className="font-semibold">
-                {booking.vendor_miss_count} {t("nearby vendors haven't responded, so we've paused the search for your")}{' '}{t(booking.service_name)} {t("order.")}</p>
+              <p className="font-semibold">{t("No vendor has accepted this order yet, so we paused the search.")}</p>
               <p className="mt-0.5">{t("You can resume searching, pick a different date/time, or cancel.")}</p>
             </div>
           </div>
@@ -215,6 +235,22 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
       )}
     </div>
   )
+
+  if (booking.status === 'cancelled') {
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-col items-center justify-center gap-3 py-16 text-center text-slate-700">
+          <XCircle className="h-8 w-8 text-red-400" />
+          <h1 className="text-sm font-bold">{t("This order was cancelled.")}</h1>
+          <p className="text-xs text-slate-400">{bookingServiceLabel(booking, t)} · {t("Order #")}{booking.id.slice(0, 8)}</p>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+            <Link href="/customer/orders" className="text-xs font-bold text-orange-600">{t("Back to orders")}</Link>
+            <Link href="/services" className="text-xs font-bold text-orange-600">{t("Book again")}</Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!booking.vendor) {
     return (
@@ -245,7 +281,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-100">{t("Live order tracking")}</p>
-              <h1 className="mt-2 text-xl font-black sm:text-2xl">{t(booking.service_name)}</h1>
+              <h1 className="mt-2 text-xl font-black sm:text-2xl">{bookingServiceLabel(booking, t)}</h1>
               <p className="mt-1 text-xs text-orange-100">{t("Order #")}{booking.id.slice(0, 8)}</p>
             </div>
             <div className="rounded-2xl bg-white/15 p-3 backdrop-blur-sm">
@@ -290,11 +326,12 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
         {booking.cannot_start_reason && !['completed', 'cancelled'].includes(booking.status) && (
           <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <AlertTriangle className="h-5 w-5 shrink-0 text-slate-400" />
-            <p className="text-xs text-slate-600">{t("A previous vendor couldn't start this job (")}{t(booking.cannot_start_reason)}{t(") — you've been matched with a new one.")}</p>
+            <p className="text-xs text-slate-600">{t("A previous vendor couldn't start this job, so you've been matched with a new one.")}</p>
           </div>
         )}
 
-        {/* Vendor card */}
+        {/* Vendor card - only once the vendor has accepted, so their phone number is not shared before then. */}
+        {VENDOR_CONTACT_STATUSES.includes(booking.status) && (
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <InitialsAvatar name={booking.vendor.business_name} size={11} />
@@ -312,9 +349,10 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
             href={`tel:${booking.vendor.contact_number}`}
             className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-emerald-50 py-2.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
           >
-            <PhoneCall className="h-4 w-4" /> {t("Call")}{' '}{booking.vendor.contact_number}
+            <PhoneCall className="h-4 w-4" /> {t("Call")}{' '}<bdi dir="ltr">{booking.vendor.contact_number}</bdi>
           </a>
         </div>
+        )}
 
         {/* Timeline */}
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -360,7 +398,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
                       <div className="mt-3 flex flex-wrap gap-2">
                         {booking.photos.map((url) => (
                           <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
-                            <img src={`${API_BASE}${url}`} alt={t('Completed job')} className="h-16 w-16 rounded-lg border border-slate-200 object-cover" />
+                            <Image src={`${API_BASE}${url}`} alt={t('Completed job')} width={64} height={64} unoptimized className="h-16 w-16 rounded-lg border border-slate-200 object-cover" />
                           </a>
                         ))}
                       </div>

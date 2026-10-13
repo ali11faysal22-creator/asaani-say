@@ -3,6 +3,7 @@
 import { Link } from '@/i18n/navigation'
 import { useLanguage } from '../lib/i18n'
 import SocialLinks from './social-links'
+import { SITE_CONTACT } from '../lib/site-contact'
 
 export default function PublicFooter() {
   const { t } = useLanguage()
@@ -45,8 +46,8 @@ export default function PublicFooter() {
               <h3 className="font-semibold text-lg text-white">{t('Contact Us')}</h3>
               <div className="space-y-2 text-slate-300 leading-relaxed">
                 <p>{t('Our Support and Sales team is available 24/7 to answer your queries.')}</p>
-                <p className="pt-1 font-medium">+1 (333) 000-0000</p>
-                <p className="font-medium">{t('AsaaniSay@gmail.com')}</p>
+                <p className="pt-1 font-medium" dir="ltr">{SITE_CONTACT.phone}</p>
+                <p className="font-medium">{SITE_CONTACT.email}</p>
                 <div className="pt-2 [&>div]:text-slate-200"><SocialLinks /></div>
               </div>
             </div>

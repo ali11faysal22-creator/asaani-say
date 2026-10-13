@@ -89,6 +89,8 @@ export type BookingResult = {
   customer_name: string
   customer_phone?: string | null
   total_amount?: number | null
+  /** Additional services picked in the same order (the main one is service_name). */
+  extra_services?: string[]
   created_at: string
   vendor_assigned_at?: string | null
   vendor_response_deadline?: string | null
@@ -248,6 +250,10 @@ function anyAccessToken(): string | null {
   return getAccessToken('admin') || getAccessToken('vendor') || getAccessToken('customer')
 }
 
+// Only these two role-agnostic endpoints need "whichever session is logged in". Every other
+// path either maps to one role (roleForPath) or is public and must not carry a bearer token.
+const ANY_ROLE_PATHS = new Set(['/api/auth/me', '/api/auth/logout'])
+
 // Endpoint paths already encode which role they belong to — use that to pick the
 // matching token instead of guessing from whichever role logged in most recently.
 function roleForPath(path: string): AuthRole | null {
@@ -371,7 +377,7 @@ export async function readError(res: Response): Promise<{ message: string; field
 async function api<T>(path: string, initWithRole?: RequestInit & { authRole?: AuthRole }): Promise<T> {
   const { authRole, ...init } = initWithRole || {}
   const role = authRole ?? roleForPath(path)
-  const token = role ? getAccessToken(role) : anyAccessToken()
+  const token = role ? getAccessToken(role) : ANY_ROLE_PATHS.has(path) ? anyAccessToken() : null
   let res: Response
   try {
     res = await fetch(`${API_BASE}${path}`, {
@@ -701,26 +707,35 @@ export function bookingQuery(serviceId?: string, serviceName?: string) {
   return params
 }
 
-export async function fetchAvailableDates(
+type AvailabilityOptions = { serviceId?: string; service?: string; signal?: AbortSignal }
+
+export async function fetchAvailability(
   addressId: string,
-  options: { serviceId?: string; service?: string; days?: number } = {}
-): Promise<DateRow[]> {
+  options: AvailabilityOptions & { days?: number } = {}
+): Promise<{ dates: DateRow[]; radiusKm: number | null }> {
   const params = bookingQuery(options.serviceId, options.service)
   params.set('address_id', addressId)
   params.set('days', String(options.days ?? 45))
-  const data = await api<{ dates: DateRow[] }>(`/api/bookings/dates?${params}`)
-  return data.dates || []
+  const data = await api<{ dates: DateRow[]; radius_km?: number }>(`/api/bookings/dates?${params}`, { signal: options.signal })
+  return { dates: data.dates || [], radiusKm: data.radius_km ?? null }
+}
+
+export async function fetchAvailableDates(
+  addressId: string,
+  options: AvailabilityOptions & { days?: number } = {}
+): Promise<DateRow[]> {
+  return (await fetchAvailability(addressId, options)).dates
 }
 
 export async function fetchAvailableSlots(
   addressId: string,
   date: string,
-  options: { serviceId?: string; service?: string } = {}
+  options: AvailabilityOptions = {}
 ): Promise<SlotRow[]> {
   const params = bookingQuery(options.serviceId, options.service)
   params.set('address_id', addressId)
   params.set('date', date)
-  const data = await api<{ slots: SlotRow[] }>(`/api/bookings/slots?${params}`)
+  const data = await api<{ slots: SlotRow[] }>(`/api/bookings/slots?${params}`, { signal: options.signal })
   return data.slots || []
 }
 
@@ -728,16 +743,33 @@ export async function placeBooking(payload: {
   customer_id: string
   service_id?: string
   service?: string
+  vendor_id?: string
+  /** Other services bought together with service_id; the server prices the whole order. */
+  extra_service_ids?: string[]
   address_id: string
   date: string
   slot_start: string
   slot_end: string
+  /** Display-only hint: the server ignores it and recomputes the total from catalog prices. */
   total_amount?: number
+  notes?: string
 }): Promise<BookingResult> {
   return api('/api/bookings', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
+}
+
+export async function fetchBooking(bookingId: string): Promise<BookingResult> {
+  return api(`/api/bookings/${encodeURIComponent(bookingId)}`)
+}
+
+/** "Pipe Repair + Tap Fitting" - the main service plus any extras, each run through `translate`. */
+export function bookingServiceLabel(
+  booking: { service_name: string; extra_services?: string[] },
+  translate: (text: string) => string = (text) => text,
+): string {
+  return [booking.service_name, ...(booking.extra_services ?? [])].map((name) => translate(name)).join(' + ')
 }
 
 export async function fetchVendorBookings(vendorId: string): Promise<BookingResult[]> {
@@ -844,6 +876,7 @@ export type AdminBooking = {
   area: string | null
   service_id: string
   service_name: string
+  extra_services?: string[]
   status: string
   scheduled_date: string
   slot_start: string

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { FieldError, errorBorder, messageOf } from '@/components/FieldError'
 import { useState } from 'react'
 import {
@@ -233,7 +234,7 @@ export function VendorBookingActionPanel({
           <div className="flex flex-wrap gap-2">
             {booking.photos.map((url) => (
               <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
-                <img src={`${API_BASE}${url}`} alt={t('Completion')} className="h-16 w-16 rounded-lg object-cover border border-slate-200" />
+                <Image src={`${API_BASE}${url}`} alt={t('Completion')} width={64} height={64} unoptimized className="h-16 w-16 rounded-lg object-cover border border-slate-200" />
               </a>
             ))}
           </div>

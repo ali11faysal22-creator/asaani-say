@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { Link } from '@/i18n/navigation'
+import Image from 'next/image'
 import {
   ChevronDown,
 } from 'lucide-react';
@@ -10,6 +10,7 @@ import { useLanguage } from '../lib/i18n';
 import { submitContactMessage } from '../lib/booking-api';
 import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError';
 import PublicFooter from '../components/public-footer'
+import { SITE_CONTACT } from '../lib/site-contact'
 
 export default function ContactPage() {
   const { t } = useLanguage();
@@ -121,27 +122,27 @@ export default function ContactPage() {
           
           
           <div className="bg-white rounded-xl p-6 shadow-[0_4px_20px_rgba(45,51,74,0.08)] space-y-4">
-            <img src="/assets/contact-us/icons/phone-icon.png" alt="" aria-hidden="true" className="w-14 h-14" />
+            <Image src="/assets/contact-us/icons/phone-icon.png" alt="" aria-hidden="true" width={56} height={56} className="w-14 h-14" />
             <div>
               <p className="text-xs md:text-sm font-semibold text-slate-600 uppercase tracking-wider">{t("CALL US")}</p>
-              <p className="font-bold text-[#1B2A59] mt-2 text-xl md:text-2xl leading-snug">+1 (303) 000-9080</p>
+              <p className="font-bold text-[#1B2A59] mt-2 text-xl md:text-2xl leading-snug" dir="ltr">{SITE_CONTACT.phone}</p>
               <p className="text-slate-500 leading-snug mt-2 text-sm">{t("Available Mon–Sat 9AM–6PM for quick assistance.")}</p>
             </div>
           </div>
 
           
           <div className="bg-white rounded-xl p-6 shadow-[0_4px_20px_rgba(45,51,74,0.08)] space-y-4">
-            <img src="/assets/contact-us/icons/email-icon.png" alt="" aria-hidden="true" className="w-14 h-14" />
+            <Image src="/assets/contact-us/icons/email-icon.png" alt="" aria-hidden="true" width={56} height={56} className="w-14 h-14" />
             <div>
               <p className="text-xs md:text-sm font-semibold text-slate-600 uppercase tracking-wider">{t("EMAIL US")}</p>
-              <p className="font-bold text-[#1B2A59] mt-2 text-lg md:text-xl lg:text-[1.35rem] leading-snug break-words">{t("AsaaniSay@gmail.com")}</p>
+              <p className="font-bold text-[#1B2A59] mt-2 text-lg md:text-xl lg:text-[1.35rem] leading-snug break-words">{SITE_CONTACT.email}</p>
               <p className="text-slate-500 leading-snug mt-2 text-sm">{t("Drop us an email anytime and we will respond within 24 hours.")}</p>
             </div>
           </div>
 
           
           <div className="bg-white rounded-xl p-6 shadow-[0_4px_20px_rgba(45,51,74,0.08)] space-y-4">
-            <img src="/assets/contact-us/icons/location-icon.png" alt="" aria-hidden="true" className="w-14 h-14" />
+            <Image src="/assets/contact-us/icons/location-icon.png" alt="" aria-hidden="true" width={56} height={56} className="w-14 h-14" />
             <div>
               <p className="text-xs md:text-sm font-semibold text-slate-600 uppercase tracking-wider">{t("OFFICE ADDRESS")}</p>
               <p className="font-bold text-[#1B2A59] mt-2 text-xl md:text-2xl leading-snug">{t("Lahore, Pakistan")}</p>
@@ -151,7 +152,7 @@ export default function ContactPage() {
 
           
           <div className="bg-white rounded-xl p-6 shadow-[0_4px_20px_rgba(45,51,74,0.08)] space-y-4">
-            <img src="/assets/contact-us/icons/working-hours-icon.png" alt="" aria-hidden="true" className="w-14 h-14" />
+            <Image src="/assets/contact-us/icons/working-hours-icon.png" alt="" aria-hidden="true" width={56} height={56} className="w-14 h-14" />
             <div>
               <p className="text-xs md:text-sm font-semibold text-slate-600 uppercase tracking-wider">{t("WORKING HOURS")}</p>
               <p className="font-bold text-[#1B2A59] mt-2 text-xl md:text-2xl leading-snug">{t("Mon – Sat: 9AM – 6PM")}</p>

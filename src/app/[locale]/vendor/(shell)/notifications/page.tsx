@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { FieldError, errorBorder, messageOf } from '@/components/FieldError'
 import React, { useState, useEffect } from 'react'
 import {
@@ -25,6 +26,7 @@ import {
   deleteVendorNotification,
   fetchVendorBookings,
   fetchVendorNotifications,
+  formatSlotLabel,
   getStoredAuth,
   markVendorNotificationRead,
   updateVendorBookingStatus,
@@ -32,6 +34,8 @@ import {
   type VendorBookingAction,
 } from '@/app/lib/booking-api'
 import { ResponseCountdown } from '@/app/components/response-countdown'
+import { startPolling } from '@/app/lib/polling'
+import Modal from '@/components/Modal'
 import { useLanguage } from '@/app/lib/i18n'
 
 function formatNotificationTimestamp(value: string, language: 'en' | 'ur'): string {
@@ -183,9 +187,9 @@ export default function NotificationsPage() {
             service,
             date: requestMatch?.[3] || booking?.date,
             time: requestMatch
-              ? `${requestMatch[4]} - ${requestMatch[5]}`
+              ? `${formatSlotLabel(requestMatch[4])} - ${formatSlotLabel(requestMatch[5])}`
               : booking
-                ? `${booking.slot_start} - ${booking.slot_end}`
+                ? `${formatSlotLabel(booking.slot_start)} - ${formatSlotLabel(booking.slot_end)}`
                 : undefined,
             bookingStatus,
             bookingId,
@@ -209,11 +213,10 @@ export default function NotificationsPage() {
       }
     }
 
-    loadVendorNotifications()
-    const refreshTimer = window.setInterval(loadVendorNotifications, 5000)
+    const stop = startPolling(loadVendorNotifications, 5000)
     return () => {
       active = false
-      window.clearInterval(refreshTimer)
+      stop()
     }
   }, [])
 
@@ -256,17 +259,18 @@ export default function NotificationsPage() {
 
   const handleBookingAction = async (id: string, status: 'accepted' | 'declined') => {
     if (actionInProgress) return
+    setActionError('')
     setActionInProgress(true)
     try {
       const auth = getStoredAuth('vendor')
       if (!auth) {
-        alert(t('Vendor session expired. Please sign in again.'))
+        setActionError('Vendor session expired. Please sign in again.')
         return
       }
       const action = status === 'accepted' ? 'accept' : 'reject'
       const bookingId = selectedNotif?.bookingId || id
       if (!bookingId) {
-        alert(t('This notification does not include a booking reference.'))
+        setActionError('This notification does not include a booking reference.')
         return
       }
       const updatedBooking = await decideVendorBooking(auth.profile_id || auth.user_id, bookingId, action)
@@ -532,6 +536,12 @@ export default function NotificationsPage() {
                                 <span className="font-medium text-[#EE6C52]">{selectedNotif.customerPhone}</span>
                               </div>
                             )}
+                            {selectedNotif.booking?.extra_services && selectedNotif.booking.extra_services.length > 0 && (
+                              <div className="flex items-start justify-between gap-4 text-slate-600">
+                                <span className="shrink-0 font-semibold">{t('Also booked')}</span>
+                                <span className="min-w-0 text-end font-medium text-slate-800">{selectedNotif.booking.extra_services.map((name) => t(name)).join(', ')}</span>
+                              </div>
+                            )}
                             {selectedNotif.location && (
                               <div className="flex items-start justify-between gap-4 text-slate-600">
                                 <span className="flex shrink-0 items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {t('Location')}</span>
@@ -543,6 +553,11 @@ export default function NotificationsPage() {
                                 <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-slate-400" /> {t('Date & Time')}</span>
                                 <span className="font-medium text-slate-800" dir="ltr">{selectedNotif.date ? translateDate(selectedNotif.date, language) : ''} @ {selectedNotif.time}</span>
                               </div>
+                            )}
+                            {selectedNotif.bookingStatus === 'pending' && selectedNotif.booking && (
+                              <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] font-semibold text-amber-700">
+                                {t("The customer's phone number and exact address are shared once you accept this job.")}
+                              </p>
                             )}
                             {selectedNotif.amount && (
                               <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-slate-800">
@@ -585,6 +600,7 @@ export default function NotificationsPage() {
                               )}
                               <div className="flex items-center gap-3">
                                 <button
+                                  type="button"
                                   disabled={actionInProgress}
                                   onClick={() => handleBookingAction(selectedNotif.id, 'accepted')}
                                   className="flex-1 py-2.5 bg-[#EE6C52] hover:bg-orange-600 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer text-center"
@@ -592,6 +608,7 @@ export default function NotificationsPage() {
                                   {t("Accept Booking")}
                                 </button>
                                 <button
+                                  type="button"
                                   disabled={actionInProgress}
                                   onClick={() => handleBookingAction(selectedNotif.id, 'declined')}
                                   className="flex-1 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 disabled:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer text-center"
@@ -681,7 +698,7 @@ export default function NotificationsPage() {
                           <div className="flex flex-wrap gap-2">
                             {selectedNotif.booking.photos.map((url) => (
                               <a key={url} href={`${API_BASE}${url}`} target="_blank" rel="noreferrer">
-                                <img src={`${API_BASE}${url}`} alt={t('Completion photos')} className="h-16 w-16 rounded-lg object-cover border border-slate-200" />
+                                <Image src={`${API_BASE}${url}`} alt={t('Completion photos')} width={64} height={64} unoptimized className="h-16 w-16 rounded-lg object-cover border border-slate-200" />
                               </a>
                             ))}
                           </div>
@@ -701,8 +718,12 @@ export default function NotificationsPage() {
           </div>
 
       {assignmentConflict && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4" role="dialog" aria-modal="true" aria-labelledby="assignment-conflict-title">
-          <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+        <Modal
+          onClose={() => setAssignmentConflict(null)}
+          labelledBy="assignment-conflict-title"
+          overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4"
+          panelClassName="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+        >
             <button
               type="button"
               onClick={() => setAssignmentConflict(null)}
@@ -754,8 +775,7 @@ export default function NotificationsPage() {
             >
               {t('Close')}
             </button>
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   )
