@@ -13,8 +13,6 @@ import {
 import CustomerNavbar from '../components/customer-navbar'
 
 import { BreadcrumbBar } from '@/components/Breadcrumbs'
-import LanguageSwitcher from '../components/language-switcher'
-import SocialLinks from '../components/social-links'
 import { useLanguage } from '../lib/i18n'
 import PublicFooter from '../components/public-footer'
 
@@ -257,18 +255,7 @@ export default function OrderConfirmationPage() {
       </div>}
       
       
-      <div className="bg-[#EEF2FB] text-xs text-slate-600 py-2.5 px-4 md:px-12 flex justify-between items-center border-b border-slate-200/60">
-        <div className="flex items-center gap-6">
-          <span>{t("AsaaniSay@gmail.com")}</span>
-          <span className="border-s border-slate-300 ps-6">+1 (333) 000-0000</span>
-        </div>
-        <div className="flex items-center gap-4 text-slate-700">
-          <SocialLinks />
-          <LanguageSwitcher compact />
-        </div>
-      </div>
-
-      <CustomerNavbar showLanguageSwitcher={false} />
+      <CustomerNavbar />
       <BreadcrumbBar />
 
       

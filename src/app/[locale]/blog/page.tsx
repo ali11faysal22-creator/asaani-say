@@ -5,7 +5,6 @@ import { Link } from '@/i18n/navigation'
 import Image from 'next/image';
 import CustomerNavbar from '../components/customer-navbar'
 import { BreadcrumbBar } from '@/components/Breadcrumbs';
-import PublicContactBar from '../components/public-contact-bar';
 import { useLanguage } from '../lib/i18n';
 import PublicFooter from '../components/public-footer'
 
@@ -102,10 +101,9 @@ export default function BlogPage() {
     <div className="w-full bg-white font-sans text-slate-800">
       
       
-      <PublicContactBar />
 
       
-      <CustomerNavbar active="blog" showLanguageSwitcher={false} />
+      <CustomerNavbar active="blog" />
       <BreadcrumbBar />
 
       

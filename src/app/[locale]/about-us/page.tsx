@@ -6,7 +6,6 @@ import { Link } from '@/i18n/navigation'
 import Counter from '../components/counter'; 
 import CustomerNavbar from '../components/customer-navbar'
 import { BreadcrumbBar } from '@/components/Breadcrumbs';
-import PublicContactBar from '../components/public-contact-bar'
 import { useLanguage } from '../lib/i18n'
 import PublicFooter from '../components/public-footer'
 
@@ -16,10 +15,9 @@ export default function AboutUsPage() {
     <div className="w-full bg-white font-sans text-slate-800">
       
       
-      <PublicContactBar />
 
       
-      <CustomerNavbar active="about" showLanguageSwitcher={false} />
+      <CustomerNavbar active="about" />
       <BreadcrumbBar />
 
       

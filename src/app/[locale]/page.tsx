@@ -5,7 +5,6 @@ import { Link } from '@/i18n/navigation'
 import { FieldError, errorRing, fieldErrorsOf, messageOf } from '@/components/FieldError'
 import Image from 'next/image'
 import CustomerNavbar from './components/customer-navbar'
-import PublicContactBar from './components/public-contact-bar'
 import { useLanguage } from './lib/i18n'
 import { submitServiceRequest } from './lib/booking-api'
 import PublicFooter from './components/public-footer'
@@ -336,9 +335,8 @@ export default function HeroSection() {
  
   return (
     <div className="w-full bg-white font-sans text-slate-800">
-      <PublicContactBar />
 
-      <CustomerNavbar active="home" showLanguageSwitcher={false} />
+      <CustomerNavbar active="home" />
       <section className="site-container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
 

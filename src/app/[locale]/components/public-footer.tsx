@@ -2,6 +2,7 @@
 
 import { Link } from '@/i18n/navigation'
 import { useLanguage } from '../lib/i18n'
+import SocialLinks from './social-links'
 
 export default function PublicFooter() {
   const { t } = useLanguage()
@@ -46,6 +47,7 @@ export default function PublicFooter() {
                 <p>{t('Our Support and Sales team is available 24/7 to answer your queries.')}</p>
                 <p className="pt-1 font-medium">+1 (333) 000-0000</p>
                 <p className="font-medium">{t('AsaaniSay@gmail.com')}</p>
+                <div className="pt-2 [&>div]:text-slate-200"><SocialLinks /></div>
               </div>
             </div>
           </div>

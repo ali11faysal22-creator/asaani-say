@@ -25,7 +25,6 @@ import { LocationPicker } from './location-picker'
 import CustomerNavbar from './customer-navbar'
 
 import { BreadcrumbBar } from '@/components/Breadcrumbs'
-import PublicContactBar from './public-contact-bar'
 import PublicFooter from './public-footer'
 import { useLanguage } from '../lib/i18n'
 import { PENDING_SERVICE_BOOKING_KEY, readPendingServiceBooking } from '../lib/service-booking-resume'
@@ -429,9 +428,8 @@ export default function ServiceCategoryView({ slug }: { slug: string }) {
   return (
     <div className="w-full bg-white font-sans text-slate-800 relative min-h-screen">
       
-      <PublicContactBar />
 
-      <CustomerNavbar active="services" showLanguageSwitcher={false} />
+      <CustomerNavbar active="services" />
       <BreadcrumbBar labels={category ? { [`/services/${slug}`]: t(category.name) } : undefined} />
 
       

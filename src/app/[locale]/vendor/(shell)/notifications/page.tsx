@@ -533,9 +533,9 @@ export default function NotificationsPage() {
                               </div>
                             )}
                             {selectedNotif.location && (
-                              <div className="flex items-center justify-between text-slate-600">
-                                <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {t('Location')}</span>
-                                <span className="font-medium text-slate-700">{selectedNotif.location}</span>
+                              <div className="flex items-start justify-between gap-4 text-slate-600">
+                                <span className="flex shrink-0 items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {t('Location')}</span>
+                                <span className="min-w-0 wrap-break-word text-end font-medium text-slate-700">{selectedNotif.location}</span>
                               </div>
                             )}
                             {selectedNotif.date && (

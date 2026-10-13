@@ -10,7 +10,6 @@ import CustomerNavbar from '../components/customer-navbar'
 import { BreadcrumbBar } from '@/components/Breadcrumbs'
 import { categoryIcon } from '../lib/category-icons'
 import { useLanguage } from '../lib/i18n'
-import PublicContactBar from '../components/public-contact-bar'
 import PublicFooter from '../components/public-footer'
 
 const featuresList = [
@@ -274,9 +273,8 @@ export default function ServicesPage(){
 
   return (
     <div className="w-full bg-white font-sans text-slate-800">
-      <PublicContactBar />
 
-      <CustomerNavbar active="services" showLanguageSwitcher={false} />
+      <CustomerNavbar active="services" />
       <BreadcrumbBar />
 
       <section className="relative w-full h-95 sm:h-[420px] lg:h-[560px] bg-slate-100 flex items-center overflow-hidden">

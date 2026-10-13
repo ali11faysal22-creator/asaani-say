@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import CustomerNavbar from '../components/customer-navbar'
 import { BreadcrumbBar } from '@/components/Breadcrumbs';
-import PublicContactBar from '../components/public-contact-bar';
 import { useLanguage } from '../lib/i18n';
 import { submitContactMessage } from '../lib/booking-api';
 import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError';
@@ -101,10 +100,9 @@ export default function ContactPage() {
     <div className="w-full bg-white font-sans text-slate-800">
       
       
-      <PublicContactBar />
 
       
-      <CustomerNavbar active="contact" showLanguageSwitcher={false} />
+      <CustomerNavbar active="contact" />
       <BreadcrumbBar />
 
       

@@ -10,7 +10,6 @@ import LanguageSwitcher from '@/app/components/language-switcher'
 import { BreadcrumbBar } from '@/components/Breadcrumbs'
 import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError'
 import { useLanguage } from '../lib/i18n'
-import SocialLinks from '../components/social-links'
 import { 
   Hand, 
   Sparkles, 
@@ -831,17 +830,6 @@ export default function CartAndCheckoutPage() {
       )}
 
       
-      <div className="bg-[#EEF2FB] text-xs text-slate-600 py-2.5 px-4 md:px-12 flex justify-between items-center border-b border-slate-200/60">
-        <div className="flex items-center gap-6">
-          <span>{t("AsaaniSay@gmail.com")}</span>
-          <span className="border-s border-slate-300 ps-6">+1 (333) 000-0000</span>
-        </div>
-        <div className="flex items-center gap-4 text-slate-700">
-          <SocialLinks />
-          <LanguageSwitcher compact />
-        </div>
-      </div>
-
       
       <header className="bg-white max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between border-b border-slate-100">
         <Link href="/" className="flex items-center gap-2">
@@ -863,11 +851,14 @@ export default function CartAndCheckoutPage() {
           <Link href="/contact-us" className="hover:text-orange-500 transition">{t("Contact Us")}</Link>
         </nav>
 
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher compact />
         <Link href="/login">
           <button className="hidden md:inline-flex items-center gap-2 bg-[#3A3E59] hover:bg-[#2C2F45] text-white px-5 py-2.5 rounded-lg text-sm font-medium transition shadow-xs cursor-pointer">
             <span>{t("Get Started")}</span>
           </button>
         </Link>
+        </div>
       </header>
       <BreadcrumbBar />
 
