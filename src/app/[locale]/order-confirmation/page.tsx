@@ -18,7 +18,8 @@ import { BreadcrumbBar } from '@/components/Breadcrumbs'
 import { useLanguage } from '../lib/i18n'
 import PublicFooter from '../components/public-footer'
 
-const CUSTOMER_REQUEST_TIMEOUT_SECONDS = 180
+// Fallback only: the real per-vendor window comes from the booking's vendor_response_deadline (backend: 90s).
+const CUSTOMER_REQUEST_TIMEOUT_SECONDS = 90
 
 interface CartItem {
   id: string
@@ -72,6 +73,8 @@ export default function OrderConfirmationPage() {
   const [isDraggingRequestToast, setIsDraggingRequestToast] = useState(false)
   const [requestToastDragOffset, setRequestToastDragOffset] = useState({ x: 0, y: 0 })
   const [showVendorRequestToast, setShowVendorRequestToast] = useState(true)
+  // When the vendor currently holding this request has to answer by (ms since epoch).
+  const [responseDeadline, setResponseDeadline] = useState<number | null>(null)
   const [isCancelling, setIsCancelling] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [cancelError, setCancelError] = useState('')
@@ -114,15 +117,16 @@ export default function OrderConfirmationPage() {
   useEffect(() => {
     if (!order) return
     const updateCountdown = () => {
-      const elapsed = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 1000)
-      const remaining = Math.max(0, CUSTOMER_REQUEST_TIMEOUT_SECONDS - elapsed)
+      const end = responseDeadline ?? new Date(order.createdAt).getTime() + CUSTOMER_REQUEST_TIMEOUT_SECONDS * 1000
+      const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000))
       setSecondsRemaining(remaining)
-      if (remaining === 0) setShowVendorRequestToast(false)
+      // Hide when this vendor's window ends; show again when the request rotates to the next vendor.
+      setShowVendorRequestToast(remaining > 0 && bookingStatus === 'pending')
     }
     updateCountdown()
     const timer = window.setInterval(updateCountdown, 1000)
     return () => window.clearInterval(timer)
-  }, [order])
+  }, [order, responseDeadline, bookingStatus])
 
   useEffect(() => {
     if (!order) return
@@ -132,6 +136,7 @@ export default function OrderConfirmationPage() {
         const current = await fetchBooking(order.orderId)
         if (!active) return
         const nextStatus = current.status.toLowerCase()
+        setResponseDeadline(current.vendor_response_deadline ? new Date(current.vendor_response_deadline).getTime() : null)
         const wasReassigned = nextStatus === 'pending' && current.created_at !== order.createdAt
         if (wasReassigned && current.created_at !== lastReassignmentAt) {
           setLastReassignmentAt(current.created_at)

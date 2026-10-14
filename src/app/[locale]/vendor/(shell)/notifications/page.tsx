@@ -36,6 +36,7 @@ import {
 import { ResponseCountdown } from '@/app/components/response-countdown'
 import { startPolling } from '@/app/lib/polling'
 import Modal from '@/components/Modal'
+import { BookingReview } from '../../../components/booking-review'
 import { useLanguage } from '@/app/lib/i18n'
 
 function formatNotificationTimestamp(value: string, language: 'en' | 'ur'): string {
@@ -203,8 +204,8 @@ export default function NotificationsPage() {
         if (!active) return
         setNotifications(mapped)
         setSelectedNotif((previous) => {
-          if (previous && mapped.some((item) => item.id === previous.id)) return previous
-          return mapped[0] || null
+          const fresh = previous ? mapped.find((item) => item.id === previous.id) : undefined
+          return fresh ?? mapped[0] ?? null
         })
       } catch (error) {
         console.error('Failed to load vendor notifications', error)
@@ -530,10 +531,10 @@ export default function NotificationsPage() {
                               <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-slate-400" /> {t('Customer')}</span>
                               <span className="font-semibold text-slate-800">{selectedNotif.customerName}</span>
                             </div>
-                            {selectedNotif.customerPhone && (
+                            {(selectedNotif.booking?.customer_phone || selectedNotif.customerPhone) && (
                               <div className="flex items-center justify-between text-slate-600">
                                 <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-400" /> {t('Contact')}</span>
-                                <span className="font-medium text-[#EE6C52]">{selectedNotif.customerPhone}</span>
+                                <a href={`tel:${selectedNotif.booking?.customer_phone || selectedNotif.customerPhone}`} className="font-medium text-[#EE6C52]"><bdi dir="ltr">{selectedNotif.booking?.customer_phone || selectedNotif.customerPhone}</bdi></a>
                               </div>
                             )}
                             {selectedNotif.booking?.extra_services && selectedNotif.booking.extra_services.length > 0 && (
@@ -542,16 +543,22 @@ export default function NotificationsPage() {
                                 <span className="min-w-0 text-end font-medium text-slate-800">{selectedNotif.booking.extra_services.map((name) => t(name)).join(', ')}</span>
                               </div>
                             )}
-                            {selectedNotif.location && (
+                            {(selectedNotif.booking?.address?.line || selectedNotif.location) && (
                               <div className="flex items-start justify-between gap-4 text-slate-600">
                                 <span className="flex shrink-0 items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {t('Location')}</span>
-                                <span className="min-w-0 wrap-break-word text-end font-medium text-slate-700">{selectedNotif.location}</span>
+                                <span className="min-w-0 wrap-break-word text-end font-medium text-slate-700">{selectedNotif.booking?.address?.line || selectedNotif.location}</span>
                               </div>
                             )}
                             {selectedNotif.date && (
                               <div className="flex items-center justify-between text-slate-600">
                                 <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-slate-400" /> {t('Date & Time')}</span>
                                 <span className="font-medium text-slate-800" dir="ltr">{selectedNotif.date ? translateDate(selectedNotif.date, language) : ''} @ {selectedNotif.time}</span>
+                              </div>
+                            )}
+                            {selectedNotif.booking?.rating != null && (
+                              <div className="flex items-start justify-between gap-4 border-t border-slate-100 pt-2 text-slate-600">
+                                <span className="shrink-0 font-semibold">{t('Customer review')}</span>
+                                <BookingReview rating={selectedNotif.booking.rating} comment={selectedNotif.booking.rating_comment} />
                               </div>
                             )}
                             {selectedNotif.bookingStatus === 'pending' && selectedNotif.booking && (

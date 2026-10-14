@@ -7,7 +7,10 @@ import { useLanguage } from '../lib/i18n'
 import { fetchBooking, getStoredAuth, type BookingResult } from '../lib/booking-api'
 import { startPolling } from '../lib/polling'
 
-const REQUEST_TIMEOUT_SECONDS = 180
+// How long after placing an order this reminder is worth showing. The per-vendor answer window is
+// not hard-coded here: it comes from the booking's vendor_response_deadline (the backend decides it).
+const WATCH_WINDOW_SECONDS = 180
+const FALLBACK_RESPONSE_SECONDS = 90
 
 type StoredOrder = {
   orderId?: string
@@ -48,7 +51,7 @@ export default function CustomerRequestMonitor() {
       }
 
       const orderAge = (Date.now() - new Date(storedOrder.createdAt).getTime()) / 1000
-      if (!Number.isFinite(orderAge) || orderAge > REQUEST_TIMEOUT_SECONDS) {
+      if (!Number.isFinite(orderAge) || orderAge > WATCH_WINDOW_SECONDS) {
         if (active) {
           setOrder(null)
           setBooking(null)
@@ -90,8 +93,10 @@ export default function CustomerRequestMonitor() {
     if (!order?.createdAt || booking?.status !== 'pending') return
 
     const update = () => {
-      const elapsed = Math.floor((Date.now() - new Date(order.createdAt as string).getTime()) / 1000)
-      setSecondsRemaining(Math.max(0, REQUEST_TIMEOUT_SECONDS - elapsed))
+      const end = booking.vendor_response_deadline
+        ? new Date(booking.vendor_response_deadline).getTime()
+        : new Date(order.createdAt as string).getTime() + FALLBACK_RESPONSE_SECONDS * 1000
+      setSecondsRemaining(Math.max(0, Math.ceil((end - Date.now()) / 1000)))
     }
     update()
     const timer = window.setInterval(update, 1000)

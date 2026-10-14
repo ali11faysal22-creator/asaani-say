@@ -888,6 +888,7 @@ export type AdminBooking = {
   photos: string[]
   cannot_start_reason: string | null
   rating: number | null
+  rating_comment?: string | null
   vendor_miss_count: number
   paused_for_customer_decision: boolean
   admin_hold: boolean

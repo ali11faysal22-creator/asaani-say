@@ -33,9 +33,16 @@ export default function VendorNotificationMonitor() {
 
     void load()
     const timer = window.setInterval(() => void load(), 5000)
+    // Browsers slow timers down in background tabs (down to about once a minute), so a new request
+    // could sit unseen; check again the moment the vendor looks at the tab.
+    const onVisible = () => { if (!document.hidden) void load() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
     return () => {
       active = false
       window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
     }
   }, [pathname])
 

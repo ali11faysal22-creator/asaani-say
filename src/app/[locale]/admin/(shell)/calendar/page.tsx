@@ -14,6 +14,7 @@ import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
 import { useLanguage } from '../../../lib/i18n'
 import { ResponseCountdown } from '@/app/components/response-countdown'
 import { BookingTimeline } from '@/app/components/booking-timeline'
+import { BookingReview } from '../../../components/booking-review'
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -319,6 +320,9 @@ export default function AdminCalendarPage() {
             { label: 'Scheduled', value: `${selectedBooking.scheduled_date} · ${selectedBooking.slot_start}–${selectedBooking.slot_end}` },
             { label: 'Amount', value: selectedBooking.total_amount != null ? `${t('Rs.')} ${selectedBooking.total_amount.toLocaleString()}` : '—' },
             { label: 'Status', value: <StatusBadge label={selectedBooking.status.replace('_', ' ')} tone={bookingStatusTone(selectedBooking.status)} /> },
+            ...(selectedBooking.rating != null
+              ? [{ label: 'Customer review', value: <BookingReview rating={selectedBooking.rating} comment={selectedBooking.rating_comment} /> }]
+              : []),
             ...(selectedBooking.status === 'pending' && selectedBooking.vendor_response_deadline
               ? [{ label: 'Vendor response', value: <ResponseCountdown deadline={selectedBooking.vendor_response_deadline} className="text-orange-600" /> }]
               : []),

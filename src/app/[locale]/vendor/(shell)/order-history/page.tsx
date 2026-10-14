@@ -6,6 +6,7 @@ import { Search, Eye, MapPin, Phone, ShoppingCart, X } from 'lucide-react'
 import { bookingServiceLabel, fetchVendorBookings, formatSlotLabel, getStoredAuth, type BookingResult } from '@/app/lib/booking-api'
 import { startPolling } from '@/app/lib/polling'
 import Modal from '@/components/Modal'
+import { BookingReview } from '../../../components/booking-review'
 import { ResponseCountdown } from '@/app/components/response-countdown'
 import { DateFilter } from '@/app/components/date-filter'
 import { VendorBookingActionPanel } from '../../components/booking-action-panel'
@@ -336,6 +337,13 @@ export default function OrderHistoryPage() {
                 )
               })()}
             </div>
+
+            {selectedOrder.rating != null && (
+              <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-4 text-xs">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t("Customer review")}</p>
+                <BookingReview rating={selectedOrder.rating} comment={selectedOrder.rating_comment} align="start" />
+              </div>
+            )}
 
             <VendorBookingActionPanel
               booking={selectedOrder}
