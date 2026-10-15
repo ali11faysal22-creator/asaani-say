@@ -1,5 +1,6 @@
 'use client'
 
+import { errorMessage, notify } from '@/components/Alerts'
 import Image from 'next/image'
 import { FieldError, errorBorder, messageOf } from '@/components/FieldError'
 import React, { useState, useEffect } from 'react'
@@ -38,6 +39,7 @@ import { startPolling } from '@/app/lib/polling'
 import Modal from '@/components/Modal'
 import { BookingReview } from '../../../components/booking-review'
 import { useLanguage } from '@/app/lib/i18n'
+import { vendorActionSuccessMessage } from '@/app/lib/vendor-action-messages'
 
 function formatNotificationTimestamp(value: string, language: 'en' | 'ur'): string {
   const date = new Date(value)
@@ -254,12 +256,23 @@ export default function NotificationsPage() {
     updateStorage(updated)
     const auth = getStoredAuth('vendor')
     if (auth?.profile_id) {
-      await deleteVendorNotification(auth.profile_id, id).catch(() => undefined)
+      await deleteVendorNotification(auth.profile_id, id)
+        .then(() => notify.success(t('Notification deleted.')))
+        .catch(() => notify.error(t('Could not delete the notification. Please try again.')))
     }
   }
 
   const handleBookingAction = async (id: string, status: 'accepted' | 'declined') => {
     if (actionInProgress) return
+    if (status === 'declined') {
+      const confirmed = await notify.confirm({
+        title: t('Decline this request?'),
+        text: t('The customer will be matched with another vendor.'),
+        confirmLabel: t('Yes, decline'),
+        tone: 'danger',
+      })
+      if (!confirmed) return
+    }
     setActionError('')
     setActionInProgress(true)
     try {
@@ -293,6 +306,7 @@ export default function NotificationsPage() {
         setSelectedNotif({ ...selectedNotif, isRead: true, booking: updatedBooking, bookingId: updatedBooking.id, bookingStatus: updatedBooking.status as NotificationItem['bookingStatus'] })
       }
       updateStorage(updated)
+      notify.success(vendorActionSuccessMessage(action, t))
     } catch (error) {
       if (error instanceof Error && isBookingUnavailableError(error.message)) {
         const staleNotification = notifications.find((item) => item.id === id) || selectedNotif
@@ -302,6 +316,7 @@ export default function NotificationsPage() {
       } else {
         console.error('Vendor booking decision failed', error)
         setActionError(error instanceof Error ? error.message : 'Unable to decide booking request')
+        notify.error(errorMessage(error, t('Unable to decide booking request')))
       }
     } finally {
       setActionInProgress(false)
@@ -321,6 +336,7 @@ export default function NotificationsPage() {
       setNotifications((items) => items.map((item) => item.bookingId === bookingId ? { ...item, booking: updatedBooking } : item))
       setShowCannotStartForm(false)
       setCannotStartReason('')
+      notify.success(vendorActionSuccessMessage(action, t))
     } catch (error) {
       if (error instanceof Error && isBookingUnavailableError(error.message)) {
         const staleId = selectedNotif?.id
@@ -330,6 +346,7 @@ export default function NotificationsPage() {
       } else {
         if (reason !== undefined) setReasonError(messageOf(error, 'Unable to update tracking status'))
         else setActionError(messageOf(error, 'Unable to update tracking status'))
+        notify.error(t(messageOf(error, 'Unable to update tracking status')))
       }
     } finally {
       setActionInProgress(false)
@@ -348,6 +365,7 @@ export default function NotificationsPage() {
       setNotifications((items) => items.map((item) => item.bookingId === bookingId ? { ...item, booking: updatedBooking } : item))
       setShowCompletionUpload(false)
       setCompletionPhotos([])
+      notify.popup('success', t('Job completed'), t('Great work! The customer has been notified and can now rate you.'))
     } catch (error) {
       if (error instanceof Error && isBookingUnavailableError(error.message)) {
         const staleId = selectedNotif?.id
@@ -356,6 +374,7 @@ export default function NotificationsPage() {
         setSelectedNotif(null)
       } else {
         setPhotoError(messageOf(error, 'Unable to complete order'))
+        notify.error(t(messageOf(error, 'Unable to complete order')))
       }
     } finally {
       setActionInProgress(false)

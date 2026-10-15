@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import React, { useEffect, useState } from 'react'
 import { Link } from '@/i18n/navigation'
 import { cancelCustomerBooking, fetchBooking } from '../lib/booking-api'
@@ -176,6 +177,7 @@ export default function OrderConfirmationPage() {
       setOrder((previous) => previous ? { ...previous, status: cancelled.status } : previous)
       localStorage.setItem('asaani_latest_order', JSON.stringify({ ...order, status: cancelled.status }))
       setShowCancelConfirm(false)
+      notify.popup('success', t('Order cancelled'), t('Your order has been cancelled. You can book a service again any time.'))
     } catch (error) {
       setCancelError(error instanceof Error ? error.message : t('Could not cancel the order. Please try again.'))
     } finally {

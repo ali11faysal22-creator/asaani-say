@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError'
 import Modal from '@/components/Modal'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
@@ -384,6 +385,7 @@ export default function ServiceCategoryView({ slug, initialCategory = null }: { 
         createdAt: result.created_at,
       }))
       window.dispatchEvent(new Event('asaani-order-changed'))
+      notify.success(t('Booking request sent! We are finding a vendor for you.'))
       const notification = {
         id: `booking-${result.id}`,
         message: 'Your service request has been submitted. We are waiting for vendor acceptance and will update you shortly.',
@@ -399,7 +401,9 @@ export default function ServiceCategoryView({ slug, initialCategory = null }: { 
         saveBookingDraftForLogin()
         setShowAuthPrompt(true)
       } else {
-        setBookingError(messageOf(error, 'Unable to reach the server. Please check your internet connection and try again.'))
+        const failure = messageOf(error, 'Unable to reach the server. Please check your internet connection and try again.')
+        setBookingError(failure)
+        notify.error(t(failure))
       }
     } finally {
       setIsSubmitting(false)

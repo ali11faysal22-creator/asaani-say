@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import { usePathname, useRouter } from '@/i18n/navigation'
 import { LogOut, Menu } from 'lucide-react'
 import { signOut } from '@/app/lib/booking-api'
@@ -15,6 +16,7 @@ export default function AdminTopbar({ onMenuClick }: { onMenuClick: () => void }
 
   const handleSignOut = () => {
     void signOut()
+    notify.success(t('You have been signed out.'))
     router.push('/admin/login')
   }
 

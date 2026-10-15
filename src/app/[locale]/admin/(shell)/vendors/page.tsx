@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from '@/i18n/navigation'
-import { Ban, CheckCircle2, Eye, ShieldCheck, ShieldOff } from 'lucide-react'
-import { fetchAdminVendors, getCurrentUser, setAdminVendorStatus, setAdminVendorVerified, type AdminVendor } from '@/app/lib/booking-api'
+import { Ban, CheckCircle2, Eye, ShieldCheck, ShieldOff, Trash2 } from 'lucide-react'
+import { deleteAdminVendor, fetchAdminVendors, getCurrentUser, setAdminVendorStatus, setAdminVendorVerified, type AdminVendor } from '@/app/lib/booking-api'
 import { InitialsAvatar } from '../../components/initials-avatar'
 import { StatusBadge, vendorStatusTone } from '../../components/status-badge'
 import { TableToolbar } from '../../components/table-toolbar'
 import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
+import ConfirmDialog from '@/components/ConfirmDialog'
+import { errorMessage, notify } from '@/components/Alerts'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
 import { useLanguage } from '../../../lib/i18n'
 
@@ -19,8 +21,10 @@ export default function AdminVendorsPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [vendors, setVendors] = useState<AdminVendor[]>([])
   const [search, setSearch] = useState('')
-  const [error, setError] = useState('')
   const [selectedVendor, setSelectedVendor] = useState<AdminVendor | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<AdminVendor | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   const loadData = async () => {
     try {
@@ -79,21 +83,53 @@ export default function AdminVendorsPage() {
     setSelectedVendor((prev) => (prev && prev.id === updated.id ? updated : prev))
   }
 
+  const vendorName = (vendor: AdminVendor) => `${vendor.first_name} ${vendor.last_name}`.trim() || vendor.business_name
+
   const toggleVerified = async (vendor: AdminVendor) => {
-    setError('')
     try {
-      applyUpdate(await setAdminVendorVerified(vendor.id, !vendor.is_verified))
+      const updated = await setAdminVendorVerified(vendor.id, !vendor.is_verified)
+      applyUpdate(updated)
+      notify.success(updated.is_verified ? `${vendorName(vendor)} ${t('is now a verified vendor.')}` : `${t('Verification removed for')} ${vendorName(vendor)}.`)
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not update vendor.')
+      notify.error(errorMessage(requestError, t('Could not update the vendor. Please try again.')))
     }
   }
 
   const toggleSuspended = async (vendor: AdminVendor) => {
-    setError('')
+    const suspending = vendor.status !== 'suspended'
+    if (suspending) {
+      const confirmed = await notify.confirm({
+        title: `${t('Suspend')} ${vendorName(vendor)}?`,
+        text: t('They will stop receiving new requests until you reactivate them.'),
+        confirmLabel: t('Yes, suspend'),
+        tone: 'danger',
+      })
+      if (!confirmed) return
+    }
     try {
-      applyUpdate(await setAdminVendorStatus(vendor.id, vendor.status === 'suspended' ? 'approved' : 'suspended'))
+      applyUpdate(await setAdminVendorStatus(vendor.id, suspending ? 'suspended' : 'approved'))
+      notify.success(suspending ? `${vendorName(vendor)} ${t('has been suspended.')}` : `${vendorName(vendor)} ${t('is active again.')}`)
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Could not update vendor.')
+      notify.error(errorMessage(requestError, t('Could not update the vendor. Please try again.')))
+    }
+  }
+
+  const performDelete = async (vendor: AdminVendor) => {
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      await deleteAdminVendor(vendor.id)
+      setVendors((prev) => prev.filter((v) => v.id !== vendor.id))
+      setSelectedVendor((prev) => (prev && prev.id === vendor.id ? null : prev))
+      setPendingDelete(null)
+      notify.success(`${vendorName(vendor)} ${t('has been deleted.')}`)
+    } catch (requestError) {
+      const notFound = (requestError as { status?: number }).status === 404
+      setDeleteError(notFound
+        ? t('This vendor could not be found. It may already be deleted, or the server needs to be restarted with the latest update.')
+        : errorMessage(requestError, t('Could not delete the vendor. Please try again.')))
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -116,8 +152,6 @@ export default function AdminVendorsPage() {
         onRefresh={handleRefresh}
         refreshing={refreshing}
       />
-
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
 
       <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
         <table className="w-full text-start text-xs">
@@ -182,6 +216,12 @@ export default function AdminVendorsPage() {
                       tone={vendor.status === 'suspended' ? 'default' : 'danger'}
                       onClick={() => toggleSuspended(vendor)}
                     />
+                    <IconActionButton
+                      icon={Trash2}
+                      label="Delete vendor"
+                      tone="danger"
+                      onClick={() => { setDeleteError(''); setPendingDelete(vendor) }}
+                    />
                   </div>
                 </td>
               </tr>
@@ -229,6 +269,20 @@ export default function AdminVendorsPage() {
               </button>
             </div>
           }
+        />
+      )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title={`${t('Delete')} "${pendingDelete.first_name} ${pendingDelete.last_name}"?`}
+          message={t('This vendor account will be removed and can no longer sign in. This cannot be undone.')}
+          tone="danger"
+          confirmLabel={t('Delete')}
+          busy={deleting}
+          busyLabel={t('Deleting…')}
+          error={deleteError || undefined}
+          onConfirm={() => void performDelete(pendingDelete)}
+          onCancel={() => { setPendingDelete(null); setDeleteError('') }}
         />
       )}
     </div>

@@ -24,6 +24,7 @@ import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
 import { useLanguage } from '../../../lib/i18n'
 import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError'
 import ConfirmDialog from '@/components/ConfirmDialog'
+import { notify } from '@/components/Alerts'
 
 const PAGE_SIZE = 10
 
@@ -189,10 +190,12 @@ export default function AdminServicesPage() {
         const updated = await updateAdminCategory(editingCategory.id, payload)
         setCategories((prev) => prev.map((c) => (c.id === updated.id ? { ...updated, services: c.services } : c)))
         setEditingCategory(null)
+        notify.success(`${t('Category updated:')} ${updated.display_name}`)
       } else {
         const created = await createAdminCategory(payload)
         setCategories((prev) => [...prev, created])
         setAddingCategory(false)
+        notify.success(`${t('Category added:')} ${created.display_name}`)
       }
     } catch (requestError) {
       const apiFieldErrors = fieldErrorsOf(requestError)
@@ -214,6 +217,7 @@ export default function AdminServicesPage() {
       await deleteAdminCategory(category.id)
       setCategories((prev) => prev.filter((c) => c.id !== category.id))
       setPendingDelete(null)
+      notify.success(`${t('Category deleted:')} ${category.display_name}`)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not delete category.')
     } finally {
@@ -271,6 +275,7 @@ export default function AdminServicesPage() {
               : c
           )
         )
+        notify.success(`${t('Service updated:')} ${updated.name}`)
       } else {
         const created = await createAdminService({
           category_id: serviceForm.category_id,
@@ -283,6 +288,7 @@ export default function AdminServicesPage() {
         setCategories((prev) =>
           prev.map((c) => (c.id === serviceForm.category_id ? { ...c, services: [...c.services, created] } : c))
         )
+        notify.success(`${t('Service added:')} ${created.name}`)
       }
       setEditingService(null)
     } catch (requestError) {
@@ -307,6 +313,7 @@ export default function AdminServicesPage() {
         prev.map((c) => (c.id === category.id ? { ...c, services: c.services.filter((s) => s.id !== service.id) } : c))
       )
       setPendingDelete(null)
+      notify.success(`${t('Service deleted:')} ${service.name}`)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not delete service.')
     } finally {

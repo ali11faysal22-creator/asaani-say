@@ -5,6 +5,7 @@ import { bookingServiceLabel, cancelAdminBooking, holdAdminBooking, type AdminBo
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { DetailModal } from './detail-modal'
 import { useLanguage } from '../../lib/i18n'
+import { notify } from '@/components/Alerts'
 
 export function UnassignedBookingActionsModal({
   booking,
@@ -27,6 +28,7 @@ export function UnassignedBookingActionsModal({
       onUpdated(await cancelAdminBooking(booking.id))
       setConfirmingCancel(false)
       onClose()
+      notify.success(t('Booking cancelled. The customer has been notified.'))
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t('Could not cancel booking.'))
     } finally {
@@ -39,6 +41,7 @@ export function UnassignedBookingActionsModal({
     setError('')
     try {
       onUpdated(await holdAdminBooking(booking.id, !booking.admin_hold))
+      notify.success(booking.admin_hold ? t('Booking is back to auto-matching.') : t('Booking is on hold.'))
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t('Could not update hold status.'))
     } finally {

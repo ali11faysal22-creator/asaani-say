@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import Image from 'next/image'
 import React, { useState, useRef, useEffect } from 'react'
 import { Link } from '@/i18n/navigation'
@@ -167,7 +168,8 @@ export default function VendorProfilePage() {
       setAvatar(imageUrl)
       setToast({ show: true, message: t('Profile picture saved successfully!'), type: 'success' })
     } catch (error) {
-      setToast({ show: true, message: error instanceof Error ? t(error.message) : t('Unable to upload profile picture'), type: 'success' })
+      setToast({ show: false, message: '', type: 'success' })
+      notify.error(error instanceof Error ? t(error.message) : t('Unable to upload profile picture'))
     }
   }
   const handleSaveChanges = async () => {

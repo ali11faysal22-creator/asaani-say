@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import React, { useState } from 'react'
 import { Link, useRouter } from '@/i18n/navigation'
 import { Eye, EyeOff, Hand, ShieldCheck, Sparkles } from 'lucide-react'
@@ -82,6 +83,8 @@ export default function CustomerAuthPage() {
           })
         }
       }
+      if (isRegister) notify.popup('success', t('Account created'), t('Welcome to Asaani Say! You can now book a service.'))
+      else notify.success(`${t('Welcome back')}${authResult.full_name ? `, ${authResult.full_name}` : ''}!`)
       const pendingBooking = readPendingServiceBooking()
       if (pendingBooking) {
         router.push(`/services/${pendingBooking.slug}`)

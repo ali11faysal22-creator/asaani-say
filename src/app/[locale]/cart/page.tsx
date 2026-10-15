@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import React, { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import { Link } from '@/i18n/navigation'
@@ -705,6 +706,7 @@ export default function CartAndCheckoutPage() {
       setCheckoutErrors(Object.keys(apiFieldErrors).length
         ? { ...apiFieldErrors, general: 'Please correct the highlighted fields.' }
         : { general: messageOf(error, 'Unable to place booking') })
+      notify.error(Object.keys(apiFieldErrors).length ? t('Please correct the highlighted fields.') : messageOf(error, t('We could not place your booking. Please try again.')))
       setPlacingOrder(false)
       window.setTimeout(() => document.querySelector('main [role="alert"], [role="alert"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
     }

@@ -17,6 +17,7 @@ import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
 import { useLanguage } from '../../../lib/i18n'
+import { errorMessage, notify } from '@/components/Alerts'
 
 function statusTone(status: ServiceRequest['status']): StatusTone {
   if (status === 'assigned') return 'good'
@@ -105,8 +106,10 @@ export default function AdminServiceRequestsPage() {
       setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
       setSelectedRequest((prev) => (prev && prev.id === updated.id ? updated : prev))
       setAssigningRequest(null)
+      notify.success(t('Vendor assigned. The customer has been notified.'))
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Could not assign vendor.')
+      notify.error(errorMessage(requestError, t('Could not assign the vendor. Please try again.')))
     } finally {
       setAssigning(false)
     }

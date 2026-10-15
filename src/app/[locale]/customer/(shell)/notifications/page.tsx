@@ -1,5 +1,6 @@
 'use client'
 
+import { errorMessage, notify } from '@/components/Alerts'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from '@/i18n/navigation'
 import { Link } from '@/i18n/navigation'
@@ -67,6 +68,9 @@ export default function CustomerNotificationsPage() {
     try {
       await markAllCustomerNotificationsRead(customerId)
       setNotifications((items) => items.map((item) => ({ ...item, is_read: true })))
+      notify.success(t('All notifications marked as read.'))
+    } catch (requestError) {
+      notify.error(errorMessage(requestError, t('Unable to mark all notifications as read. Please try again.')))
     } finally {
       setMarkingAll(false)
     }
@@ -83,8 +87,13 @@ export default function CustomerNotificationsPage() {
   }
   const remove = async (id: string) => {
     if (!customerId) return
-    await deleteCustomerNotification(customerId, id)
-    setNotifications((items) => items.filter((item) => item.id !== id))
+    try {
+      await deleteCustomerNotification(customerId, id)
+      setNotifications((items) => items.filter((item) => item.id !== id))
+      notify.success(t('Notification deleted.'))
+    } catch (requestError) {
+      notify.error(errorMessage(requestError, t('Could not delete the notification. Please try again.')))
+    }
   }
 
   const filteredNotifications = useMemo(() => {

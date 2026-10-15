@@ -16,6 +16,7 @@ import { IconActionButton } from '../../components/icon-action-button'
 import { DetailModal } from '../../components/detail-modal'
 import { useAutoRefreshOnFocus } from '../../components/use-auto-refresh'
 import { useLanguage } from '../../../lib/i18n'
+import { errorMessage, notify } from '@/components/Alerts'
 
 export default function AdminContactMessagesPage() {
   const { t } = useLanguage()
@@ -88,6 +89,7 @@ export default function AdminContactMessagesPage() {
         setSelectedMessage(updated)
       } catch (readError) {
         console.error('Unable to mark message read', readError)
+        notify.error(errorMessage(readError, t('Could not mark the message as read.')))
       }
     }
   }

@@ -1,5 +1,6 @@
 'use client'
 
+import { errorMessage, notify } from '@/components/Alerts'
 import { Link } from '@/i18n/navigation'
 import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
@@ -150,8 +151,10 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
     setCancelError('')
     try {
       setBooking(await cancelCustomerBooking(booking.id))
+      notify.popup('success', t('Order cancelled'), t('Your order has been cancelled. You can book a service again any time.'))
     } catch (requestError) {
       setCancelError(requestError instanceof Error ? requestError.message : t('Could not cancel this order.'))
+      notify.error(errorMessage(requestError, t('Could not cancel this order.')))
     } finally {
       setCancelling(false)
     }
@@ -162,8 +165,10 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
     setCancelError('')
     try {
       setBooking(await resumeCustomerBookingSearch(booking.id))
+      notify.success(t('We are looking for another vendor for you.'))
     } catch (requestError) {
       setCancelError(requestError instanceof Error ? requestError.message : t('Could not resume the search.'))
+      notify.error(errorMessage(requestError, t('Could not resume the search.')))
     } finally {
       setResuming(false)
     }

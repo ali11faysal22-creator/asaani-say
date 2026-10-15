@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import React, { useEffect, useState } from 'react'
 import { Link, useRouter } from '@/i18n/navigation'
 import { fetchPublicConfig, loginUser, registerVendor, setStoredAuth } from '@/app/lib/booking-api'
@@ -503,6 +504,7 @@ export default function VendorLoginPage() {
       if (auth?.role === 'vendor') {
         setStoredAuth('vendor', auth)
         router.push('/vendor/dashboard')
+        notify.popup('success', t('Account created'), t('Welcome to Asaani Say! Your vendor profile is ready.'))
       } else {
         setFormError(t('Vendor registration did not return a valid vendor session.'))
       }
@@ -537,11 +539,13 @@ export default function VendorLoginPage() {
       if (auth?.role === 'vendor') {
         setStoredAuth('vendor', auth)
         router.push('/vendor/dashboard')
+        notify.success(`${t('Welcome back')}${auth.full_name ? `, ${auth.full_name}` : ''}!`)
       } else {
         setFormError(t('This account is not registered as a vendor.'))
       }
     } catch (error) {
       setFormError(messageOf(error, 'Vendor login failed. Please try again.'))
+      notify.error(t(messageOf(error, 'Vendor login failed. Please try again.')))
     } finally {
       setIsProcessing(false)
     }

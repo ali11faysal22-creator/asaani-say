@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import { useEffect, useState } from 'react'
 import { usePathname } from '@/i18n/navigation'
 import { X } from 'lucide-react'
@@ -78,6 +79,7 @@ export default function CustomerDecisionPrompt() {
     try {
       await resumeCustomerBookingSearch(booking.id)
       setBooking(null)
+      notify.success(t('We are looking for another vendor for you.'))
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t('Could not resume the search.'))
     } finally {
@@ -92,6 +94,7 @@ export default function CustomerDecisionPrompt() {
       await cancelCustomerBooking(booking.id)
       dismiss(booking.id)
       setBooking(null)
+      notify.success(t('Your order has been cancelled.'))
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t('Could not cancel this order.'))
     } finally {

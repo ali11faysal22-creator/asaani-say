@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import React, { useState } from 'react'
 import { Link, useRouter } from '@/i18n/navigation'
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
@@ -29,6 +30,7 @@ export default function AdminLoginPage() {
       if (auth.role !== 'admin') throw new Error('This account does not have admin access.')
       setStoredAuth('admin', auth)
       router.push('/admin/dashboard')
+      notify.success(`${t('Welcome back')}${auth.full_name ? `, ${auth.full_name}` : ''}!`)
     } catch (requestError) {
       const apiFieldErrors = fieldErrorsOf(requestError)
       setFieldErrors(Object.keys(apiFieldErrors).length ? apiFieldErrors : { password: messageOf(requestError, 'Sign in failed.') })

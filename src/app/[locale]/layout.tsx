@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import "./globals.css";
 import CustomerRequestMonitor from './components/customer-request-monitor';
+import AlertHost from '@/components/Alerts';
 import { SITE_NAME, SITE_URL, getTranslator } from './lib/seo';
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -69,6 +70,7 @@ export default async function RootLayout({
         </a>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <CustomerRequestMonitor />
+          <AlertHost />
           <main id="main-content" className="flex-1">{children}</main>
         </NextIntlClientProvider>
       </body>

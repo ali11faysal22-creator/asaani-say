@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import { Link } from '@/i18n/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Bell, Check, CheckCheck, Clock } from 'lucide-react'
@@ -68,6 +69,7 @@ export default function CustomerNotificationPopover() {
     try {
       await markAllCustomerNotificationsRead(auth.profile_id)
       setNotifications((items) => items.map((item) => ({ ...item, unread: false })))
+      notify.success(t('All notifications marked as read.'))
     } catch (error) {
       console.warn('Unable to mark all customer notifications as read', error)
       setMarkAllError(t('Unable to mark all notifications as read. Please try again.'))

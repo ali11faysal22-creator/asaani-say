@@ -1,4 +1,5 @@
 'use client';
+import { notify } from '@/components/Alerts'
 import React, { useState } from 'react';
 import Image from 'next/image'
 import {
@@ -69,12 +70,14 @@ export default function ContactPage() {
       });
       setContactStatus('success');
       setContactMessage(t('Message sent! Our team will get back to you shortly.'));
+      notify.popup('success', t('Message sent'), t('Thank you for contacting us. Our team will get back to you shortly.'));
       setContactForm({ fullName: '', email: '', phone: '', subject: '', message: '' });
     } catch (error) {
       const apiFieldErrors = fieldErrorsOf(error);
       setFieldErrors(apiFieldErrors);
       setContactStatus('error');
       setContactMessage(Object.keys(apiFieldErrors).length ? 'Please correct the highlighted fields.' : messageOf(error, 'Something went wrong. Please try again.'));
+      if (!Object.keys(apiFieldErrors).length) notify.error(t(messageOf(error, 'Something went wrong. Please try again.')));
     }
   };
 

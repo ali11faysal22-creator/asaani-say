@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import { useState } from 'react'
 import { Star } from 'lucide-react'
 import { rateBooking, type BookingResult } from '@/app/lib/booking-api'
@@ -32,6 +33,7 @@ export function VendorRatingForm({
     try {
       const updated = await rateBooking(bookingId, rating, comment.trim() || undefined)
       onRated(updated)
+      notify.popup('success', t('Thank you for your feedback!'), t('Your rating helps other customers choose the right vendor.'))
     } catch (submitError) {
       const apiFieldErrors = fieldErrorsOf(submitError)
       setErrors(Object.keys(apiFieldErrors).length ? apiFieldErrors : { rating: messageOf(submitError, 'Unable to submit rating.') })

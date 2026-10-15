@@ -1,6 +1,8 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import Image from 'next/image'
+import { vendorActionSuccessMessage } from '@/app/lib/vendor-action-messages'
 import { FieldError, errorBorder, messageOf } from '@/components/FieldError'
 import { useState } from 'react'
 import {
@@ -59,10 +61,20 @@ export function VendorBookingActionPanel({
     if (field === 'reason') setReasonError(message)
     else if (field === 'photos') setPhotoError(message)
     else setError(message)
+    notify.error(t(message))
   }
 
   const handleDecision = async (action: 'accept' | 'reject') => {
     if (actionInProgress) return
+    if (action === 'reject') {
+      const confirmed = await notify.confirm({
+        title: t('Decline this request?'),
+        text: t('The customer will be matched with another vendor.'),
+        confirmLabel: t('Yes, decline'),
+        tone: 'danger',
+      })
+      if (!confirmed) return
+    }
     setActionInProgress(true)
     setError('')
     setReasonError('')
@@ -70,6 +82,7 @@ export function VendorBookingActionPanel({
     try {
       const updated = await decideVendorBooking(vendorId(), booking.id, action)
       onUpdated(updated)
+      notify.success(vendorActionSuccessMessage(action, t))
     } catch (requestError) {
       handleFailure(requestError, 'Unable to update this booking')
     } finally {
@@ -86,6 +99,7 @@ export function VendorBookingActionPanel({
     try {
       const updated = await updateVendorBookingStatus(vendorId(), booking.id, action, reason)
       onUpdated(updated)
+      notify.success(vendorActionSuccessMessage(action, t))
       setShowCannotStartForm(false)
       setCannotStartReason('')
     } catch (requestError) {
@@ -104,6 +118,7 @@ export function VendorBookingActionPanel({
     try {
       const updated = await completeVendorBookingWithPhotos(booking.id, completionPhotos)
       onUpdated(updated)
+      notify.popup('success', t('Job completed'), t('Great work! The customer has been notified and can now rate you.'))
       setShowCompletionUpload(false)
       setCompletionPhotos([])
     } catch (requestError) {

@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import React, { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Link, useRouter } from '@/i18n/navigation'
@@ -68,6 +69,7 @@ function ForgotPasswordFlow() {
     try {
       const response = await requestPasswordReset({ identifier: identifier.trim(), role })
       setNotice(t(response.message))
+      notify.success(t('Verification code sent. Please check your phone or email.'))
       setDevOtp(process.env.NODE_ENV !== 'production' ? response.dev_otp : null)
       setCooldown(RESEND_COOLDOWN_SECONDS)
       setStep('reset')
@@ -75,7 +77,10 @@ function ForgotPasswordFlow() {
       if ((err as { status?: number })?.status === 429) setCooldown(RESEND_COOLDOWN_SECONDS)
       const apiFieldErrors = fieldErrorsOf(err)
       if (Object.keys(apiFieldErrors).length) setFieldErrors(apiFieldErrors)
-      else setError(requestErrorMessage(err))
+      else {
+        setError(requestErrorMessage(err))
+        notify.error(requestErrorMessage(err))
+      }
     } finally {
       setIsProcessing(false)
     }
@@ -107,6 +112,7 @@ function ForgotPasswordFlow() {
     try {
       await resetPassword({ identifier: identifier.trim(), role, otp, new_password: newPassword })
       setStep('done')
+      notify.success(t('Password updated. You can now log in with your new password.'))
     } catch (err) {
       const status = (err as { status?: number })?.status
       const apiFieldErrors = fieldErrorsOf(err)

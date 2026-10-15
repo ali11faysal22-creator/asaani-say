@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import { Link } from '@/i18n/navigation'
 import { usePathname, useRouter } from '@/i18n/navigation'
 import { LogOut, Menu, Settings } from 'lucide-react'
@@ -17,6 +18,7 @@ export default function VendorTopbar({ onMenuClick }: { onMenuClick: () => void 
 
   const handleSignOut = () => {
     void signOut()
+    notify.success(t('You have been signed out.'))
     router.push('/vendor/login')
   }
 

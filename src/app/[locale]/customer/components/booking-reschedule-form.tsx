@@ -1,5 +1,6 @@
 'use client'
 
+import { errorMessage, notify } from '@/components/Alerts'
 import { useEffect, useState } from 'react'
 import { Calendar, Clock, Loader2 } from 'lucide-react'
 import {
@@ -72,8 +73,10 @@ export function BookingRescheduleForm({
     setError('')
     try {
       onRescheduled(await rescheduleCustomerBooking(booking.id, selectedDate, selectedSlot.start, selectedSlot.end))
+      notify.success(t('Your order has been rescheduled.'))
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t('Could not reschedule this order.'))
+      notify.error(errorMessage(requestError, t('Could not reschedule this order.')))
     } finally {
       setBusy(false)
     }

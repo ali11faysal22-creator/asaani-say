@@ -1003,6 +1003,10 @@ export async function setAdminVendorStatus(vendorId: string, status: 'approved' 
   })
 }
 
+export async function deleteAdminVendor(vendorId: string): Promise<void> {
+  return api(`/api/admin/vendors/${encodeURIComponent(vendorId)}`, { method: 'DELETE' })
+}
+
 export async function fetchAdminCustomers(): Promise<AdminCustomer[]> {
   return api('/api/admin/customers')
 }

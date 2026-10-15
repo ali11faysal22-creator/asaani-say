@@ -1,4 +1,5 @@
 'use client'
+import { notify } from '@/components/Alerts'
 import React, {useEffect,useRef,useState } from 'react'
 import {ChevronDown,User,Star,Quote,Truck,Clock,MousePointerClick,ArrowRight,ArrowUpRight,AlertCircle,ExternalLink as ExternalLinkIcon} from 'lucide-react'
 import { Link } from '@/i18n/navigation'
@@ -178,12 +179,14 @@ export default function HeroSection() {
       })
       setOrderStatus('success')
       setOrderMessage(t("Request sent! We'll match you with a professional shortly."))
+      notify.popup('success', t('Request sent'), t("We'll match you with a professional shortly."))
       setOrderForm({ zipCode: '', city: '', service: '', date: '', time: '', email: '', phone: '' })
     } catch (error) {
       const apiFieldErrors = fieldErrorsOf(error)
       setOrderErrors(apiFieldErrors)
       setOrderStatus('error')
       setOrderMessage(Object.keys(apiFieldErrors).length ? 'Please correct the highlighted fields.' : messageOf(error, 'Something went wrong. Please try again.'))
+      if (!Object.keys(apiFieldErrors).length) notify.error(t(messageOf(error, 'Something went wrong. Please try again.')))
     }
   }
 

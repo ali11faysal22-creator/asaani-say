@@ -1,5 +1,6 @@
 'use client'
 
+import { notify } from '@/components/Alerts'
 import { useEffect, useRef, useState } from 'react'
 import { Link, usePathname } from '@/i18n/navigation'
 import { Bell, ChevronDown, ClipboardList, Hand, LayoutDashboard, Menu, ShieldCheck, Sparkles, User, Wrench, X } from 'lucide-react'
@@ -133,6 +134,7 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
     setPortals([])
     setProfileOpen(false)
     void endSession()
+    notify.success(t('You have been signed out.'))
   }
 
   const guestAction = (
