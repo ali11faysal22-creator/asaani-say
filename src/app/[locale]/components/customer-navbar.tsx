@@ -2,10 +2,27 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Link, usePathname } from '@/i18n/navigation'
-import { Bell, ChevronDown, ClipboardList, Hand, LayoutDashboard, Menu, Sparkles, User, X } from 'lucide-react'
-import { clearStoredAuth, fetchCustomerNotifications, getCurrentUser, getStoredAuth, logoutUser, markCustomerNotificationRead, type CustomerNotification } from '../lib/booking-api'
+import { Bell, ChevronDown, ClipboardList, Hand, LayoutDashboard, Menu, ShieldCheck, Sparkles, User, Wrench, X } from 'lucide-react'
+import { clearStoredAuth, fetchCustomerNotifications, getCurrentUser, getStoredAuth, logoutUser, markCustomerNotificationRead, type AuthRole, type CustomerNotification } from '../lib/booking-api'
 import LanguageSwitcher from './language-switcher'
 import { useLanguage } from '../lib/i18n'
+
+type PortalSession = { role: Exclude<AuthRole, 'customer'>; name: string; href: string; label: string }
+
+const displayName = (auth: { email?: string; full_name?: string | null } | null, fallback: string) =>
+  auth?.full_name?.trim()
+  || auth?.email?.split('@')[0]?.replace(/[._-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+  || fallback
+
+/** Vendor / admin sessions stored in this browser. Each role keeps its own login, so they can be active together. */
+function readPortalSessions(): PortalSession[] {
+  const sessions: PortalSession[] = []
+  const vendor = getStoredAuth('vendor')
+  if (vendor) sessions.push({ role: 'vendor', name: displayName(vendor, 'Vendor'), href: '/vendor/dashboard', label: 'Vendor Portal' })
+  const admin = getStoredAuth('admin')
+  if (admin) sessions.push({ role: 'admin', name: displayName(admin, 'Admin'), href: '/admin/dashboard', label: 'Admin Console' })
+  return sessions
+}
 
 export default function CustomerNavbar({ active = '', showLanguageSwitcher = true }: { active?: string; showLanguageSwitcher?: boolean }) {
   const { t } = useLanguage()
@@ -13,6 +30,8 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
   const [auth, setAuth] = useState<{ role?: string; email?: string; full_name?: string | null } | null | undefined>(undefined)
   const [profileOpen, setProfileOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  // Vendor / admin logins in this browser; the public header shows them as signed in, next to any customer login.
+  const [portals, setPortals] = useState<PortalSession[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [alertNotification, setAlertNotification] = useState<CustomerNotification | null>(null)
   const notificationLoadInFlight = useRef(false)
@@ -20,12 +39,13 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
   const profileButtonRef = useRef<HTMLButtonElement>(null)
   const isActivePath = (path: string, section: string) =>
     active === section || pathname === path || pathname.startsWith(`${path}/`)
-  const customerName = auth?.full_name?.trim()
-    || auth?.email?.split('@')[0]?.replace(/[._-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
-    || 'Customer'
+  const customerName = displayName(auth ?? null, 'Customer')
+  const hasSession = Boolean(auth) || portals.length > 0
+  const accountName = auth ? customerName : portals[0]?.name || ''
 
   useEffect(() => {
     const load = () => {
+      setPortals(readPortalSessions())
       if (notificationLoadInFlight.current) return
       const storedAuth = getStoredAuth('customer')
       if (!storedAuth) {
@@ -71,8 +91,10 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
     }
     load()
     window.addEventListener('asaani-auth-changed', load)
+    window.addEventListener('storage', load)
     return () => {
       window.removeEventListener('asaani-auth-changed', load)
+      window.removeEventListener('storage', load)
     }
   }, [])
 
@@ -119,6 +141,20 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
     })
   }
 
+  const signOutPortal = (role: PortalSession['role']) => {
+    clearStoredAuth(role)
+    setProfileOpen(false)
+    setPortals(readPortalSessions())
+    window.dispatchEvent(new Event('asaani-auth-changed'))
+    logoutUser().catch(() => undefined)
+  }
+
+  const guestAction = (
+    <Link href="/login" className="inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-lg bg-[#3A3E59] px-2.5 py-2 text-[11px] font-medium text-white shadow-sm transition hover:bg-[#2C2F45] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-sm">
+      {t('Get Started')}
+    </Link>
+  )
+
   return (
     <header className="relative site-container mx-auto flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-6 lg:px-8">
       <Link href="/" className="flex items-center gap-2">
@@ -134,27 +170,26 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
       </nav>
       <div className="flex items-center gap-2">
         {showLanguageSwitcher && <LanguageSwitcher compact />}
-        {auth === undefined ? (
-          <Link href="/login" className="inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-lg bg-[#3A3E59] px-2.5 py-2 text-[11px] font-medium text-white shadow-sm transition hover:bg-[#2C2F45] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-sm">
-            {t('Get Started')}
-          </Link>
-        ) : auth ? (
+        {!hasSession ? (
+          guestAction
+        ) : (
           <div className="relative" ref={profileMenuRef}>
             <button
               ref={profileButtonRef}
               type="button"
-              aria-label={t('Open customer account menu')}
+              aria-label={auth ? t('Open customer account menu') : t('Open account menu')}
               aria-expanded={profileOpen}
               aria-controls="customer-account-menu"
               onClick={() => setProfileOpen((open) => !open)}
               className="inline-flex h-10 items-center gap-2 rounded-full border border-orange-100 bg-orange-50/70 px-3 text-orange-700 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 sm:px-3.5"
             >
               <User className="h-4 w-4 shrink-0" />
-              <span className="hidden max-w-36 truncate text-xs font-semibold tracking-wide sm:inline">{customerName}</span>
+              <span className="hidden max-w-36 truncate text-xs font-semibold tracking-wide sm:inline">{accountName}</span>
               <ChevronDown className={`hidden h-3.5 w-3.5 transition-transform sm:inline ${profileOpen ? 'rotate-180' : ''}`} />
             </button>
             {profileOpen && (
-              <div id="customer-account-menu" aria-label={t('Customer account options')} className="fixed left-1/2 top-28 z-50 w-56 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 rounded-xl border border-slate-200 bg-white p-2 shadow-xl md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:translate-x-0">
+              <div id="customer-account-menu" aria-label={t('Account options')} className="fixed left-1/2 top-28 z-50 w-56 max-w-[calc(100vw-1.5rem)] -translate-x-1/2 rounded-xl border border-slate-200 bg-white p-2 shadow-xl md:absolute md:left-auto md:right-0 md:top-full md:mt-2 md:translate-x-0">
+                  {auth && (<>
                   <Link
                     href="/customer/dashboard"
                     onClick={() => setProfileOpen(false)}
@@ -183,15 +218,32 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
                     onClick={signOut}
                     className="w-full rounded-lg px-3 py-2.5 text-start text-sm font-semibold text-red-500 transition-colors hover:bg-red-50"
                   >
-                    {t('Sign out')}
+                    {portals.length > 0 ? `${t('Sign out')} · ${t('Customer')}` : t('Sign out')}
                   </button>
+                  </>)}
+                  {portals.map((portal, index) => (
+                    <div key={portal.role}>
+                      {(auth || index > 0) && <div className="my-1 border-t border-slate-100" />}
+                      <Link
+                        href={portal.href}
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-orange-50 hover:text-orange-600"
+                      >
+                        {portal.role === 'vendor' ? <Wrench className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                        <span className="min-w-0"><span className="block">{t(portal.label)}</span><span className="block truncate text-[11px] font-medium text-slate-400">{portal.name}</span></span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => signOutPortal(portal.role)}
+                        className="w-full rounded-lg px-3 py-2.5 text-start text-sm font-semibold text-red-500 transition-colors hover:bg-red-50"
+                      >
+                        {`${t('Sign out')} · ${t(portal.label)}`}
+                      </button>
+                    </div>
+                  ))}
               </div>
             )}
           </div>
-        ) : (
-          <Link href="/login" className="inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-lg bg-[#3A3E59] px-2.5 py-2 text-[11px] font-medium text-white shadow-sm transition hover:bg-[#2C2F45] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-sm">
-            {t('Get Started')}
-          </Link>
         )}
         <button type="button" onClick={() => setMobileOpen((open) => !open)} className="rounded-lg border border-slate-200 p-2 text-slate-700 md:hidden" aria-label={t('Open navigation menu')}>
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}

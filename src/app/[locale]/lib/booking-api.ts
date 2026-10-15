@@ -211,10 +211,24 @@ const ACCESS_TOKEN_KEYS: Record<AuthRole, string> = {
   admin: 'asaani_admin_token',
 }
 
-// All roles persist in localStorage so a session survives closing and reopening the
-// browser (previously vendor used sessionStorage, which logged them out per tab/session).
+// Where logins live. By default each browser TAB has its own sessions (sessionStorage): signing in
+// as a vendor in one tab does not sign in the other tabs, and a customer login in tab 2 does not
+// leak into the vendor tab. Set NEXT_PUBLIC_AUTH_STORAGE=local to share one login across all tabs
+// and keep it after the browser is closed (localStorage) instead.
+const SHARE_LOGIN_ACROSS_TABS = process.env.NEXT_PUBLIC_AUTH_STORAGE === 'local'
+let legacyAuthPurged = false
+
 function authStorage(): Storage {
-  return window.localStorage
+  if (SHARE_LOGIN_ACROSS_TABS) return window.localStorage
+  if (!legacyAuthPurged) {
+    // Older builds kept every role's login in localStorage, shared by all tabs; drop those leftovers once.
+    legacyAuthPurged = true
+    try {
+      for (const key of [...Object.values(AUTH_STORAGE_KEYS), ...Object.values(ACCESS_TOKEN_KEYS)]) window.localStorage.removeItem(key)
+    } catch {
+    }
+  }
+  return window.sessionStorage
 }
 
 export function getStoredAuth(role: AuthRole): AuthResponse | null {

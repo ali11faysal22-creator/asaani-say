@@ -59,6 +59,8 @@ export default function ServiceCategoryView({ slug, initialCategory = null }: { 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [bookingData, setBookingData] = useState<BookingResult | null>(null)
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
+  // Set when a vendor/admin (and no customer) tries to order: only customers can place orders.
+  const [roleNotice, setRoleNotice] = useState<'vendor' | 'admin' | null>(null)
   const [bookingError, setBookingError] = useState('')
   const [addressErrors, setAddressErrors] = useState<Record<string, string>>({})
   const resumedBookingRef = useRef<{ date?: string; slot?: { start: string; end: string } } | null>(null)
@@ -406,6 +408,17 @@ export default function ServiceCategoryView({ slug, initialCategory = null }: { 
 
   const totalPrice = selectedServices.reduce((acc, curr) => acc + (curr.price || 0), 0)
 
+  const handleContinue = () => {
+    if (!getStoredAuth('customer')) {
+      const portalRole = getStoredAuth('vendor') ? 'vendor' : getStoredAuth('admin') ? 'admin' : null
+      if (portalRole) {
+        setRoleNotice(portalRole)
+        return
+      }
+    }
+    setIsSlotModalOpen(true)
+  }
+
   return (
     <div className="w-full bg-white font-sans text-slate-800 relative min-h-screen">
       
@@ -490,7 +503,7 @@ export default function ServiceCategoryView({ slug, initialCategory = null }: { 
         <div className="fixed bottom-6 end-6 z-40">
           <button
             type="button"
-            onClick={() => setIsSlotModalOpen(true)}
+            onClick={handleContinue}
             className="bg-[#EE6C52] hover:bg-orange-600 text-white font-extrabold text-sm px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-3 transition-all transform hover:scale-105 border-2 border-white cursor-pointer"
           >
             <span>{t('Continue')} ({selectedServices.length} {t('Selected')}{t(") • Rs:")}{' '}{totalPrice}</span>
@@ -768,6 +781,35 @@ export default function ServiceCategoryView({ slug, initialCategory = null }: { 
                   {t("Close & Done")}</button>
               </div>
             )}
+        </Modal>
+      )}
+      {roleNotice && (
+        <Modal
+          onClose={() => setRoleNotice(null)}
+          labelledBy="role-notice-title"
+          overlayClassName="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
+          panelClassName="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl"
+        >
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600"><UserCheck className="h-6 w-6" /></div>
+            <h2 id="role-notice-title" className="text-lg font-extrabold text-slate-900">
+              {roleNotice === 'vendor' ? t("You're signed in as a vendor") : t("You're signed in as an admin")}
+            </h2>
+            <p className="mt-2 text-xs leading-relaxed text-slate-500">{t('If you want to order a service, please sign in as a customer first.')}</p>
+            <div className="mt-6 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  // Keep the chosen services so the order can continue right after the customer signs in.
+                  saveBookingDraftForLogin()
+                  setRoleNotice(null)
+                  router.push('/customer/login')
+                }}
+                className="w-full rounded-xl bg-orange-500 px-3 py-3 text-xs font-extrabold text-white hover:bg-orange-600"
+              >
+                {t('Sign in as a customer')}
+              </button>
+              <button type="button" onClick={() => setRoleNotice(null)} className="w-full rounded-xl border border-slate-200 px-3 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50">{t('Go back')}</button>
+            </div>
         </Modal>
       )}
       {showAuthPrompt && (
