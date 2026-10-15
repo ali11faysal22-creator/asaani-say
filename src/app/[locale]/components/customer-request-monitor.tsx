@@ -7,10 +7,8 @@ import { useLanguage } from '../lib/i18n'
 import { fetchBooking, getStoredAuth, type BookingResult } from '../lib/booking-api'
 import { startPolling } from '../lib/polling'
 
-// How long after placing an order this reminder is worth showing. The per-vendor answer window is
-// not hard-coded here: it comes from the booking's vendor_response_deadline (the backend decides it).
+// One countdown from the moment the order is placed; the backend's per-vendor 90s windows are internal.
 const WATCH_WINDOW_SECONDS = 180
-const FALLBACK_RESPONSE_SECONDS = 90
 
 type StoredOrder = {
   orderId?: string
@@ -93,10 +91,8 @@ export default function CustomerRequestMonitor() {
     if (!order?.createdAt || booking?.status !== 'pending') return
 
     const update = () => {
-      const end = booking.vendor_response_deadline
-        ? new Date(booking.vendor_response_deadline).getTime()
-        : new Date(order.createdAt as string).getTime() + FALLBACK_RESPONSE_SECONDS * 1000
-      setSecondsRemaining(Math.max(0, Math.ceil((end - Date.now()) / 1000)))
+      const elapsed = Math.floor((Date.now() - new Date(order.createdAt as string).getTime()) / 1000)
+      setSecondsRemaining(Math.max(0, WATCH_WINDOW_SECONDS - elapsed))
     }
     update()
     const timer = window.setInterval(update, 1000)
