@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from '@/i18n/navigation'
 import { LogOut, Menu } from 'lucide-react'
-import { clearStoredAuth, logoutUser } from '@/app/lib/booking-api'
+import { signOut } from '@/app/lib/booking-api'
 import AdminNotificationPopover from './admin-notification-popover'
 import { ADMIN_PAGE_META, DEFAULT_ADMIN_PAGE_META } from './admin-page-meta'
 import { useLanguage } from '../../lib/i18n'
@@ -14,9 +14,8 @@ export default function AdminTopbar({ onMenuClick }: { onMenuClick: () => void }
   const { title, subtitle } = (pathname && ADMIN_PAGE_META[pathname]) || DEFAULT_ADMIN_PAGE_META
 
   const handleSignOut = () => {
-    clearStoredAuth('admin')
+    void signOut()
     router.push('/admin/login')
-    logoutUser().catch(() => {})
   }
 
   return (

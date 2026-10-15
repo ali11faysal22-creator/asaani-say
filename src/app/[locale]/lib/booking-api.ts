@@ -200,35 +200,51 @@ const AUTH_STORAGE_KEYS: Record<AuthRole, string> = {
   admin: 'asaani_admin_auth',
 }
 
-// Each role keeps its own JWT, colocated with that role's auth blob. Dashboards for
-// different roles can therefore stay logged in side by side (e.g. admin open in one tab
-// while a vendor account is exercised in another) without one login clobbering another's
-// bearer token — which previously caused background pollers to send the wrong role's
-// token and get 403'd ("Admin access required" etc.) once a different role logged in.
+// Each role keeps its own key pair, but only ONE role can be signed in per browser profile at a
+// time: setStoredAuth() replaces whichever account was active before. Logins live in localStorage,
+// so every tab of the profile sees the same account and switching accounts in one tab is picked up
+// by the others through the "storage" event (see use-require-auth).
 const ACCESS_TOKEN_KEYS: Record<AuthRole, string> = {
   customer: 'asaani_customer_token',
   vendor: 'asaani_vendor_token',
   admin: 'asaani_admin_token',
 }
 
-// Where logins live. By default each browser TAB has its own sessions (sessionStorage): signing in
-// as a vendor in one tab does not sign in the other tabs, and a customer login in tab 2 does not
-// leak into the vendor tab. Set NEXT_PUBLIC_AUTH_STORAGE=local to share one login across all tabs
-// and keep it after the browser is closed (localStorage) instead.
-const SHARE_LOGIN_ACROSS_TABS = process.env.NEXT_PUBLIC_AUTH_STORAGE === 'local'
-let legacyAuthPurged = false
+const AUTH_ROLES = Object.keys(AUTH_STORAGE_KEYS) as AuthRole[]
+export const AUTH_CHANGED_EVENT = 'asaani-auth-changed'
+
+// Remembers who was signed in last, so a different account never inherits that user's cached data.
+const LAST_USER_KEY = 'asaani_last_user_id'
+
+// Browser-side caches that belong to a single user (cart, latest order, vendor setup...).
+const USER_SCOPED_KEYS = [
+  'asaani_cart',
+  'asaani_booking_details',
+  'asaani_latest_order',
+  'asaani_user_notifications',
+  'asaani_user_addresses',
+  'vendor_availability',
+  'vendor_onboarding_data',
+  'vendor_signup_data',
+  'vendor_selected_categories',
+  'vendor_main_services',
+  'vendor_selected_sub_services',
+  'vendor_sub_services',
+]
 
 function authStorage(): Storage {
-  if (SHARE_LOGIN_ACROSS_TABS) return window.localStorage
-  if (!legacyAuthPurged) {
-    // Older builds kept every role's login in localStorage, shared by all tabs; drop those leftovers once.
-    legacyAuthPurged = true
-    try {
-      for (const key of [...Object.values(AUTH_STORAGE_KEYS), ...Object.values(ACCESS_TOKEN_KEYS)]) window.localStorage.removeItem(key)
-    } catch {
-    }
+  return window.localStorage
+}
+
+function clearUserScopedData(): void {
+  try {
+    for (const key of USER_SCOPED_KEYS) authStorage().removeItem(key)
+  } catch {
   }
-  return window.sessionStorage
+}
+
+function notifyAuthChanged(): void {
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT))
 }
 
 export function getStoredAuth(role: AuthRole): AuthResponse | null {
@@ -241,27 +257,78 @@ export function getStoredAuth(role: AuthRole): AuthResponse | null {
   return null
 }
 
+function removeStoredRole(role: AuthRole): void {
+  authStorage().removeItem(AUTH_STORAGE_KEYS[role])
+  authStorage().removeItem(ACCESS_TOKEN_KEYS[role])
+}
+
+/** Signs `auth` in as the browser profile's single active account, replacing any other role/user. */
 export function setStoredAuth(role: AuthRole, auth: AuthResponse): void {
   if (typeof window === 'undefined') return
-  authStorage().setItem(AUTH_STORAGE_KEYS[role], JSON.stringify(auth))
-  if (auth.access_token) {
-    authStorage().setItem(ACCESS_TOKEN_KEYS[role], auth.access_token)
+  try {
+    const previousUserId = authStorage().getItem(LAST_USER_KEY)
+    if (previousUserId && previousUserId !== auth.user_id) clearUserScopedData()
+    for (const other of AUTH_ROLES) removeStoredRole(other)
+    authStorage().setItem(LAST_USER_KEY, auth.user_id)
+    authStorage().setItem(AUTH_STORAGE_KEYS[role], JSON.stringify(auth))
+    if (auth.access_token) authStorage().setItem(ACCESS_TOKEN_KEYS[role], auth.access_token)
+  } catch {
+  }
+  notifyAuthChanged()
+}
+
+/**
+ * Updates the cached profile of an already signed-in account (e.g. after /api/auth/me) without
+ * touching tokens or other roles. If the role no longer holds a token the session was replaced or
+ * ended while the request was in flight, so the late response must not bring it back.
+ */
+function refreshStoredAuth(role: AuthRole, auth: AuthResponse): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (!authStorage().getItem(ACCESS_TOKEN_KEYS[role])) return
+    authStorage().setItem(AUTH_STORAGE_KEYS[role], JSON.stringify(auth))
+  } catch {
   }
 }
 
 export function clearStoredAuth(role: AuthRole): void {
   if (typeof window === 'undefined') return
-  authStorage().removeItem(AUTH_STORAGE_KEYS[role])
-  authStorage().removeItem(ACCESS_TOKEN_KEYS[role])
+  try {
+    removeStoredRole(role)
+  } catch {
+  }
+  notifyAuthChanged()
 }
 
 export function getAccessToken(role: AuthRole): string | null {
   if (typeof window === 'undefined') return null
-  return authStorage().getItem(ACCESS_TOKEN_KEYS[role])
+  try {
+    return authStorage().getItem(ACCESS_TOKEN_KEYS[role])
+  } catch {
+    return null
+  }
 }
 
 function anyAccessToken(): string | null {
   return getAccessToken('admin') || getAccessToken('vendor') || getAccessToken('customer')
+}
+
+/**
+ * Explicit sign-out: grabs the active token first, wipes the session and that user's cached data from
+ * this browser, then tells the server. The local sign-out never waits on (or fails with) the request.
+ */
+export function signOut(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve()
+  const token = anyAccessToken()
+  try {
+    for (const role of AUTH_ROLES) removeStoredRole(role)
+    authStorage().removeItem(LAST_USER_KEY)
+  } catch {
+  }
+  clearUserScopedData()
+  notifyAuthChanged()
+  if (!token) return Promise.resolve()
+  return api<void>('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => undefined)
 }
 
 // Only these two role-agnostic endpoints need "whichever session is logged in". Every other
@@ -518,7 +585,7 @@ export async function resetPassword(payload: {
 export async function getCurrentUser(role?: AuthRole): Promise<AuthResponse> {
   try {
     const user = await api<AuthResponse>('/api/auth/me', role ? { authRole: role } : undefined)
-    setStoredAuth(user.role, user)
+    refreshStoredAuth(user.role, user)
     return user
   } catch (error) {
     const status = (error as { status?: number }).status
@@ -539,10 +606,6 @@ export async function getCurrentUser(role?: AuthRole): Promise<AuthResponse> {
     }
     throw error
   }
-}
-
-export async function logoutUser(): Promise<void> {
-  return api('/api/auth/logout', { method: 'POST' })
 }
 
 export async function fetchVendorProfile(vendorId: string): Promise<VendorProfileResponse> {

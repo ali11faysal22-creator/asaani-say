@@ -5,26 +5,28 @@ import { useState, type ReactNode } from 'react'
 import { usePathname } from '@/i18n/navigation'
 import CustomerSidebar from './customer-sidebar'
 import CustomerTopbar from './customer-topbar'
+import { useRequireAuth } from '@/app/lib/use-require-auth'
 import CustomerRatingPrompt from './customer-rating-prompt'
 import CustomerDecisionPrompt from './customer-decision-prompt'
 import { resolveCustomerPageMeta } from './customer-page-meta'
 
 export default function CustomerShell({ children }: { children: ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const authed = useRequireAuth('customer', '/customer/login')
   const pathname = usePathname()
   const { contentClassName } = resolveCustomerPageMeta(pathname)
 
   return (
     <div className="min-h-screen w-full bg-[#F8FAFC] flex font-sans">
-      <CustomerRatingPrompt />
-      <CustomerDecisionPrompt />
+      {authed && <CustomerRatingPrompt />}
+      {authed && <CustomerDecisionPrompt />}
       <CustomerSidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
 
       <div className="flex-1 min-w-0 flex flex-col">
         <CustomerTopbar onMenuClick={() => setMobileNavOpen(true)} />
 
         <div data-shell-main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className={`${contentClassName || 'w-full'} space-y-6`}><Breadcrumbs />{children}</div>
+          <div className={`${contentClassName || 'w-full'} space-y-6`}><Breadcrumbs />{authed ? children : null}</div>
         </div>
       </div>
     </div>

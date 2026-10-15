@@ -82,7 +82,6 @@ export default function CustomerAuthPage() {
           })
         }
       }
-      window.dispatchEvent(new Event('asaani-auth-changed'))
       const pendingBooking = readPendingServiceBooking()
       if (pendingBooking) {
         router.push(`/services/${pendingBooking.slug}`)

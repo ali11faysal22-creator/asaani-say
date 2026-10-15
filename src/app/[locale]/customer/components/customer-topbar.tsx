@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from '@/i18n/navigation'
 import { LogOut, Menu } from 'lucide-react'
-import { clearStoredAuth, logoutUser } from '@/app/lib/booking-api'
+import { signOut } from '@/app/lib/booking-api'
 import CustomerNotificationPopover from './customer-notification-popover'
 import { resolveCustomerPageMeta } from './customer-page-meta'
 import LanguageSwitcher from '@/app/components/language-switcher'
@@ -15,10 +15,8 @@ export default function CustomerTopbar({ onMenuClick }: { onMenuClick: () => voi
   const { title, subtitle } = resolveCustomerPageMeta(pathname)
 
   const handleSignOut = () => {
-    clearStoredAuth('customer')
-    window.dispatchEvent(new Event('asaani-auth-changed'))
+    void signOut()
     router.push('/customer/login')
-    logoutUser().catch(() => {})
   }
 
   return (

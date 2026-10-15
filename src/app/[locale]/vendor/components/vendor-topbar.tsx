@@ -3,7 +3,7 @@
 import { Link } from '@/i18n/navigation'
 import { usePathname, useRouter } from '@/i18n/navigation'
 import { LogOut, Menu, Settings } from 'lucide-react'
-import { clearStoredAuth, logoutUser } from '@/app/lib/booking-api'
+import { signOut } from '@/app/lib/booking-api'
 import NotificationPopover from './notification-popover'
 import { DEFAULT_VENDOR_PAGE_META, VENDOR_PAGE_META } from './vendor-page-meta'
 import LanguageSwitcher from '@/app/components/language-switcher'
@@ -16,9 +16,8 @@ export default function VendorTopbar({ onMenuClick }: { onMenuClick: () => void 
   const { title, subtitle } = (pathname && VENDOR_PAGE_META[pathname]) || DEFAULT_VENDOR_PAGE_META
 
   const handleSignOut = () => {
-    clearStoredAuth('vendor')
+    void signOut()
     router.push('/vendor/login')
-    logoutUser().catch(() => {})
   }
 
   return (

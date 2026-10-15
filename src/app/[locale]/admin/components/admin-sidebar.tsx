@@ -19,7 +19,7 @@ const NAV_ITEMS = [
 function Brand() {
   const { t } = useLanguage()
   return (
-    <Link href="/admin/dashboard" aria-label={t('Go to dashboard')} className="flex items-center gap-3">
+    <Link href="/" aria-label={t('Go to home page')} className="flex items-center gap-3">
       <div className="w-9 h-9 rounded-xl bg-[#EE6C52] flex items-center justify-center shadow-xs shrink-0">
         <ShieldCheck className="w-4.5 h-4.5 text-white" />
       </div>

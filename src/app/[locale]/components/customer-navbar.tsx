@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, usePathname } from '@/i18n/navigation'
 import { Bell, ChevronDown, ClipboardList, Hand, LayoutDashboard, Menu, ShieldCheck, Sparkles, User, Wrench, X } from 'lucide-react'
-import { clearStoredAuth, fetchCustomerNotifications, getCurrentUser, getStoredAuth, logoutUser, markCustomerNotificationRead, type AuthRole, type CustomerNotification } from '../lib/booking-api'
+import { AUTH_CHANGED_EVENT, fetchCustomerNotifications, getCurrentUser, getStoredAuth, markCustomerNotificationRead, signOut as endSession, type AuthRole, type CustomerNotification } from '../lib/booking-api'
 import LanguageSwitcher from './language-switcher'
 import { useLanguage } from '../lib/i18n'
 
@@ -14,7 +14,7 @@ const displayName = (auth: { email?: string; full_name?: string | null } | null,
   || auth?.email?.split('@')[0]?.replace(/[._-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
   || fallback
 
-/** Vendor / admin sessions stored in this browser. Each role keeps its own login, so they can be active together. */
+/** The vendor / admin session stored in this browser, if that is the account currently signed in. */
 function readPortalSessions(): PortalSession[] {
   const sessions: PortalSession[] = []
   const vendor = getStoredAuth('vendor')
@@ -30,7 +30,7 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
   const [auth, setAuth] = useState<{ role?: string; email?: string; full_name?: string | null } | null | undefined>(undefined)
   const [profileOpen, setProfileOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  // Vendor / admin logins in this browser; the public header shows them as signed in, next to any customer login.
+  // The browser profile has a single active account; when it is a vendor / admin the public header shows it as signed in.
   const [portals, setPortals] = useState<PortalSession[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [alertNotification, setAlertNotification] = useState<CustomerNotification | null>(null)
@@ -90,10 +90,10 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
         })
     }
     load()
-    window.addEventListener('asaani-auth-changed', load)
+    window.addEventListener(AUTH_CHANGED_EVENT, load)
     window.addEventListener('storage', load)
     return () => {
-      window.removeEventListener('asaani-auth-changed', load)
+      window.removeEventListener(AUTH_CHANGED_EVENT, load)
       window.removeEventListener('storage', load)
     }
   }, [])
@@ -129,24 +129,10 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
   }
 
   const signOut = () => {
-    clearStoredAuth('customer')
     setAuth(null)
+    setPortals([])
     setProfileOpen(false)
-    window.dispatchEvent(new Event('asaani-auth-changed'))
-    logoutUser().catch(() => {
-    }).finally(() => {
-      setAuth(null)
-      setProfileOpen(false)
-      window.dispatchEvent(new Event('asaani-auth-changed'))
-    })
-  }
-
-  const signOutPortal = (role: PortalSession['role']) => {
-    clearStoredAuth(role)
-    setProfileOpen(false)
-    setPortals(readPortalSessions())
-    window.dispatchEvent(new Event('asaani-auth-changed'))
-    logoutUser().catch(() => undefined)
+    void endSession()
   }
 
   const guestAction = (
@@ -218,7 +204,7 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
                     onClick={signOut}
                     className="w-full rounded-lg px-3 py-2.5 text-start text-sm font-semibold text-red-500 transition-colors hover:bg-red-50"
                   >
-                    {portals.length > 0 ? `${t('Sign out')} · ${t('Customer')}` : t('Sign out')}
+                    {t('Sign out')}
                   </button>
                   </>)}
                   {portals.map((portal, index) => (
@@ -234,7 +220,7 @@ export default function CustomerNavbar({ active = '', showLanguageSwitcher = tru
                       </Link>
                       <button
                         type="button"
-                        onClick={() => signOutPortal(portal.role)}
+                        onClick={signOut}
                         className="w-full rounded-lg px-3 py-2.5 text-start text-sm font-semibold text-red-500 transition-colors hover:bg-red-50"
                       >
                         {`${t('Sign out')} · ${t(portal.label)}`}

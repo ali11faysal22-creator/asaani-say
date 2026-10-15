@@ -5,10 +5,12 @@ import { useState, type ReactNode } from 'react'
 import { usePathname } from '@/i18n/navigation'
 import VendorSidebar from './vendor-sidebar'
 import VendorTopbar from './vendor-topbar'
+import { useRequireAuth } from '@/app/lib/use-require-auth'
 import { DEFAULT_VENDOR_PAGE_META, VENDOR_PAGE_META } from './vendor-page-meta'
 
 export default function VendorShell({ children }: { children: ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const authed = useRequireAuth('vendor', '/vendor/login')
   const pathname = usePathname()
   const { contentClassName } = (pathname && VENDOR_PAGE_META[pathname]) || DEFAULT_VENDOR_PAGE_META
 
@@ -20,7 +22,7 @@ export default function VendorShell({ children }: { children: ReactNode }) {
         <VendorTopbar onMenuClick={() => setMobileNavOpen(true)} />
 
         <div className="min-w-0 flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className={`min-w-0 ${contentClassName || 'w-full'} space-y-6`}><Breadcrumbs />{children}</div>
+          <div className={`min-w-0 ${contentClassName || 'w-full'} space-y-6`}><Breadcrumbs />{authed ? children : null}</div>
         </div>
       </div>
     </div>
