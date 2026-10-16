@@ -34,11 +34,11 @@ export default function AdminCustomersPage() {
       try {
         const user = await getCurrentUser('admin')
         if (user.role !== 'admin') {
-          router.push('/admin/login')
+          router.replace('/admin/login')
           return
         }
       } catch {
-        router.push('/admin/login')
+        router.replace('/admin/login')
         return
       }
       await loadData()

@@ -17,7 +17,7 @@ export default function AdminTopbar({ onMenuClick }: { onMenuClick: () => void }
   const handleSignOut = () => {
     void signOut()
     notify.success(t('You have been signed out.'))
-    router.push('/admin/login')
+    router.replace('/admin/login')
   }
 
   return (

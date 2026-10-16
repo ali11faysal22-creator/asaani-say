@@ -67,7 +67,7 @@ export default function OrderHistoryPage() {
       try {
         const saved = getStoredAuth('vendor')
         if (!saved || saved.role !== 'vendor') {
-          router.push('/vendor/login')
+          router.replace('/vendor/login')
           return
         }
         const rows = await fetchVendorBookings(saved.profile_id || saved.user_id)

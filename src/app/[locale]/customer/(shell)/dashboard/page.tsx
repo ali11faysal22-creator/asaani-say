@@ -36,7 +36,7 @@ export default function CustomerDashboardPage() {
       try {
         const auth = await getCurrentUser('customer')
         if (auth.role !== 'customer') {
-          router.push('/customer/login')
+          router.replace('/customer/login')
           return
         }
         if (active) setCustomerName(auth.email?.split('@')[0] || 'there')
@@ -53,7 +53,7 @@ export default function CustomerDashboardPage() {
           }
         }
       } catch {
-        router.push('/customer/login')
+        router.replace('/customer/login')
         return
       } finally {
         if (active) setLoading(false)

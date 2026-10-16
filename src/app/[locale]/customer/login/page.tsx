@@ -89,7 +89,7 @@ export default function CustomerAuthPage() {
       if (pendingBooking) {
         router.push(`/services/${pendingBooking.slug}`)
       } else {
-        router.push('/customer/dashboard')
+        router.replace('/customer/dashboard')
       }
     } catch (requestError) {
       if (accountCreated) {

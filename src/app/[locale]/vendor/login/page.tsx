@@ -503,7 +503,7 @@ export default function VendorLoginPage() {
       const auth = await registerVendor(payload)
       if (auth?.role === 'vendor') {
         setStoredAuth('vendor', auth)
-        router.push('/vendor/dashboard')
+        router.replace('/vendor/dashboard')
         notify.popup('success', t('Account created'), t('Welcome to Asaani Say! Your vendor profile is ready.'))
       } else {
         setFormError(t('Vendor registration did not return a valid vendor session.'))
@@ -538,7 +538,7 @@ export default function VendorLoginPage() {
       const auth = await loginUser({ identifier: emailOrPhone, password, role: 'vendor' })
       if (auth?.role === 'vendor') {
         setStoredAuth('vendor', auth)
-        router.push('/vendor/dashboard')
+        router.replace('/vendor/dashboard')
         notify.success(`${t('Welcome back')}${auth.full_name ? `, ${auth.full_name}` : ''}!`)
       } else {
         setFormError(t('This account is not registered as a vendor.'))

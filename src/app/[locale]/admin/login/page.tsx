@@ -1,10 +1,10 @@
 'use client'
 
 import { notify } from '@/components/Alerts'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useRouter } from '@/i18n/navigation'
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
-import { loginUser, setStoredAuth } from '@/app/lib/booking-api'
+import { getStoredAuth, loginUser, setStoredAuth } from '@/app/lib/booking-api'
 import { useLanguage } from '../../lib/i18n'
 import { FieldError, errorBorder, fieldErrorsOf, messageOf } from '@/components/FieldError'
 
@@ -16,6 +16,10 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (getStoredAuth('admin')) router.replace('/admin/dashboard')
+  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,7 +33,7 @@ export default function AdminLoginPage() {
       const auth = await loginUser({ identifier: email, password, role: 'admin' })
       if (auth.role !== 'admin') throw new Error('This account does not have admin access.')
       setStoredAuth('admin', auth)
-      router.push('/admin/dashboard')
+      router.replace('/admin/dashboard')
       notify.success(`${t('Welcome back')}${auth.full_name ? `, ${auth.full_name}` : ''}!`)
     } catch (requestError) {
       const apiFieldErrors = fieldErrorsOf(requestError)

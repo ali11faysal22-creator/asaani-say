@@ -93,7 +93,7 @@ export default function VendorProfilePage() {
         if (typeof window === 'undefined') return
         const auth = getStoredAuth('vendor')
         if (!auth || auth.role !== 'vendor') {
-          router.push('/vendor/login')
+          router.replace('/vendor/login')
           return
         }
 

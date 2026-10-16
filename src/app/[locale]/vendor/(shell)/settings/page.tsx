@@ -199,7 +199,7 @@ export default function VendorSettingsPage() {
     const loadBackendProfile = async () => {
       const auth = getStoredAuth('vendor')
       if (!auth?.profile_id) {
-        router.push('/vendor/login')
+        router.replace('/vendor/login')
         return
       }
       try {

@@ -39,7 +39,7 @@ export default function VendorDashboardPage() {
     const load = async () => {
       const auth = getStoredAuth('vendor')
       if (!auth || auth.role !== 'vendor') {
-        router.push('/vendor/login')
+        router.replace('/vendor/login')
         return
       }
       const vendorId = auth.profile_id || auth.user_id

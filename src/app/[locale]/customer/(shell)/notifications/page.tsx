@@ -25,7 +25,7 @@ export default function CustomerNotificationsPage() {
       try {
         const auth = await getCurrentUser('customer')
         if (auth.role !== 'customer') {
-          router.push('/customer/login')
+          router.replace('/customer/login')
           return
         }
         if (auth.profile_id) {
@@ -45,7 +45,7 @@ export default function CustomerNotificationsPage() {
           }
         }
       } catch {
-        router.push('/customer/login')
+        router.replace('/customer/login')
         return
       } finally {
         if (active) setLoading(false)

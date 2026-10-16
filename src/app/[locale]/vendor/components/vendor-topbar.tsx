@@ -19,7 +19,7 @@ export default function VendorTopbar({ onMenuClick }: { onMenuClick: () => void 
   const handleSignOut = () => {
     void signOut()
     notify.success(t('You have been signed out.'))
-    router.push('/vendor/login')
+    router.replace('/vendor/login')
   }
 
   return (

@@ -65,7 +65,7 @@ export default function CustomerOrdersPage() {
         if (!profileId) {
           const auth = await getCurrentUser('customer')
           if (auth.role !== 'customer' || !auth.profile_id) {
-            router.push('/customer/login')
+            router.replace('/customer/login')
             return
           }
           profileId = auth.profile_id
@@ -74,7 +74,7 @@ export default function CustomerOrdersPage() {
         if (active) setOrders(data)
       } catch (error) {
         // Only a rejected session sends the customer to sign in; a network hiccup keeps the list as is.
-        if (error instanceof ApiError && error.status === 401) router.push('/customer/login')
+        if (error instanceof ApiError && error.status === 401) router.replace('/customer/login')
       } finally {
         if (active) setLoading(false)
       }

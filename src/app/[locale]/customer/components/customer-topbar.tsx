@@ -18,7 +18,7 @@ export default function CustomerTopbar({ onMenuClick }: { onMenuClick: () => voi
   const handleSignOut = () => {
     void signOut()
     notify.success(t('You have been signed out.'))
-    router.push('/customer/login')
+    router.replace('/customer/login')
   }
 
   return (

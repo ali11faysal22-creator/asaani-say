@@ -96,7 +96,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
       if (!signedIn) {
         const auth = await getCurrentUser('customer').catch(() => null)
         if (!auth || auth.role !== 'customer') {
-          router.push('/customer/login')
+          router.replace('/customer/login')
           return
         }
         signedIn = true
@@ -107,7 +107,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
       } catch (error) {
         if (!active) return
         const status = error instanceof ApiError ? error.status : undefined
-        if (status === 401) { router.push('/customer/login'); return }
+        if (status === 401) { router.replace('/customer/login'); return }
         // Not found / not yours: say so. Anything else is a hiccup - keep showing the last known state.
         if (status === 403 || status === 404) setBooking(null)
         setLoading(false)
