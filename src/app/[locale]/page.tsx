@@ -138,6 +138,13 @@ export default function HeroSection() {
   const [orderStatus, setOrderStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [orderMessage, setOrderMessage] = useState('')
   const [orderErrors, setOrderErrors] = useState<Record<string, string>>({})
+  // Today's date is only known in the browser; computing it during render makes the prerendered HTML go stale.
+  const [minDate, setMinDate] = useState('')
+  useEffect(() => {
+    const now = new Date()
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
+    setMinDate(now.toISOString().slice(0, 10))
+  }, [])
 
   const updateOrderField = (field: keyof typeof orderForm) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -463,7 +470,7 @@ export default function HeroSection() {
                     type="date"
                     value={orderForm.date}
                     onChange={updateOrderField('date')}
-                    min={new Date().toISOString().slice(0, 10)}
+                    min={minDate || undefined}
                     className={`w-full bg-white text-slate-700 text-xs px-4 py-3 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-slate-400 ${errorRing(orderErrors.preferred_date)}`}/>
                   <FieldError message={orderErrors.preferred_date} />
 
