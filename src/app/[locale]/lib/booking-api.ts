@@ -81,9 +81,37 @@ export type AssignedVendor = {
   distance_km: number
 }
 
+export type BookingReporterRole = 'customer' | 'vendor'
+export type BookingStatus =
+  | 'unassigned'
+  | 'pending'
+  | 'accepted'
+  | 'rejected'
+  | 'on_the_way'
+  | 'reached'
+  | 'in_progress'
+  | 'paused'
+  | 'cannot_start'
+  | 'work_completed'
+  | 'payment_requested'
+  | 'completed'
+  | 'cancelled'
+  | 'interrupted'
+
+export type BookingProblemReport = {
+  booking_id: string
+  reported_by: BookingReporterRole
+  reporter_id: string
+  reporter_name: string
+  message: string
+  created_at: string
+}
+
 export type BookingResult = {
   id: string
-  status: string
+  status: BookingStatus
+  stopped_by?: BookingReporterRole | null
+  problem_report?: BookingProblemReport | null
   service_id?: string | null
   customer_id: string
   customer_name: string
@@ -694,6 +722,18 @@ export async function fetchCustomerBookings(customerId: string): Promise<Booking
   return api(`/api/v1/customer/bookings?customer_id=${encodeURIComponent(customerId)}`)
 }
 
+export async function submitBookingProblemReport(
+  bookingId: string,
+  role: BookingReporterRole,
+  message: string,
+): Promise<BookingResult> {
+  return api(`/api/v1/bookings/${encodeURIComponent(bookingId)}/problem-report`, {
+    method: 'POST',
+    authRole: role,
+    body: JSON.stringify({ message }),
+  })
+}
+
 export async function rateBooking(bookingId: string, rating: number, comment?: string): Promise<BookingResult> {
   return api(`/api/v1/customer/bookings/${encodeURIComponent(bookingId)}/rate`, {
     method: 'POST',
@@ -954,7 +994,12 @@ export type AdminBooking = {
   service_id: string
   service_name: string
   extra_services?: string[]
-  status: string
+  status: BookingStatus
+  stopped_by?: BookingReporterRole | null
+  problem_report_reported_by?: BookingReporterRole | null
+  problem_report_reporter_name?: string | null
+  problem_report_message?: string | null
+  problem_report_created_at?: string | null
   scheduled_date: string
   slot_start: string
   slot_end: string

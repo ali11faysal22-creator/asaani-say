@@ -22,6 +22,7 @@ export function StatusBadge({ label, tone }: { label: string; tone: StatusTone }
 
 export function bookingStatusTone(status: string): StatusTone {
   if (status === 'completed') return 'good'
+  if (status === 'interrupted') return 'critical'
   if (status === 'unassigned' || status === 'rejected' || status === 'cancelled') return 'critical'
   if (status === 'pending' || status === 'payment_requested' || status === 'work_completed') return 'warning'
   return 'neutral' // accepted, on_the_way, reached, in_progress, paused

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from '@/i18n/navigation'
 import { Link } from '@/i18n/navigation'
-import { Clock3, Eye, MapPin, Navigation, Phone, Search, X } from 'lucide-react'
+import { Clock3, Eye, MapPin, Navigation, Search, X } from 'lucide-react'
 import { API_BASE, ApiError, bookingServiceLabel, fetchCustomerBookingHistory, fetchCustomerBookings, formatSlotLabel, getCurrentUser, type BookingResult } from '@/app/lib/booking-api'
 import { startPolling } from '@/app/lib/polling'
 import { DateFilter } from '@/app/components/date-filter'
@@ -12,7 +12,7 @@ import Modal from '@/components/Modal'
 import { useLanguage } from '@/app/lib/i18n'
 
 // The vendor's phone number is only shared once they have accepted the job.
-const TRACKABLE_STATUSES = ['accepted', 'on_the_way', 'reached', 'in_progress', 'paused', 'work_completed', 'payment_requested', 'completed']
+const TRACKABLE_STATUSES = ['accepted', 'on_the_way', 'reached', 'in_progress', 'paused', 'work_completed', 'payment_requested', 'completed', 'interrupted']
 const canTrack = (order: BookingResult) => TRACKABLE_STATUSES.includes(order.status)
 
 const statusLabel = (status: string) =>
@@ -24,13 +24,14 @@ const statusLabel = (status: string) =>
     : status === 'work_completed' ? 'Work finished'
     : status === 'payment_requested' ? 'Payment requested'
     : status === 'completed' ? 'Completed'
+    : status === 'interrupted' ? 'Service stopped'
     : status === 'rejected' ? 'Vendor declined'
     : status === 'cancelled' ? 'Cancelled'
     : 'Waiting for vendor'
 
 const statusTone = (status: string) =>
   status === 'accepted' || status === 'completed' ? 'bg-emerald-50 text-emerald-600'
-    : status === 'rejected' || status === 'cancelled' ? 'bg-red-50 text-red-600'
+    : status === 'rejected' || status === 'cancelled' || status === 'interrupted' ? 'bg-red-50 text-red-600'
     : 'bg-orange-50 text-orange-600'
 
 export default function CustomerOrdersPage() {
@@ -213,19 +214,7 @@ export default function CustomerOrdersPage() {
                 {cancelledByCustomer ? t('You cancelled this order.') : t('This order was cancelled.')}
               </p>
             )}
-            {selectedOrder.vendor && canTrack(selectedOrder) && (
-              <div className="border-b border-slate-100 py-4">
-                <p className="text-xs text-slate-400">{t("Vendor contact")}</p>
-                <p className="mt-1 font-bold text-slate-900"><bdi dir="ltr">{selectedOrder.vendor.contact_number}</bdi></p>
-                <a
-                  href={`tel:${selectedOrder.vendor.contact_number}`}
-                  onClick={(event) => event.stopPropagation()}
-                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700"
-                >
-                  <Phone className="h-4 w-4" /> {t("Call vendor")}</a>
-              </div>
-            )}
-            <p className="mt-4 flex items-center gap-2 text-xs text-slate-500"><MapPin className="h-4 w-4 text-orange-500" aria-hidden="true" /> {selectedOrder.address.line}</p>
+            <p className="mt-4 flex items-center gap-2 text-xs text-slate-500"><MapPin className="h-4 w-4 text-orange-500" /> {selectedOrder.address.line}</p>
             {selectedOrder.photos.length > 0 && (
               <div className="mt-4 border-t border-slate-100 pt-4">
                 <p className="mb-2 text-xs text-slate-400">{t("Completion photos")}</p>

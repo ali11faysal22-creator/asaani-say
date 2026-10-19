@@ -19,7 +19,7 @@ function bucketForStatus(status: string): 'pending' | 'active' | 'completed' | '
 }
 
 const statusLabel = (status: string, t: (text: string) => string) =>
-  t(status === 'accepted' ? 'Confirmed' : status === 'on_the_way' ? 'Vendor on the way' : status === 'in_progress' ? 'Vendor arrived' : status === 'completed' ? 'Completed' : status === 'rejected' ? 'Vendor declined' : 'Waiting for vendor')
+  t(status === 'accepted' ? 'Confirmed' : status === 'on_the_way' ? 'Vendor on the way' : status === 'in_progress' ? 'Vendor arrived' : status === 'completed' ? 'Completed' : status === 'interrupted' ? 'Service stopped' : status === 'rejected' ? 'Vendor declined' : 'Waiting for vendor')
 
 export default function CustomerDashboardPage() {
   const { language, t } = useLanguage()
@@ -90,7 +90,7 @@ export default function CustomerDashboardPage() {
     [orders]
   )
 
-  const canTrack = (order: BookingResult) => ['accepted', 'on_the_way', 'in_progress', 'completed'].includes(order.status)
+  const canTrack = (order: BookingResult) => ['accepted', 'on_the_way', 'in_progress', 'completed', 'interrupted'].includes(order.status)
 
   if (loading) {
     return (
@@ -203,7 +203,7 @@ export default function CustomerDashboardPage() {
                       className={`rounded-full px-3 py-1.5 text-xs font-bold ${
                         order.status === 'accepted' || order.status === 'completed'
                           ? 'bg-emerald-50 text-emerald-600'
-                          : order.status === 'rejected' || order.status === 'cancelled'
+                          :                           order.status === 'rejected' || order.status === 'cancelled' || order.status === 'interrupted'
                             ? 'bg-red-50 text-red-600'
                             : 'bg-orange-50 text-orange-600'
                       }`}

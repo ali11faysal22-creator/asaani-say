@@ -18,13 +18,14 @@ type StatusTab = (typeof STATUS_TABS)[number]
 const ACTIVE_STATUSES = ['accepted', 'on_the_way', 'reached', 'in_progress', 'paused', 'work_completed', 'payment_requested']
 
 function statusLabel(status: string): string {
+  if (status === 'interrupted') return 'Service stopped'
   return status.replace(/_/g, ' ')
 }
 
 function statusBadgeClass(status: string): string {
   if (status === 'completed') return 'bg-emerald-100 text-emerald-700'
   if (status === 'pending') return 'bg-amber-100 text-amber-700'
-  if (status === 'cancelled') return 'bg-red-100 text-red-600'
+  if (status === 'cancelled' || status === 'interrupted') return 'bg-red-100 text-red-600'
   return 'bg-sky-100 text-sky-700'
 }
 

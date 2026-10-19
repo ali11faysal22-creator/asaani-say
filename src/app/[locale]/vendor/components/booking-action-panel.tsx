@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { vendorActionSuccessMessage } from '@/app/lib/vendor-action-messages'
 import { FieldError, errorBorder, messageOf } from '@/components/FieldError'
 import { useState } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import {
   API_BASE,
   completeVendorBookingWithPhotos,
@@ -15,6 +16,7 @@ import {
   type VendorBookingAction,
 } from '@/app/lib/booking-api'
 import { ResponseCountdown } from '@/app/components/response-countdown'
+import { ReportProblemButton } from '@/app/components/report-problem-button'
 import { useLanguage } from '@/app/lib/i18n'
 
 const TRACKED_STATUSES = ['accepted', 'on_the_way', 'reached', 'in_progress', 'paused', 'work_completed', 'payment_requested']
@@ -132,6 +134,16 @@ export function VendorBookingActionPanel({
     <div className="space-y-3">
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{t(error)}</p>}
 
+      {booking.status === 'interrupted' && booking.problem_report && (
+        <div role="alert" className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+          <div className="min-w-0">
+            <p className="font-bold">{t('Service stopped by')} {t(booking.problem_report.reported_by)}</p>
+            <p className="mt-1 whitespace-pre-wrap break-words">{booking.problem_report.message}</p>
+          </div>
+        </div>
+      )}
+
       {booking.status === 'pending' && (
         <div className="space-y-2">
           {booking.vendor_response_deadline && (
@@ -240,6 +252,9 @@ export function VendorBookingActionPanel({
               </div>
             </div>
           )}
+          <div className="mt-3">
+            <ReportProblemButton booking={booking} role="vendor" onReported={onUpdated} />
+          </div>
         </div>
       )}
 

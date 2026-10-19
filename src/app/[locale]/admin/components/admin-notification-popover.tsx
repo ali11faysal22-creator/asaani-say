@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Bell, Check, Clock } from 'lucide-react'
+import { AlertTriangle, Bell, Check, Clock } from 'lucide-react'
+import { useRouter } from '@/i18n/navigation'
 import { fetchAdminNotifications, getStoredAuth, markAdminNotificationRead } from '@/app/lib/booking-api'
 import { playNotificationSound } from '@/app/lib/notification-sound'
 import { useLanguage } from '../../lib/i18n'
@@ -9,12 +10,16 @@ import { useLanguage } from '../../lib/i18n'
 interface NotificationItem {
   id: string
   title: string
+  detail?: string
   time: string
   unread: boolean
+  highPriority: boolean
+  bookingId?: string
 }
 
 export default function AdminNotificationPopover() {
   const { t } = useLanguage()
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const previousUnreadIds = useRef<Set<string> | null>(null)
@@ -36,12 +41,20 @@ export default function AdminNotificationPopover() {
         }
         previousUnreadIds.current = new Set(unreadIds)
 
-        setNotifications(sorted.slice(0, 8).map((row) => ({
-          id: row.id,
-          title: row.body,
-          time: row.created_at ? new Date(row.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', hour12: true }) : 'Just now',
-          unread: !row.is_read,
-        })))
+        setNotifications(sorted.slice(0, 8).map((row) => {
+          const highPriority = row.title.startsWith('HIGH PRIORITY:')
+          const bookingId = highPriority ? row.body.match(/Booking ID:\s*([a-zA-Z0-9-]+)/)?.[1] : undefined
+          const detail = highPriority ? row.body.match(/Message:\s*([^\r\n]+)/)?.[1] : undefined
+          return {
+            id: row.id,
+            title: highPriority ? 'Service problem reported' : row.body,
+            detail,
+            time: row.created_at ? new Date(row.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short', hour12: true }) : 'Just now',
+            unread: !row.is_read,
+            highPriority,
+            bookingId,
+          }
+        }))
       } catch (error) {
         console.warn('Unable to load admin notifications', error)
       }
@@ -62,8 +75,13 @@ export default function AdminNotificationPopover() {
   }
 
   const handleMarkSingleAsRead = async (id: string) => {
+    const notification = notifications.find((item) => item.id === id)
     setNotifications((prev) => prev.map((item) => item.id === id ? { ...item, unread: false } : item))
     await markAdminNotificationRead(id).catch(() => undefined)
+    if (notification?.bookingId) {
+      setIsOpen(false)
+      router.push(`/admin/bookings?booking=${encodeURIComponent(notification.bookingId)}`)
+    }
   }
 
   return (
@@ -102,23 +120,26 @@ export default function AdminNotificationPopover() {
                 <div className="p-8 text-center text-slate-400 text-xs">{t('No new notifications')}</div>
               ) : (
                 notifications.map((item) => (
-                  <div
+                  <button
                     key={item.id}
+                    type="button"
                     onClick={() => void handleMarkSingleAsRead(item.id)}
-                    className="px-5 py-3.5 flex items-start gap-3.5 transition hover:bg-slate-50 cursor-pointer group"
-                    title={t('Click to mark as read')}
+                    className={`w-full px-5 py-3.5 flex items-start gap-3.5 text-start transition hover:bg-slate-50 cursor-pointer group ${item.highPriority ? 'bg-rose-50/60' : ''}`}
+                    title={t(item.bookingId ? 'Open booking details' : 'Click to mark as read')}
                   >
-                    <div className="w-9 h-9 rounded-full bg-orange-100 text-[#EE6C52] flex items-center justify-center shrink-0 mt-0.5">
-                      {item.unread ? <Clock className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${item.highPriority ? 'bg-rose-100 text-rose-600' : 'bg-orange-100 text-[#EE6C52]'}`}>
+                      {item.highPriority ? <AlertTriangle className="w-4 h-4" /> : item.unread ? <Clock className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className={`text-xs leading-snug ${item.unread ? 'font-extrabold text-[#1E2337]' : 'font-semibold text-slate-600'}`}>
+                      <h4 className={`text-xs leading-snug ${item.highPriority ? 'font-extrabold text-rose-700' : item.unread ? 'font-extrabold text-[#1E2337]' : 'font-semibold text-slate-600'}`}>
                         {t(item.title)}
                       </h4>
+                      {item.detail && <p className="mt-1 line-clamp-2 text-[11px] text-slate-600">{item.detail}</p>}
                       <span className="text-[10px] font-medium text-slate-400 mt-1 block">{item.time === 'Just now' ? t('Just now') : item.time}</span>
                     </div>
-                    {item.unread && <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1.5 group-hover:bg-slate-400" />}
-                  </div>
+                    {item.highPriority && <div className="w-2 h-2 rounded-full bg-rose-600 shrink-0 mt-1.5" />}
+                    {!item.highPriority && item.unread && <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1.5 group-hover:bg-slate-400" />}
+                  </button>
                 ))
               )}
             </div>
