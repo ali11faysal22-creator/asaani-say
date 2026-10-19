@@ -1,6 +1,6 @@
 'use client'
 import React, {useEffect,useRef,useState } from 'react'
-import {ChevronDown,User,Star,Quote,Truck,Clock,MousePointerClick,ArrowRight,ArrowUpRight,AlertCircle,ExternalLink as ExternalLinkIcon} from 'lucide-react'
+import {Sparkles,ChevronDown,User,Star,Quote,Wrench,Drill,Sun,Truck,Bug,Clock,MousePointerClick,Users,Award,RefreshCw,ArrowRight,ArrowUpRight,AlertCircle,ExternalLink as ExternalLinkIcon} from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { FieldError, errorRing, fieldErrorsOf, messageOf } from '@/components/FieldError'
 import Image from 'next/image'
@@ -265,17 +265,17 @@ export default function HeroSection() {
 
   const steps = [
     {
-      icon: <MousePointerClick className="w-8 h-8 text-orange-500"/>,
+      icon: '/booking-step-book-now.png',
       title: 'Choose Your Service',
       desc: 'Select the service you need and share the details of your requirements in just a few clicks.',
     },
     {
-      icon: <Clock className="w-8 h-8 text-[#23263B]"/>,
+      icon: '/booking-step-clock.png',
       title: 'Pick Your Preferred Time',
       desc: 'Choose a convenient date and time slot that fits your schedule for the service visit.',
     },
     {
-      icon: <Truck className="w-8 h-8 text-[#23263B]"/>,
+      icon: '/booking-step-truck.png',
       title: 'Get Our Expert Support',
       desc: 'Our trained professionals will arrive on time to complete the job safely and efficiently.',
     },
@@ -563,7 +563,7 @@ export default function HeroSection() {
 
                   <div className="flex items-start gap-5 py-2">
                     <div className="w-16 h-16 bg-[#EEF2FB] rounded-xl flex items-center justify-center shrink-0">
-                    {step.icon}
+                      <Image src={step.icon} alt="" aria-hidden="true" width={56} height={56} className="h-14 w-14 object-contain" />
                     </div>
                     <div>
                       <h3 className="font-bold text-[#23263B] mb-1 fs-h4">
@@ -894,8 +894,8 @@ export default function HeroSection() {
               <span className="w-8 h-0.5 bg-orange-500"></span>
               <span className="text-sm font-bold text-orange-500 tracking-wider uppercase">{t("testimonial")}</span>
             </div>
-            <h2 className="font-extrabold text-[#23263B] tracking-tight leading-tight fs-h2">
-              {t("What They Say About Our")}{' '}<br className="hidden sm:block" />
+                     <h2 className="text-3xl sm:text-4xl font-extrabold text-[#23263B] tracking-tight leading-tight">
+              {t("What They Say About Our")}{' '}<br />
               {t("Service")}</h2>
           </div>
 
