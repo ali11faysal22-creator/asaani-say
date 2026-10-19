@@ -26,6 +26,7 @@ import { VendorRatingForm } from '@/app/customer/components/vendor-rating-form'
 import { BookingRescheduleForm } from '@/app/customer/components/booking-reschedule-form'
 import { BookingTimeline } from '@/app/components/booking-timeline'
 import { useLanguage } from '@/app/lib/i18n'
+import { ReportProblemButton } from '@/app/components/report-problem-button'
 
 const statusSteps = [
   { key: 'accepted', label: 'Confirmed', shortLabel: 'Confirmed', detail: 'Vendor confirmed your service request.', icon: CheckCircle2 },
@@ -58,6 +59,7 @@ const HERO_COPY: Record<string, { title: string; icon: typeof Truck }> = {
   work_completed: { title: 'Work finished', icon: Sparkles },
   payment_requested: { title: 'Payment requested', icon: CreditCard },
   completed: { title: 'Order completed', icon: Check },
+  interrupted: { title: 'Service stopped', icon: AlertTriangle },
 }
 
 export default function CustomerTrackingPage({ params }: { params: Promise<{ id: string }> }) {
@@ -101,6 +103,7 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
   const progressPercent = Math.min(100, Math.round((currentRank / (statusSteps.length - 1)) * 100))
   const eta = useMemo(() => {
     if (!booking) return ''
+    if (booking.status === 'interrupted') return t('Service stopped')
     if (booking.status === 'completed' || booking.status === 'in_progress' || booking.status === 'paused') return t('At your address')
     if (booking.status === 'on_the_way') return t('Arriving in approximately 20 minutes')
     return `${t('Scheduled for')} ${formatSlotLabel(booking.slot_start)} - ${formatSlotLabel(booking.slot_end)}`
@@ -269,6 +272,20 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
         </div>
 
         {needsDecision && decisionBanner}
+        {booking.status === 'interrupted' && booking.problem_report && (
+          <div role="alert" className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
+            <div className="min-w-0 text-xs text-rose-800">
+              <p className="font-bold">
+                {t('Service stopped by')} {t(booking.problem_report.reported_by)}
+              </p>
+              <p className="mt-1 whitespace-pre-wrap break-words">{booking.problem_report.message}</p>
+              <p className="mt-1 text-[11px] text-rose-600">
+                {formatTrackingTime(booking.problem_report.created_at)}
+              </p>
+            </div>
+          </div>
+        )}
         {booking.status === 'pending' && (
           <div className="flex items-center gap-3 rounded-2xl border border-orange-200 bg-orange-50 p-4">
             <Clock3 className="h-5 w-5 shrink-0 text-orange-500" />
@@ -318,11 +335,14 @@ export default function CustomerTrackingPage({ params }: { params: Promise<{ id:
 
         {/* Timeline */}
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <p className="mb-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t("Order timeline")}</p>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{t("Order timeline")}</p>
+            <ReportProblemButton booking={booking} role="customer" onReported={setBooking} />
+          </div>
           <div className="space-y-0">
             {statusSteps.map((step, index) => {
               const done = currentRank >= index
-              const isCurrent = currentRank === index && booking.status !== 'completed'
+              const isCurrent = currentRank === index && !['completed', 'interrupted', 'cancelled'].includes(booking.status)
               const StepIcon = step.icon
               return (
                 <div key={step.key} className="flex gap-4">

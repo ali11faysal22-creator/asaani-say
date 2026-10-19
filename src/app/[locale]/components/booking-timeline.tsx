@@ -20,6 +20,7 @@ const STATUS_LABELS: Record<string, string> = {
   PAYMENT_REQUESTED: 'Payment requested',
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
+  INTERRUPTED: 'Service stopped',
 }
 
 const ACTOR_LABELS: Record<BookingEvent['actor'], string> = {

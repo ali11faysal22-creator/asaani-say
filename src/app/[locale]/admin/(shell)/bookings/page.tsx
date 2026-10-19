@@ -27,6 +27,7 @@ const FILTERS = [
   { key: 'active', label: 'In Progress' },
   { key: 'completed', label: 'Completed' },
   { key: 'cancelled', label: 'Cancelled' },
+  { key: 'interrupted', label: 'Interrupted' },
 ] as const
 
 type FilterKey = (typeof FILTERS)[number]['key']
@@ -35,6 +36,7 @@ function bucketForStatus(status: string): FilterKey {
   if (status === 'unassigned') return 'unassigned'
   if (status === 'completed') return 'completed'
   if (status === 'pending') return 'pending'
+  if (status === 'interrupted') return 'interrupted'
   if (status === 'rejected' || status === 'cancelled') return 'cancelled'
   return 'active'
 }
@@ -42,11 +44,15 @@ function bucketForStatus(status: string): FilterKey {
 function paymentInfo(booking: AdminBooking): { label: string; className: string } {
   if (booking.payment_received_at) return { label: 'Paid', className: 'bg-emerald-100 text-emerald-700' }
   if (booking.payment_requested_at) return { label: 'Requested', className: 'bg-amber-100 text-amber-700' }
-  if (booking.status === 'cancelled' || booking.status === 'rejected') return { label: 'N/A', className: 'bg-slate-100 text-slate-400' }
+  if (booking.status === 'cancelled' || booking.status === 'rejected' || booking.status === 'interrupted') return { label: 'N/A', className: 'bg-slate-100 text-slate-400' }
   return { label: 'Not yet', className: 'bg-slate-100 text-slate-500' }
 }
 
-export default function AdminBookingsPage() {
+export default function AdminBookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ booking?: string | string[] }>
+}) {
   const { t } = useLanguage()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -57,6 +63,17 @@ export default function AdminBookingsPage() {
   const [filter, setFilter] = useState<FilterKey>('all')
   const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null)
   const [resolveBooking, setResolveBooking] = useState<AdminBooking | null>(null)
+  const [requestedBookingId, setRequestedBookingId] = useState('')
+
+  useEffect(() => {
+    void searchParams.then(({ booking }) => setRequestedBookingId(Array.isArray(booking) ? booking[0] || '' : booking || ''))
+  }, [searchParams])
+
+  useEffect(() => {
+    if (!requestedBookingId) return
+    const match = bookings.find((booking) => booking.id === requestedBookingId)
+    if (match) setSelectedBooking(match)
+  }, [bookings, requestedBookingId])
 
   const loadData = async () => {
     try {
@@ -197,7 +214,7 @@ export default function AdminBookingsPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <StatusBadge label={booking.status.replace('_', ' ')} tone={bookingStatusTone(booking.status)} />
+                  <StatusBadge label={booking.status === 'interrupted' ? 'Service stopped' : booking.status.replace('_', ' ')} tone={bookingStatusTone(booking.status)} />
                   {booking.admin_hold && (
                     <span className="ms-1.5 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{t('On hold')}</span>
                   )}
@@ -237,7 +254,13 @@ export default function AdminBookingsPage() {
         <DetailModal
           title={selectedBooking.service_name}
           subtitle={`${selectedBooking.customer_name} → ${selectedBooking.vendor_contact_name || selectedBooking.vendor_name || t('Unassigned')}`}
-          onClose={() => setSelectedBooking(null)}
+          onClose={() => {
+            setSelectedBooking(null)
+            if (requestedBookingId) {
+              setRequestedBookingId('')
+              router.replace('/admin/bookings')
+            }
+          }}
           fields={[
             { label: 'Customer', value: selectedBooking.customer_name },
             {
@@ -258,7 +281,17 @@ export default function AdminBookingsPage() {
                 </span>
               ),
             },
-            { label: 'Status', value: <StatusBadge label={selectedBooking.status.replace('_', ' ')} tone={bookingStatusTone(selectedBooking.status)} /> },
+            { label: 'Status', value: <StatusBadge label={selectedBooking.status === 'interrupted' ? 'Service stopped' : selectedBooking.status.replace('_', ' ')} tone={bookingStatusTone(selectedBooking.status)} /> },
+            ...(selectedBooking.problem_report_message
+              ? [
+                  { label: 'Reported by', value: `${selectedBooking.problem_report_reported_by ? t(selectedBooking.problem_report_reported_by) : ''} — ${selectedBooking.problem_report_reporter_name || ''}` },
+                  { label: 'Report submitted', value: selectedBooking.problem_report_created_at ? new Date(selectedBooking.problem_report_created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—' },
+                  {
+                    label: 'Problem report',
+                    value: <span className="max-w-[65%] whitespace-pre-wrap break-words text-start">{selectedBooking.problem_report_message}</span>,
+                  },
+                ]
+              : []),
             ...(selectedBooking.status === 'pending' && selectedBooking.vendor_response_deadline
               ? [{ label: 'Vendor response', value: <ResponseCountdown deadline={selectedBooking.vendor_response_deadline} className="text-orange-600" /> }]
               : []),

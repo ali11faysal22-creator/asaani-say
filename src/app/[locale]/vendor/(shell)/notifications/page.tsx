@@ -32,6 +32,7 @@ import {
   type VendorBookingAction,
 } from '@/app/lib/booking-api'
 import { ResponseCountdown } from '@/app/components/response-countdown'
+import { ReportProblemButton } from '@/app/components/report-problem-button'
 import { useLanguage } from '@/app/lib/i18n'
 
 function formatNotificationTimestamp(value: string, language: 'en' | 'ur'): string {
@@ -91,6 +92,7 @@ export interface NotificationItem {
     | 'work_completed'
     | 'payment_requested'
     | 'completed'
+    | 'interrupted'
   bookingId?: string
   booking?: BookingResult
 }
@@ -156,6 +158,7 @@ export default function NotificationsPage() {
             'work_completed',
             'payment_requested',
             'completed',
+            'interrupted',
           ])
           const isCancelled = booking?.status === 'cancelled' || row.title.toLowerCase().includes('cancelled')
           const bookingStatus = isCancelled
@@ -329,6 +332,15 @@ export default function NotificationsPage() {
     } finally {
       setActionInProgress(false)
     }
+  }
+
+  const applyReportedBooking = (updatedBooking: BookingResult) => {
+    setSelectedNotif((item) => item
+      ? { ...item, booking: updatedBooking, bookingId: updatedBooking.id, bookingStatus: 'interrupted' }
+      : item)
+    setNotifications((items) => items.map((item) => item.bookingId === updatedBooking.id
+      ? { ...item, booking: updatedBooking, bookingStatus: 'interrupted' }
+      : item))
   }
 
   const handleCompleteBooking = async () => {
@@ -607,9 +619,15 @@ export default function NotificationsPage() {
                           )}
                         </div>
                       )}
-                      {selectedNotif.booking && ['accepted', 'on_the_way', 'reached', 'in_progress', 'paused', 'work_completed', 'payment_requested'].includes(selectedNotif.booking.status) && (
+                      {selectedNotif.booking && ['accepted', 'on_the_way', 'reached', 'in_progress', 'paused', 'work_completed', 'payment_requested', 'interrupted'].includes(selectedNotif.booking.status) && (
                         <div className="mt-4 border-t border-slate-100 pt-4">
                           <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">{t('Customer tracking')}</p>
+                          {selectedNotif.booking.status === 'interrupted' && selectedNotif.booking.problem_report && (
+                            <div role="alert" className="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+                              <p className="font-bold">{t('Service stopped by')} {t(selectedNotif.booking.problem_report.reported_by)}</p>
+                              <p className="mt-1 whitespace-pre-wrap break-words">{selectedNotif.booking.problem_report.message}</p>
+                            </div>
+                          )}
                           <div className="flex flex-wrap gap-2">
                             {selectedNotif.booking.status === 'accepted' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('on_the_way')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Mark on the way')}</button>}
                             {selectedNotif.booking.status === 'on_the_way' && <button type="button" disabled={actionInProgress} onClick={() => void handleTrackingStatus('reached')} className="rounded-lg bg-orange-500 px-3 py-2 text-[11px] font-bold text-white disabled:opacity-50">{t('Mark reached')}</button>}
@@ -624,6 +642,9 @@ export default function NotificationsPage() {
                             {['accepted', 'on_the_way', 'reached'].includes(selectedNotif.booking.status) && !showCannotStartForm && (
                               <button type="button" disabled={actionInProgress} onClick={() => setShowCannotStartForm(true)} className="rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] font-bold text-rose-600 disabled:opacity-50">{t('Cannot start job')}</button>
                             )}
+                          </div>
+                          <div className="mt-3">
+                            <ReportProblemButton booking={selectedNotif.booking} role="vendor" onReported={applyReportedBooking} />
                           </div>
                           {showCannotStartForm && (
                             <div className="mt-3 space-y-2 rounded-xl border border-rose-200 bg-rose-50/50 p-3">
